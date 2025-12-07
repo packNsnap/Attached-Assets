@@ -3,7 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target } from "lucide-react";
+import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +65,37 @@ export default function ResumeAnalyzerModule() {
   const [fileName, setFileName] = useState<string>("");
   const [resumeText, setResumeText] = useState<string>("");
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  const recommendMutation = useMutation({
+    mutationFn: async (data: { candidateName: string; jobId: string; jobTitle: string; skillsNeeded: string[]; fitScore: number }) => {
+      const res = await fetch("/api/skills-test-recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create recommendation");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Recommendation Sent",
+        description: "Skills test recommendation created.",
+        action: (
+          <Button variant="outline" size="sm" onClick={() => navigate("/skills-test")}>
+            View in Skills Tests
+          </Button>
+        ),
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create skills test recommendation.",
+      });
+    },
+  });
 
   const { data: jobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
@@ -385,6 +418,41 @@ export default function ResumeAnalyzerModule() {
                           </Badge>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {result.fitScore >= 70 && result.selectedJob && (
+                    <div className="pt-4 border-t">
+                      <Button
+                        onClick={() => {
+                          recommendMutation.mutate({
+                            candidateName: fileName || "Unknown Candidate",
+                            jobId: result.selectedJob!.id,
+                            jobTitle: result.selectedJob!.title,
+                            skillsNeeded: result.skillMatch.missing.length > 0 ? result.skillMatch.missing : result.selectedJob!.skills,
+                            fitScore: result.fitScore,
+                          });
+                        }}
+                        disabled={recommendMutation.isPending}
+                        className="w-full"
+                        variant="outline"
+                        data-testid="button-recommend-skills-test"
+                      >
+                        {recommendMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <ClipboardList className="mr-2 h-4 w-4" />
+                            Recommend Skills Test
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Send this candidate to the Skills Test module for assessment
+                      </p>
                     </div>
                   )}
                 </CardContent>

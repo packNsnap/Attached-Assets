@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, Plus, Trash2, Eye, Link as LinkIcon, CheckCircle2, ListChecks, BrainCircuit } from "lucide-react";
+import { Loader2, Plus, Trash2, Eye, Link as LinkIcon, CheckCircle2, ListChecks, BrainCircuit, Inbox, ArrowRight, User, Briefcase } from "lucide-react";
+import type { SkillsTestRecommendation } from "@shared/schema";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -56,7 +58,28 @@ export default function SkillsTestModule() {
   const [activeTab, setActiveTab] = useState("builder");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedTest, setGeneratedTest] = useState<Test | null>(null);
+  const [pendingRecommendationId, setPendingRecommendationId] = useState<string | null>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: recommendations = [] } = useQuery<SkillsTestRecommendation[]>({
+    queryKey: ["/api/skills-test-recommendations"],
+  });
+
+  const updateRecommendationStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await fetch(`/api/skills-test-recommendations/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/skills-test-recommendations"] });
+    },
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -76,6 +99,12 @@ export default function SkillsTestModule() {
       setGeneratedTest(newTest);
       setIsGenerating(false);
       setActiveTab("preview");
+      
+      if (pendingRecommendationId) {
+        updateRecommendationStatus.mutate({ id: pendingRecommendationId, status: "test_created" });
+        setPendingRecommendationId(null);
+      }
+      
       toast({
         title: "Test Generated",
         description: `Created ${newTest.questions.length} questions for ${values.roleName}.`,
@@ -99,11 +128,88 @@ export default function SkillsTestModule() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
-          <TabsTrigger value="builder">Builder</TabsTrigger>
-          <TabsTrigger value="preview" disabled={!generatedTest}>Preview</TabsTrigger>
-          <TabsTrigger value="results">Results (Mock)</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
+          <TabsTrigger value="recommendations" data-testid="tab-recommendations">
+            Recommendations
+            {recommendations.filter(r => r.status === "pending").length > 0 && (
+              <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                {recommendations.filter(r => r.status === "pending").length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="builder" data-testid="tab-builder">Builder</TabsTrigger>
+          <TabsTrigger value="preview" disabled={!generatedTest} data-testid="tab-preview">Preview</TabsTrigger>
+          <TabsTrigger value="results" data-testid="tab-results">Results</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="recommendations" className="mt-6">
+          <div className="space-y-4">
+            {recommendations.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Inbox className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium text-muted-foreground">No Recommendations</h3>
+                  <p className="text-sm text-muted-foreground/70 max-w-sm text-center mt-2">
+                    When candidates are analyzed in Resume Logic and have a good fit score, they'll appear here for skills testing.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              recommendations.map((rec) => (
+                <Card key={rec.id} data-testid={`recommendation-${rec.id}`}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium" data-testid={`text-candidate-name-${rec.id}`}>{rec.candidateName}</span>
+                          <Badge variant={rec.status === "pending" ? "default" : "secondary"}>
+                            {rec.status === "pending" ? "Needs Test" : rec.status === "test_created" ? "Test Created" : rec.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="h-4 w-4" />
+                          <span>{rec.jobTitle}</span>
+                          <span className="text-primary font-medium">• {rec.fitScore}% fit</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {rec.skillsNeeded.map((skill) => (
+                            <Badge key={skill} variant="outline" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        {rec.status === "pending" && (
+                          <Button
+                            size="sm"
+                            data-testid={`button-create-test-${rec.id}`}
+                            onClick={() => {
+                              form.setValue("roleName", rec.jobTitle);
+                              form.setValue("skills", rec.skillsNeeded.join(", "));
+                              setPendingRecommendationId(rec.id);
+                              setActiveTab("builder");
+                              toast({
+                                title: "Form Pre-filled",
+                                description: "Skills test form has been populated. Generate the test to complete.",
+                              });
+                            }}
+                          >
+                            <ArrowRight className="mr-2 h-4 w-4" />
+                            Create Test
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
 
         <TabsContent value="builder" className="mt-6">
           <div className="grid gap-6 lg:grid-cols-2">
