@@ -23,6 +23,18 @@ export const MODULES = [
     description: "Overview of your HR activities"
   },
   {
+    title: "Candidates",
+    path: "/candidates",
+    icon: UserCircle,
+    description: "View and manage all candidates"
+  },
+  {
+    title: "Hiring Pipeline",
+    path: "/hiring",
+    icon: Users,
+    description: "Track candidates through stages"
+  },
+  {
     title: "Job Descriptions / Positions",
     path: "/jobs",
     icon: Briefcase,
@@ -51,18 +63,6 @@ export const MODULES = [
     path: "/references",
     icon: UserCheck,
     description: "Automated reference request templates"
-  },
-  {
-    title: "Candidates",
-    path: "/candidates",
-    icon: UserCircle,
-    description: "View and manage all candidates"
-  },
-  {
-    title: "Hiring Pipeline",
-    path: "/hiring",
-    icon: Users,
-    description: "Track candidates through stages"
   },
   {
     title: "Onboarding",
