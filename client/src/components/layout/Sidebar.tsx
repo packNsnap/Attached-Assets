@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LogOut, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ModeToggle } from "@/components/mode-toggle";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -20,14 +21,15 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col border-r bg-sidebar text-sidebar-foreground">
-      <div className="flex h-14 items-center border-b border-sidebar-border px-4">
+    <div className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
+      <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
         <div className="flex items-center gap-2 font-heading font-bold text-xl tracking-tight">
           <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
             <span className="text-sidebar-primary-foreground">AI</span>
           </div>
           {APP_NAME}
         </div>
+        <ModeToggle />
       </div>
       
       <ScrollArea className="flex-1 py-4">
@@ -53,7 +55,7 @@ export function Sidebar() {
 
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3 mb-4 px-2">
-          <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-accent-foreground">
             <User className="h-4 w-4" />
           </div>
           <div className="text-sm">
