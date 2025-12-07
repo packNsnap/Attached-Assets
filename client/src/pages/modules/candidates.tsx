@@ -57,7 +57,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation } from "@shared/schema";
+import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation, SkillsTestResponse } from "@shared/schema";
 import { Progress } from "@/components/ui/progress";
 import { ListChecks } from "lucide-react";
 
@@ -158,6 +158,19 @@ export default function CandidatesModule() {
       return res.json() as Promise<SkillsTestInvitation[]>;
     },
     enabled: !!selectedCandidate
+  });
+
+  const [viewTestResultsInvitation, setViewTestResultsInvitation] = useState<SkillsTestInvitation | null>(null);
+
+  const { data: testResponses = [], isLoading: isLoadingTestResponses } = useQuery({
+    queryKey: ["test-responses", viewTestResultsInvitation?.id],
+    queryFn: async () => {
+      if (!viewTestResultsInvitation) return [];
+      const res = await fetch(`/api/skills-test-invitations/${viewTestResultsInvitation.id}/responses`);
+      if (!res.ok) throw new Error("Failed to fetch test responses");
+      return res.json() as Promise<SkillsTestResponse[]>;
+    },
+    enabled: !!viewTestResultsInvitation
   });
 
   const [isRerunningAnalysis, setIsRerunningAnalysis] = useState(false);
@@ -1131,7 +1144,12 @@ export default function CandidatesModule() {
                   ) : (
                     <div className="space-y-3">
                       {skillsTestInvitations.map((invitation) => (
-                        <Card key={invitation.id} className="p-4" data-testid={`test-result-${invitation.id}`}>
+                        <Card 
+                          key={invitation.id} 
+                          className={cn("p-4", invitation.status === "completed" && "cursor-pointer hover:border-primary/50 transition-colors")}
+                          data-testid={`test-result-${invitation.id}`}
+                          onClick={() => invitation.status === "completed" && setViewTestResultsInvitation(invitation)}
+                        >
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
                               <span className="font-medium">{invitation.jobTitle}</span>
@@ -1163,14 +1181,19 @@ export default function CandidatesModule() {
                               </div>
                             )}
                             
-                            <div className="text-xs text-muted-foreground">
-                              {invitation.sentAt && (
-                                <span>Sent: {new Date(invitation.sentAt).toLocaleDateString()}</span>
-                              )}
-                              {invitation.completedAt && (
-                                <span className="ml-3">
-                                  Completed: {new Date(invitation.completedAt).toLocaleDateString()}
-                                </span>
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                              <div>
+                                {invitation.sentAt && (
+                                  <span>Sent: {new Date(invitation.sentAt).toLocaleDateString()}</span>
+                                )}
+                                {invitation.completedAt && (
+                                  <span className="ml-3">
+                                    Completed: {new Date(invitation.completedAt).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              {invitation.status === "completed" && (
+                                <span className="text-primary">Click to view details</span>
                               )}
                             </div>
                           </div>
@@ -1402,6 +1425,83 @@ export default function CandidatesModule() {
           </Card>
         )}
       </div>
+
+      {/* View Test Results Dialog */}
+      <Dialog open={!!viewTestResultsInvitation} onOpenChange={() => setViewTestResultsInvitation(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Test Results</DialogTitle>
+            {viewTestResultsInvitation && (
+              <p className="text-sm text-muted-foreground">
+                {viewTestResultsInvitation.candidateName} • {viewTestResultsInvitation.jobTitle}
+              </p>
+            )}
+          </DialogHeader>
+
+          {viewTestResultsInvitation && (
+            <div className="flex items-center justify-between py-3 px-4 bg-muted rounded-lg">
+              <div>
+                <p className="text-sm text-muted-foreground">Overall Score</p>
+                <p className="text-3xl font-bold">
+                  {viewTestResultsInvitation.score !== null && viewTestResultsInvitation.score !== undefined 
+                    ? `${viewTestResultsInvitation.score}%` 
+                    : "Pending Review"}
+                </p>
+              </div>
+              <div className="text-right text-sm text-muted-foreground">
+                <p>Submitted</p>
+                <p>{viewTestResultsInvitation.completedAt 
+                  ? new Date(viewTestResultsInvitation.completedAt).toLocaleDateString() 
+                  : "N/A"}</p>
+              </div>
+            </div>
+          )}
+
+          <ScrollArea className="flex-1 pr-4">
+            {isLoadingTestResponses ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : testResponses.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No responses recorded</p>
+              </div>
+            ) : (
+              <div className="space-y-4 py-4">
+                {testResponses.map((response, idx) => (
+                  <Card key={response.id} data-testid={`response-${response.id}`}>
+                    <CardContent className="py-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-medium text-primary">{idx + 1}</span>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{response.questionText}</p>
+                          </div>
+                        </div>
+                        {response.score !== null && (
+                          <Badge 
+                            variant={response.score >= 70 ? "default" : "secondary"}
+                            className={response.score >= 70 ? "bg-green-600" : response.score >= 50 ? "bg-yellow-600" : "bg-red-600"}
+                          >
+                            {response.score}%
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <div className="ml-9 p-3 bg-muted/50 rounded-lg">
+                        <p className="text-xs text-muted-foreground mb-1">Candidate's Answer:</p>
+                        <p className="text-sm">{response.answer}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
