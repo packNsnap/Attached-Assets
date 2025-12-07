@@ -6,7 +6,9 @@ import {
   insertCandidateSchema, 
   insertInterviewNoteSchema,
   insertSkillsTestRecommendationSchema,
-  insertInterviewRecommendationSchema
+  insertInterviewRecommendationSchema,
+  insertCandidateNoteSchema,
+  insertCandidateDocumentSchema
 } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
@@ -252,6 +254,102 @@ export async function registerRoutes(
       res.json(recommendation);
     } catch (error) {
       res.status(500).json({ error: "Failed to update interview recommendation status" });
+    }
+  });
+
+  app.patch("/api/candidates/:id", async (req, res) => {
+    try {
+      const updateData = insertCandidateSchema.partial().parse(req.body);
+      const candidate = await storage.updateCandidate(req.params.id, updateData);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+      res.json(candidate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update candidate" });
+      }
+    }
+  });
+
+  app.post("/api/candidates/:id/notes", async (req, res) => {
+    try {
+      const noteData = insertCandidateNoteSchema.parse({
+        ...req.body,
+        candidateId: req.params.id
+      });
+      const note = await storage.createCandidateNote(noteData);
+      res.json(note);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create note" });
+      }
+    }
+  });
+
+  app.get("/api/candidates/:id/notes", async (req, res) => {
+    try {
+      const notes = await storage.getCandidateNotes(req.params.id);
+      res.json(notes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch notes" });
+    }
+  });
+
+  app.delete("/api/candidates/:id/notes/:noteId", async (req, res) => {
+    try {
+      const deleted = await storage.deleteCandidateNote(req.params.noteId, req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: "Note not found" });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete note" });
+    }
+  });
+
+  app.post("/api/candidates/:id/documents", async (req, res) => {
+    try {
+      const docData = insertCandidateDocumentSchema.parse({
+        ...req.body,
+        candidateId: req.params.id
+      });
+      const document = await storage.createCandidateDocument(docData);
+      res.json(document);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create document" });
+      }
+    }
+  });
+
+  app.get("/api/candidates/:id/documents", async (req, res) => {
+    try {
+      const documents = await storage.getCandidateDocuments(req.params.id);
+      res.json(documents);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch documents" });
+    }
+  });
+
+  app.delete("/api/candidates/:id/documents/:docId", async (req, res) => {
+    try {
+      const deleted = await storage.deleteCandidateDocument(req.params.docId, req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: "Document not found" });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete document" });
     }
   });
 

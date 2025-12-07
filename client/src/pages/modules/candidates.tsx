@@ -10,10 +10,20 @@ import {
   ChevronRight,
   Phone,
   MapPin,
-  Tag
+  Tag,
+  Plus,
+  FileText,
+  Linkedin,
+  Globe,
+  Trash2,
+  ExternalLink,
+  User,
+  StickyNote,
+  FolderOpen
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
@@ -32,21 +42,51 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import type { Candidate, Job } from "@shared/schema";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Candidate, Job, CandidateNote, CandidateDocument } from "@shared/schema";
 
 type JobWithCandidates = Job & { candidateCount: number };
 type Stage = "Applied" | "Screened" | "Interview" | "Offer" | "Hired" | "Rejected";
 
 const STAGES: Stage[] = ["Applied", "Screened", "Interview", "Offer", "Hired", "Rejected"];
+const NOTE_TYPES = ["general", "interview", "feedback", "screening", "reference"];
+const DOCUMENT_TYPES = ["resume", "cover_letter", "portfolio", "certificate", "other"];
+const SOURCE_OPTIONS = ["LinkedIn", "Indeed", "Referral", "Company Website", "Job Fair", "Other"];
 
 export default function CandidatesModule() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [jobFilter, setJobFilter] = useState<string>("all");
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("profile");
   const searchString = useSearch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const [newCandidate, setNewCandidate] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    location: "",
+    role: "",
+    source: "",
+    linkedinUrl: "",
+    portfolioUrl: "",
+    tags: "",
+    appliedDate: new Date().toISOString().split('T')[0]
+  });
+
+  const [newNote, setNewNote] = useState({ content: "", authorName: "", noteType: "general" });
+  const [newDocument, setNewDocument] = useState({ fileName: "", fileUrl: "", fileType: "", documentType: "resume" });
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["jobs-with-candidates"],
@@ -66,6 +106,28 @@ export default function CandidatesModule() {
     }
   });
 
+  const { data: notes = [] } = useQuery({
+    queryKey: ["candidate-notes", selectedCandidate?.id],
+    queryFn: async () => {
+      if (!selectedCandidate) return [];
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/notes`);
+      if (!res.ok) throw new Error("Failed to fetch notes");
+      return res.json() as Promise<CandidateNote[]>;
+    },
+    enabled: !!selectedCandidate
+  });
+
+  const { data: documents = [] } = useQuery({
+    queryKey: ["candidate-documents", selectedCandidate?.id],
+    queryFn: async () => {
+      if (!selectedCandidate) return [];
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/documents`);
+      if (!res.ok) throw new Error("Failed to fetch documents");
+      return res.json() as Promise<CandidateDocument[]>;
+    },
+    enabled: !!selectedCandidate
+  });
+
   useEffect(() => {
     if (candidates.length > 0 && searchString) {
       const params = new URLSearchParams(searchString);
@@ -78,6 +140,36 @@ export default function CandidatesModule() {
       }
     }
   }, [candidates, searchString]);
+
+  const createCandidateMutation = useMutation({
+    mutationFn: async (data: typeof newCandidate) => {
+      const res = await fetch("/api/candidates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...data,
+          tags: data.tags ? data.tags.split(",").map(t => t.trim()).filter(Boolean) : [],
+          stage: "Applied"
+        })
+      });
+      if (!res.ok) throw new Error("Failed to create candidate");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
+      setAddDialogOpen(false);
+      setNewCandidate({
+        name: "", email: "", phone: "", location: "", role: "", source: "",
+        linkedinUrl: "", portfolioUrl: "", tags: "",
+        appliedDate: new Date().toISOString().split('T')[0]
+      });
+      toast({ title: "Candidate Added", description: "New candidate has been added successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add candidate", variant: "destructive" });
+    }
+  });
 
   const updateStageMutation = useMutation({
     mutationFn: async ({ id, stage }: { id: string; stage: string }) => {
@@ -92,20 +184,11 @@ export default function CandidatesModule() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["candidates"] });
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
-      if (selectedCandidate) {
-        setSelectedCandidate(data);
-      }
-      toast({
-        title: "Stage Updated",
-        description: `Candidate moved to ${data.stage}`,
-      });
+      if (selectedCandidate) setSelectedCandidate(data);
+      toast({ title: "Stage Updated", description: `Candidate moved to ${data.stage}` });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update candidate stage",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update candidate stage", variant: "destructive" });
     }
   });
 
@@ -122,20 +205,85 @@ export default function CandidatesModule() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["candidates"] });
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
-      if (selectedCandidate) {
-        setSelectedCandidate(data);
-      }
-      toast({
-        title: "Position Updated",
-        description: data.jobId ? "Candidate assigned to position" : "Candidate unassigned",
-      });
+      if (selectedCandidate) setSelectedCandidate(data);
+      toast({ title: "Position Updated", description: data.jobId ? "Candidate assigned to position" : "Candidate unassigned" });
     },
     onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update candidate position",
-        variant: "destructive",
+      toast({ title: "Error", description: "Failed to update candidate position", variant: "destructive" });
+    }
+  });
+
+  const createNoteMutation = useMutation({
+    mutationFn: async (data: typeof newNote) => {
+      if (!selectedCandidate) throw new Error("No candidate selected");
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
       });
+      if (!res.ok) throw new Error("Failed to create note");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidate-notes", selectedCandidate?.id] });
+      setNewNote({ content: "", authorName: "", noteType: "general" });
+      toast({ title: "Note Added", description: "Note has been added to candidate profile." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add note", variant: "destructive" });
+    }
+  });
+
+  const deleteNoteMutation = useMutation({
+    mutationFn: async (noteId: string) => {
+      if (!selectedCandidate) throw new Error("No candidate selected");
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/notes/${noteId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete note");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidate-notes", selectedCandidate?.id] });
+      toast({ title: "Note Deleted", description: "Note has been removed." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete note", variant: "destructive" });
+    }
+  });
+
+  const createDocumentMutation = useMutation({
+    mutationFn: async (data: typeof newDocument) => {
+      if (!selectedCandidate) throw new Error("No candidate selected");
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/documents`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error("Failed to add document");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidate-documents", selectedCandidate?.id] });
+      setNewDocument({ fileName: "", fileUrl: "", fileType: "", documentType: "resume" });
+      toast({ title: "Document Added", description: "Document has been linked to candidate profile." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add document", variant: "destructive" });
+    }
+  });
+
+  const deleteDocumentMutation = useMutation({
+    mutationFn: async (docId: string) => {
+      if (!selectedCandidate) throw new Error("No candidate selected");
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/documents/${docId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete document");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidate-documents", selectedCandidate?.id] });
+      toast({ title: "Document Deleted", description: "Document has been removed." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete document", variant: "destructive" });
     }
   });
 
@@ -144,12 +292,8 @@ export default function CandidatesModule() {
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.role.toLowerCase().includes(searchQuery.toLowerCase());
-    
     const matchesStage = stageFilter === "all" || c.stage === stageFilter;
-    
-    const matchesJob = jobFilter === "all" || 
-      (jobFilter === "unassigned" ? !c.jobId : c.jobId === jobFilter);
-    
+    const matchesJob = jobFilter === "all" || (jobFilter === "unassigned" ? !c.jobId : c.jobId === jobFilter);
     return matchesSearch && matchesStage && matchesJob;
   });
 
@@ -172,6 +316,16 @@ export default function CandidatesModule() {
     return Math.round((index / (STAGES.length - 2)) * 100);
   };
 
+  const getNoteTypeColor = (type: string) => {
+    switch (type) {
+      case "interview": return "bg-purple-100 text-purple-700";
+      case "feedback": return "bg-blue-100 text-blue-700";
+      case "screening": return "bg-amber-100 text-amber-700";
+      case "reference": return "bg-green-100 text-green-700";
+      default: return "bg-slate-100 text-slate-700";
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-140px)]">
@@ -182,11 +336,145 @@ export default function CandidatesModule() {
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col">
-      <div className="shrink-0 mb-6">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Candidates</h1>
-        <p className="text-muted-foreground mt-2">
-          View and manage all candidates in your hiring process.
-        </p>
+      <div className="shrink-0 mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Candidates</h1>
+          <p className="text-muted-foreground mt-2">
+            View and manage all candidates in your hiring process.
+          </p>
+        </div>
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-add-candidate">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Candidate
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Add New Candidate</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input 
+                    id="name" 
+                    value={newCandidate.name} 
+                    onChange={e => setNewCandidate(p => ({ ...p, name: e.target.value }))}
+                    data-testid="input-candidate-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <Input 
+                    id="email" 
+                    type="email"
+                    value={newCandidate.email} 
+                    onChange={e => setNewCandidate(p => ({ ...p, email: e.target.value }))}
+                    data-testid="input-candidate-email"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone</Label>
+                  <Input 
+                    id="phone" 
+                    value={newCandidate.phone} 
+                    onChange={e => setNewCandidate(p => ({ ...p, phone: e.target.value }))}
+                    data-testid="input-candidate-phone"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input 
+                    id="location" 
+                    value={newCandidate.location} 
+                    onChange={e => setNewCandidate(p => ({ ...p, location: e.target.value }))}
+                    data-testid="input-candidate-location"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role / Position Applied *</Label>
+                  <Input 
+                    id="role" 
+                    value={newCandidate.role} 
+                    onChange={e => setNewCandidate(p => ({ ...p, role: e.target.value }))}
+                    data-testid="input-candidate-role"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="source">Source</Label>
+                  <Select 
+                    value={newCandidate.source} 
+                    onValueChange={v => setNewCandidate(p => ({ ...p, source: v }))}
+                  >
+                    <SelectTrigger data-testid="select-candidate-source">
+                      <SelectValue placeholder="How did they apply?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SOURCE_OPTIONS.map(s => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="linkedin">LinkedIn URL</Label>
+                  <Input 
+                    id="linkedin" 
+                    value={newCandidate.linkedinUrl} 
+                    onChange={e => setNewCandidate(p => ({ ...p, linkedinUrl: e.target.value }))}
+                    placeholder="https://linkedin.com/in/..."
+                    data-testid="input-candidate-linkedin"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="portfolio">Portfolio URL</Label>
+                  <Input 
+                    id="portfolio" 
+                    value={newCandidate.portfolioUrl} 
+                    onChange={e => setNewCandidate(p => ({ ...p, portfolioUrl: e.target.value }))}
+                    placeholder="https://..."
+                    data-testid="input-candidate-portfolio"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags (comma separated)</Label>
+                <Input 
+                  id="tags" 
+                  value={newCandidate.tags} 
+                  onChange={e => setNewCandidate(p => ({ ...p, tags: e.target.value }))}
+                  placeholder="e.g. Senior, Remote, Urgent"
+                  data-testid="input-candidate-tags"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="appliedDate">Applied Date</Label>
+                <Input 
+                  id="appliedDate" 
+                  type="date"
+                  value={newCandidate.appliedDate} 
+                  onChange={e => setNewCandidate(p => ({ ...p, appliedDate: e.target.value }))}
+                  data-testid="input-candidate-applied-date"
+                />
+              </div>
+              <Button 
+                onClick={() => createCandidateMutation.mutate(newCandidate)}
+                disabled={!newCandidate.name || !newCandidate.email || !newCandidate.role || createCandidateMutation.isPending}
+                data-testid="button-submit-candidate"
+              >
+                {createCandidateMutation.isPending ? "Adding..." : "Add Candidate"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="flex gap-6 flex-1 min-h-0">
@@ -231,7 +519,7 @@ export default function CandidatesModule() {
             <div className="space-y-2 pr-4">
               {filteredCandidates.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
-                  No candidates found matching your filters.
+                  {candidates.length === 0 ? "No candidates yet. Click 'Add Candidate' to get started." : "No candidates found matching your filters."}
                 </div>
               ) : (
                 filteredCandidates.map((candidate) => {
@@ -244,7 +532,7 @@ export default function CandidatesModule() {
                         "cursor-pointer transition-all hover:shadow-md",
                         isSelected && "ring-2 ring-primary"
                       )}
-                      onClick={() => setSelectedCandidate(candidate)}
+                      onClick={() => { setSelectedCandidate(candidate); setActiveTab("profile"); }}
                       data-testid={`card-candidate-${candidate.id}`}
                     >
                       <CardContent className="p-4">
@@ -283,8 +571,8 @@ export default function CandidatesModule() {
         </div>
 
         {selectedCandidate ? (
-          <Card className="w-[400px] shrink-0 flex flex-col">
-            <CardHeader className="shrink-0 pb-4">
+          <Card className="w-[450px] shrink-0 flex flex-col">
+            <CardHeader className="shrink-0 pb-2">
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-lg">
@@ -306,124 +594,337 @@ export default function CandidatesModule() {
               </div>
             </CardHeader>
             
-            <ScrollArea className="flex-1">
-              <div className="px-6 pb-6 space-y-6">
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Pipeline Progress</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>{selectedCandidate.stage}</span>
-                      <span className="text-muted-foreground">{getStageProgress(selectedCandidate.stage)}%</span>
-                    </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
-                      <div 
-                        className={cn(
-                          "h-full transition-all",
-                          selectedCandidate.stage === "Rejected" ? "bg-red-500" : "bg-primary"
-                        )}
-                        style={{ width: `${getStageProgress(selectedCandidate.stage)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+              <TabsList className="mx-6 grid grid-cols-3">
+                <TabsTrigger value="profile" data-testid="tab-profile">
+                  <User className="h-4 w-4 mr-1" /> Profile
+                </TabsTrigger>
+                <TabsTrigger value="notes" data-testid="tab-notes">
+                  <StickyNote className="h-4 w-4 mr-1" /> Notes
+                </TabsTrigger>
+                <TabsTrigger value="documents" data-testid="tab-documents">
+                  <FolderOpen className="h-4 w-4 mr-1" /> Docs
+                </TabsTrigger>
+              </TabsList>
 
-                <Separator />
-
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Update Stage</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    {STAGES.map(stage => (
-                      <Button
-                        key={stage}
-                        variant={selectedCandidate.stage === stage ? "default" : "outline"}
-                        size="sm"
-                        className="justify-start"
-                        onClick={() => {
-                          if (selectedCandidate.stage !== stage) {
-                            updateStageMutation.mutate({ id: selectedCandidate.id, stage });
-                          }
-                        }}
-                        disabled={updateStageMutation.isPending}
-                        data-testid={`button-stage-${stage.toLowerCase()}`}
-                      >
-                        <div className={cn("w-2 h-2 rounded-full mr-2", getStageColor(stage).split(' ')[0])} />
-                        {stage}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Assigned Position</h4>
-                  <Select 
-                    value={selectedCandidate.jobId || "none"} 
-                    onValueChange={(value) => {
-                      updateJobMutation.mutate({ 
-                        id: selectedCandidate.id, 
-                        jobId: value === "none" ? null : value 
-                      });
-                    }}
-                  >
-                    <SelectTrigger data-testid="select-assign-job">
-                      <SelectValue placeholder="Select a position" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No position assigned</SelectItem>
-                      {jobs.map(job => (
-                        <SelectItem key={job.id} value={job.id}>{job.title}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium text-muted-foreground">Contact</h4>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      <span data-testid="text-profile-email">{selectedCandidate.email}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span>Applied: {selectedCandidate.appliedDate}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {selectedCandidate.tags.length > 0 && (
-                  <>
-                    <Separator />
-                    <div className="space-y-3">
-                      <h4 className="text-sm font-medium text-muted-foreground">Tags</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedCandidate.tags.map(tag => (
-                          <Badge key={tag} variant="secondary" data-testid={`tag-${tag.toLowerCase()}`}>
-                            <Tag className="h-3 w-3 mr-1" />
-                            {tag}
-                          </Badge>
-                        ))}
+              <ScrollArea className="flex-1">
+                <TabsContent value="profile" className="px-6 pb-6 space-y-5 mt-4">
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground">Pipeline Progress</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>{selectedCandidate.stage}</span>
+                        <span className="text-muted-foreground">{getStageProgress(selectedCandidate.stage)}%</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-full transition-all",
+                            selectedCandidate.stage === "Rejected" ? "bg-red-500" : "bg-primary"
+                          )}
+                          style={{ width: `${getStageProgress(selectedCandidate.stage)}%` }}
+                        />
                       </div>
                     </div>
-                  </>
-                )}
+                  </div>
 
-                <Separator />
+                  <Separator />
 
-                <div className="pt-2">
-                  <Button className="w-full" variant="outline" data-testid="button-email-candidate">
-                    <Mail className="h-4 w-4 mr-2" />
-                    Email Candidate
-                  </Button>
-                </div>
-              </div>
-            </ScrollArea>
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground">Update Stage</h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {STAGES.map(stage => (
+                        <Button
+                          key={stage}
+                          variant={selectedCandidate.stage === stage ? "default" : "outline"}
+                          size="sm"
+                          className="justify-start"
+                          onClick={() => {
+                            if (selectedCandidate.stage !== stage) {
+                              updateStageMutation.mutate({ id: selectedCandidate.id, stage });
+                            }
+                          }}
+                          disabled={updateStageMutation.isPending}
+                          data-testid={`button-stage-${stage.toLowerCase()}`}
+                        >
+                          <div className={cn("w-2 h-2 rounded-full mr-2", getStageColor(stage).split(' ')[0])} />
+                          {stage}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground">Assigned Position</h4>
+                    <Select 
+                      value={selectedCandidate.jobId || "none"} 
+                      onValueChange={(value) => {
+                        updateJobMutation.mutate({ 
+                          id: selectedCandidate.id, 
+                          jobId: value === "none" ? null : value 
+                        });
+                      }}
+                    >
+                      <SelectTrigger data-testid="select-assign-job">
+                        <SelectValue placeholder="Select a position" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No position assigned</SelectItem>
+                        {jobs.map(job => (
+                          <SelectItem key={job.id} value={job.id}>{job.title}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground">Contact Information</h4>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span data-testid="text-profile-email">{selectedCandidate.email}</span>
+                      </div>
+                      {selectedCandidate.phone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          <span>{selectedCandidate.phone}</span>
+                        </div>
+                      )}
+                      {selectedCandidate.location && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          <span>{selectedCandidate.location}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span>Applied: {selectedCandidate.appliedDate}</span>
+                      </div>
+                      {selectedCandidate.source && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Briefcase className="h-4 w-4 text-muted-foreground" />
+                          <span>Source: {selectedCandidate.source}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {(selectedCandidate.linkedinUrl || selectedCandidate.portfolioUrl) && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Links</h4>
+                        <div className="flex gap-2">
+                          {selectedCandidate.linkedinUrl && (
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={selectedCandidate.linkedinUrl} target="_blank" rel="noopener noreferrer">
+                                <Linkedin className="h-4 w-4 mr-1" /> LinkedIn
+                              </a>
+                            </Button>
+                          )}
+                          {selectedCandidate.portfolioUrl && (
+                            <Button variant="outline" size="sm" asChild>
+                              <a href={selectedCandidate.portfolioUrl} target="_blank" rel="noopener noreferrer">
+                                <Globe className="h-4 w-4 mr-1" /> Portfolio
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {selectedCandidate.tags.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Tags</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedCandidate.tags.map(tag => (
+                            <Badge key={tag} variant="secondary" data-testid={`tag-${tag.toLowerCase()}`}>
+                              <Tag className="h-3 w-3 mr-1" />
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="notes" className="px-6 pb-6 space-y-4 mt-4">
+                  <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                    <h4 className="text-sm font-medium">Add Note</h4>
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input 
+                          placeholder="Your name"
+                          value={newNote.authorName}
+                          onChange={e => setNewNote(p => ({ ...p, authorName: e.target.value }))}
+                          data-testid="input-note-author"
+                        />
+                        <Select value={newNote.noteType} onValueChange={v => setNewNote(p => ({ ...p, noteType: v }))}>
+                          <SelectTrigger data-testid="select-note-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {NOTE_TYPES.map(t => (
+                              <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Textarea 
+                        placeholder="Write your note here..."
+                        value={newNote.content}
+                        onChange={e => setNewNote(p => ({ ...p, content: e.target.value }))}
+                        rows={3}
+                        data-testid="input-note-content"
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={() => createNoteMutation.mutate(newNote)}
+                        disabled={!newNote.content || !newNote.authorName || createNoteMutation.isPending}
+                        data-testid="button-add-note"
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Note
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {notes.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">No notes yet for this candidate.</p>
+                    ) : (
+                      notes.map(note => (
+                        <Card key={note.id} className="p-3">
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium text-sm">{note.authorName}</span>
+                                <Badge className={cn("text-xs", getNoteTypeColor(note.noteType))}>
+                                  {note.noteType}
+                                </Badge>
+                              </div>
+                              <p className="text-sm">{note.content}</p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(note.createdAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6"
+                              onClick={() => deleteNoteMutation.mutate(note.id)}
+                              data-testid={`button-delete-note-${note.id}`}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="documents" className="px-6 pb-6 space-y-4 mt-4">
+                  <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                    <h4 className="text-sm font-medium">Add Document Link</h4>
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input 
+                          placeholder="File name"
+                          value={newDocument.fileName}
+                          onChange={e => setNewDocument(p => ({ ...p, fileName: e.target.value }))}
+                          data-testid="input-doc-name"
+                        />
+                        <Select value={newDocument.documentType} onValueChange={v => setNewDocument(p => ({ ...p, documentType: v }))}>
+                          <SelectTrigger data-testid="select-doc-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DOCUMENT_TYPES.map(t => (
+                              <SelectItem key={t} value={t}>{t.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Input 
+                        placeholder="File URL (e.g., Google Drive, Dropbox link)"
+                        value={newDocument.fileUrl}
+                        onChange={e => setNewDocument(p => ({ ...p, fileUrl: e.target.value }))}
+                        data-testid="input-doc-url"
+                      />
+                      <Input 
+                        placeholder="File type (e.g., pdf, docx)"
+                        value={newDocument.fileType}
+                        onChange={e => setNewDocument(p => ({ ...p, fileType: e.target.value }))}
+                        data-testid="input-doc-filetype"
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={() => createDocumentMutation.mutate(newDocument)}
+                        disabled={!newDocument.fileName || !newDocument.fileUrl || !newDocument.fileType || createDocumentMutation.isPending}
+                        data-testid="button-add-document"
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Document
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {documents.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">No documents yet for this candidate.</p>
+                    ) : (
+                      documents.map(doc => (
+                        <Card key={doc.id} className="p-3">
+                          <div className="flex justify-between items-center gap-2">
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-8 w-8 text-muted-foreground" />
+                              <div>
+                                <p className="font-medium text-sm">{doc.fileName}</p>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">{doc.documentType}</Badge>
+                                  <span className="text-xs text-muted-foreground">{doc.fileType}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7"
+                                asChild
+                              >
+                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7"
+                                onClick={() => deleteDocumentMutation.mutate(doc.id)}
+                                data-testid={`button-delete-doc-${doc.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+              </ScrollArea>
+            </Tabs>
           </Card>
         ) : (
-          <Card className="w-[400px] shrink-0 flex items-center justify-center">
+          <Card className="w-[450px] shrink-0 flex items-center justify-center">
             <div className="text-center text-muted-foreground p-8">
               <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
                 <Search className="h-8 w-8" />

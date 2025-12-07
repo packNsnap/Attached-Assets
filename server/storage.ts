@@ -11,12 +11,18 @@ import {
   type InsertSkillsTestRecommendation,
   type InterviewRecommendation,
   type InsertInterviewRecommendation,
+  type CandidateNote,
+  type InsertCandidateNote,
+  type CandidateDocument,
+  type InsertCandidateDocument,
   users,
   jobs,
   candidates,
   interviewNotes,
   skillsTestRecommendations,
-  interviewRecommendations
+  interviewRecommendations,
+  candidateNotes,
+  candidateDocuments
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql, desc } from "drizzle-orm";
@@ -58,6 +64,16 @@ export interface IStorage {
   createInterviewRecommendation(rec: InsertInterviewRecommendation): Promise<InterviewRecommendation>;
   getInterviewRecommendations(): Promise<InterviewRecommendation[]>;
   updateInterviewRecommendationStatus(id: string, status: string): Promise<InterviewRecommendation | undefined>;
+  
+  updateCandidate(id: string, data: Partial<InsertCandidate>): Promise<Candidate | undefined>;
+  
+  createCandidateNote(note: InsertCandidateNote): Promise<CandidateNote>;
+  getCandidateNotes(candidateId: string): Promise<CandidateNote[]>;
+  deleteCandidateNote(id: string, candidateId: string): Promise<boolean>;
+  
+  createCandidateDocument(doc: InsertCandidateDocument): Promise<CandidateDocument>;
+  getCandidateDocuments(candidateId: string): Promise<CandidateDocument[]>;
+  deleteCandidateDocument(id: string, candidateId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -179,6 +195,47 @@ export class DatabaseStorage implements IStorage {
       .where(eq(interviewRecommendations.id, id))
       .returning();
     return result[0];
+  }
+
+  async updateCandidate(id: string, data: Partial<InsertCandidate>): Promise<Candidate | undefined> {
+    const result = await db
+      .update(candidates)
+      .set(data)
+      .where(eq(candidates.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async createCandidateNote(note: InsertCandidateNote): Promise<CandidateNote> {
+    const result = await db.insert(candidateNotes).values(note).returning();
+    return result[0];
+  }
+
+  async getCandidateNotes(candidateId: string): Promise<CandidateNote[]> {
+    return await db.select().from(candidateNotes).where(eq(candidateNotes.candidateId, candidateId)).orderBy(desc(candidateNotes.createdAt));
+  }
+
+  async deleteCandidateNote(id: string, candidateId: string): Promise<boolean> {
+    const note = await db.select().from(candidateNotes).where(eq(candidateNotes.id, id)).limit(1);
+    if (!note[0] || note[0].candidateId !== candidateId) return false;
+    const result = await db.delete(candidateNotes).where(eq(candidateNotes.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async createCandidateDocument(doc: InsertCandidateDocument): Promise<CandidateDocument> {
+    const result = await db.insert(candidateDocuments).values(doc).returning();
+    return result[0];
+  }
+
+  async getCandidateDocuments(candidateId: string): Promise<CandidateDocument[]> {
+    return await db.select().from(candidateDocuments).where(eq(candidateDocuments.candidateId, candidateId)).orderBy(desc(candidateDocuments.uploadedAt));
+  }
+
+  async deleteCandidateDocument(id: string, candidateId: string): Promise<boolean> {
+    const doc = await db.select().from(candidateDocuments).where(eq(candidateDocuments.id, id)).limit(1);
+    if (!doc[0] || doc[0].candidateId !== candidateId) return false;
+    const result = await db.delete(candidateDocuments).where(eq(candidateDocuments.id, id)).returning();
+    return result.length > 0;
   }
 }
 
