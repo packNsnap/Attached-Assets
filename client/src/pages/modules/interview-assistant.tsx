@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch } from "lucide-react";
+import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, ChevronDown, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch, Eye, StickyNote } from "lucide-react";
 import type { InterviewRecommendation } from "@shared/schema";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +103,7 @@ export default function InterviewAssistantModule() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [expandedInterviews, setExpandedInterviews] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -609,26 +611,75 @@ export default function InterviewAssistantModule() {
                         </div>
                         
                         {interviewSummary.length > 0 && (
-                          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                            <h4 className="text-xs font-medium mb-2 flex items-center gap-1">
-                              <MessageSquare className="h-3 w-3" /> Interview Summary
-                            </h4>
-                            <div className="space-y-2 text-xs">
-                              {interviewSummary.slice(0, 3).map((item: any, idx: number) => (
-                                <div key={idx} className="flex items-start gap-2">
-                                  <Badge variant="outline" className="text-xs shrink-0">
-                                    {formatCategoryName(item.category)} {item.score}/5
-                                  </Badge>
-                                  {item.notes && (
-                                    <span className="text-muted-foreground line-clamp-1">{item.notes}</span>
-                                  )}
-                                </div>
-                              ))}
-                              {interviewSummary.length > 3 && (
-                                <span className="text-primary text-xs">+ {interviewSummary.length - 3} more questions</span>
-                              )}
-                            </div>
-                          </div>
+                          <Collapsible
+                            open={expandedInterviews.has(rec.id)}
+                            onOpenChange={(open) => {
+                              setExpandedInterviews(prev => {
+                                const next = new Set(prev);
+                                if (open) {
+                                  next.add(rec.id);
+                                } else {
+                                  next.delete(rec.id);
+                                }
+                                return next;
+                              });
+                            }}
+                            className="mt-4"
+                          >
+                            <CollapsibleTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-between"
+                                data-testid={`toggle-interview-details-${rec.id}`}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <Eye className="h-4 w-4" />
+                                  View All Questions & Ratings ({interviewSummary.length})
+                                </span>
+                                <ChevronDown className={cn("h-4 w-4 transition-transform", expandedInterviews.has(rec.id) && "rotate-180")} />
+                              </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="mt-3">
+                              <div className="space-y-4 p-4 bg-muted/50 rounded-lg border">
+                                {interviewSummary.map((item: any, idx: number) => (
+                                  <div key={idx} className="p-3 bg-background rounded-lg border" data-testid={`question-detail-${rec.id}-${idx}`}>
+                                    <div className="flex items-start justify-between mb-2">
+                                      <Badge variant={getCategoryBadgeVariant(item.category)} className="text-xs">
+                                        {getCategoryIcon(item.category)} {formatCategoryName(item.category)}
+                                      </Badge>
+                                      <div className="flex items-center gap-1">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                          <Star
+                                            key={star}
+                                            className={cn(
+                                              "h-4 w-4",
+                                              star <= item.score
+                                                ? "fill-yellow-400 text-yellow-400"
+                                                : "text-muted-foreground/30"
+                                            )}
+                                          />
+                                        ))}
+                                        <span className="ml-1 text-sm font-medium">{item.score}/5</span>
+                                      </div>
+                                    </div>
+                                    <p className="text-sm font-medium mb-2">{item.question}</p>
+                                    {item.notes ? (
+                                      <div className="mt-2 p-2 bg-muted/50 rounded border-l-2 border-primary/50">
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                                          <StickyNote className="h-3 w-3" />
+                                          Interviewer Notes
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">{item.notes}</p>
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-muted-foreground italic">No notes recorded</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
                         )}
                         
                         <div className="grid grid-cols-2 gap-4 mt-4">
