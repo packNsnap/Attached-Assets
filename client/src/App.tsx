@@ -10,6 +10,10 @@ import ModulePlaceholder from "@/pages/module-placeholder";
 import { Layout } from "@/components/layout/Layout";
 import { MODULES } from "@/lib/constants";
 import JobDescriptionModule from "@/pages/modules/job-description";
+import ResumeAnalyzerModule from "@/pages/modules/resume-analyzer";
+import SkillsTestModule from "@/pages/modules/skills-test";
+import InterviewAssistantModule from "@/pages/modules/interview-assistant";
+import HiringPipelineModule from "@/pages/modules/hiring-pipeline";
 
 function Router() {
   return (
@@ -17,24 +21,24 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       
       {/* Protected Routes Wrapper */}
-      <Route path="/:rest*">
-        {(params) => {
-          return (
-            <Layout>
-              <Switch>
-                <Route path="/" component={Dashboard} />
-                <Route path="/jobs" component={JobDescriptionModule} />
-                
-                {/* Dynamically generate routes for all modules */}
-                {MODULES.filter(m => m.path !== "/" && m.path !== "/jobs").map(module => (
-                  <Route key={module.path} path={module.path} component={ModulePlaceholder} />
-                ))}
-                
-                <Route component={NotFound} />
-              </Switch>
-            </Layout>
-          );
-        }}
+      <Route>
+        <Layout>
+          <Switch>
+            <Route path="/" component={Dashboard} />
+            <Route path="/jobs" component={JobDescriptionModule} />
+            <Route path="/resume-analyzer" component={ResumeAnalyzerModule} />
+            <Route path="/skills-test" component={SkillsTestModule} />
+            <Route path="/interviews" component={InterviewAssistantModule} />
+            <Route path="/hiring" component={HiringPipelineModule} />
+            
+            {/* Dynamically generate routes for all modules */}
+            {MODULES.filter(m => m.path !== "/" && m.path !== "/jobs" && m.path !== "/resume-analyzer" && m.path !== "/skills-test" && m.path !== "/interviews" && m.path !== "/hiring").map(module => (
+              <Route key={module.path} path={module.path} component={ModulePlaceholder} />
+            ))}
+            
+            <Route component={NotFound} />
+          </Switch>
+        </Layout>
       </Route>
     </Switch>
   );
