@@ -5,7 +5,8 @@ import {
   insertJobSchema, 
   insertCandidateSchema, 
   insertInterviewNoteSchema,
-  insertSkillsTestRecommendationSchema
+  insertSkillsTestRecommendationSchema,
+  insertInterviewRecommendationSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -164,6 +165,47 @@ export async function registerRoutes(
       res.json(recommendation);
     } catch (error) {
       res.status(500).json({ error: "Failed to update recommendation status" });
+    }
+  });
+
+  app.post("/api/interview-recommendations", async (req, res) => {
+    try {
+      const recData = insertInterviewRecommendationSchema.parse(req.body);
+      const recommendation = await storage.createInterviewRecommendation(recData);
+      res.json(recommendation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create interview recommendation" });
+      }
+    }
+  });
+
+  app.get("/api/interview-recommendations", async (req, res) => {
+    try {
+      const recommendations = await storage.getInterviewRecommendations();
+      res.json(recommendations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch interview recommendations" });
+    }
+  });
+
+  app.patch("/api/interview-recommendations/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!status || typeof status !== "string") {
+        res.status(400).json({ error: "Status is required and must be a string" });
+        return;
+      }
+      const recommendation = await storage.updateInterviewRecommendationStatus(req.params.id, status);
+      if (!recommendation) {
+        res.status(404).json({ error: "Interview recommendation not found" });
+        return;
+      }
+      res.json(recommendation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update interview recommendation status" });
     }
   });
 

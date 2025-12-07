@@ -9,11 +9,14 @@ import {
   type InsertInterviewNote,
   type SkillsTestRecommendation,
   type InsertSkillsTestRecommendation,
+  type InterviewRecommendation,
+  type InsertInterviewRecommendation,
   users,
   jobs,
   candidates,
   interviewNotes,
-  skillsTestRecommendations
+  skillsTestRecommendations,
+  interviewRecommendations
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
@@ -47,6 +50,10 @@ export interface IStorage {
   createSkillsTestRecommendation(rec: InsertSkillsTestRecommendation): Promise<SkillsTestRecommendation>;
   getSkillsTestRecommendations(): Promise<SkillsTestRecommendation[]>;
   updateSkillsTestRecommendationStatus(id: string, status: string): Promise<SkillsTestRecommendation | undefined>;
+  
+  createInterviewRecommendation(rec: InsertInterviewRecommendation): Promise<InterviewRecommendation>;
+  getInterviewRecommendations(): Promise<InterviewRecommendation[]>;
+  updateInterviewRecommendationStatus(id: string, status: string): Promise<InterviewRecommendation | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -125,6 +132,24 @@ export class DatabaseStorage implements IStorage {
       .update(skillsTestRecommendations)
       .set({ status })
       .where(eq(skillsTestRecommendations.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async createInterviewRecommendation(rec: InsertInterviewRecommendation): Promise<InterviewRecommendation> {
+    const result = await db.insert(interviewRecommendations).values(rec).returning();
+    return result[0];
+  }
+
+  async getInterviewRecommendations(): Promise<InterviewRecommendation[]> {
+    return await db.select().from(interviewRecommendations);
+  }
+
+  async updateInterviewRecommendationStatus(id: string, status: string): Promise<InterviewRecommendation | undefined> {
+    const result = await db
+      .update(interviewRecommendations)
+      .set({ status })
+      .where(eq(interviewRecommendations.id, id))
       .returning();
     return result[0];
   }

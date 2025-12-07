@@ -92,3 +92,23 @@ export const insertSkillsTestRecommendationSchema = createInsertSchema(skillsTes
 
 export type InsertSkillsTestRecommendation = z.infer<typeof insertSkillsTestRecommendationSchema>;
 export type SkillsTestRecommendation = typeof skillsTestRecommendations.$inferSelect;
+
+export const interviewRecommendations = pgTable("interview_recommendations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidateName: text("candidate_name").notNull(),
+  jobTitle: text("job_title").notNull(),
+  testScore: integer("test_score").notNull(),
+  strengths: text("strengths").array().notNull(),
+  weaknesses: text("weaknesses").array().notNull(),
+  recommendedQuestions: text("recommended_questions").array().notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertInterviewRecommendationSchema = createInsertSchema(interviewRecommendations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertInterviewRecommendation = z.infer<typeof insertInterviewRecommendationSchema>;
+export type InterviewRecommendation = typeof interviewRecommendations.$inferSelect;
