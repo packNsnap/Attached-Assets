@@ -720,7 +720,7 @@ Respond in this exact JSON format:
 
   app.post("/api/generate-skills-test", async (req, res) => {
     try {
-      const { roleName, difficulty, skills, questionCount, jobDescription } = req.body;
+      const { roleName, difficulty, skills, questionCount, jobDescription, timePerQuestion } = req.body;
       
       if (!roleName || !difficulty || !skills) {
         res.status(400).json({ error: "Missing required fields: roleName, difficulty, skills" });
@@ -728,41 +728,46 @@ Respond in this exact JSON format:
       }
 
       const numQuestions = parseInt(questionCount) || 5;
+      const questionTimeLimit = parseInt(timePerQuestion) || 15;
 
       const jobContext = jobDescription 
         ? `\n\nJob Description for context:\n${jobDescription}\n\nUse the specific responsibilities and requirements from this job description to make questions highly relevant.`
         : '';
 
-      const prompt = `You are a senior hiring manager and industry expert creating a practical skills assessment for a ${roleName} position at the ${difficulty} level.
+      const prompt = `You are a senior hiring manager creating a TIMED multiple-choice skills assessment for a ${roleName} position at the ${difficulty} level.
 
-Your goal is to create REAL-WORLD SCENARIO questions that test how candidates would actually perform on the job - not textbook trivia.
+IMPORTANT: This is a TIMED test with ${questionTimeLimit} seconds per question. All questions MUST be multiple choice only - no open text questions. Questions should be answerable within the time limit without external research.
 
 Skills to assess: ${skills}${jobContext}
 
+## Question Format Requirements:
+
+Each question must have exactly 4 answer options with TWO correct answers of different quality:
+- bestAnswerIndex: The BEST answer (scores 100%) - the optimal professional response
+- goodAnswerIndex: A GOOD answer (scores 70%) - acceptable but not ideal
+- The other 2 options are WRONG (score 0%)
+
 ## Question Types to Generate:
 
-1. **Situational Judgment Questions** (multiple choice): Present a realistic workplace scenario the candidate might face. Ask "What would you do if..." or "How would you handle..."
-   - Example: "A client calls upset because their order is 3 days late and threatening to cancel. The delay was caused by a shipping partner. How do you respond?"
+1. **Situational Judgment**: Present a realistic workplace scenario. "What would you do if..." or "How would you handle..."
+   - Best answer = optimal professional response
+   - Good answer = acceptable but not ideal approach
 
-2. **Problem-Solving Scenarios** (open text): Describe a specific challenge common in this role. Ask the candidate to walk through their approach.
-   - Example: "You discover a critical bug in production that's affecting 10% of users. Walk me through your first 30 minutes of response."
+2. **Practical Application**: Test decision-making in role-specific contexts.
+   - Best answer = most efficient/effective approach
+   - Good answer = works but has drawbacks
 
-3. **Experience-Based Questions** (open text): Use the STAR format prompt to extract specific past experiences.
-   - Example: "Describe a time when you had to learn a new ${skills.split(',')[0] || 'skill'} under time pressure. What was the situation, and what did you do?"
-
-4. **Practical Application** (multiple choice): Test decision-making in role-specific contexts.
-   - Example: "When prioritizing ${skills.split(',')[0] || 'tasks'} work, which factor should typically take highest priority?"
+3. **Knowledge Application**: Apply knowledge to real scenarios (not pure trivia).
+   - Best answer = demonstrates deep understanding
+   - Good answer = shows basic competency
 
 ## Requirements:
-- Make questions specific to the ${roleName} role, not generic
-- Include realistic details: company names, metrics, team dynamics, deadlines
-- Multiple choice options should all be plausible (no obviously wrong answers)
-- Open text questions should probe for depth and specific examples
+- ALL ${numQuestions} questions must be multiple_choice type
+- Questions must be specific to the ${roleName} role
+- All 4 options should be plausible (no obviously wrong answers)
+- Questions should be answerable in ${questionTimeLimit} seconds without research
+- bestAnswerIndex and goodAnswerIndex must be different values (0-3)
 - Difficulty should match ${difficulty} level expectations
-
-Generate exactly ${numQuestions} questions with approximately 50% multiple choice and 50% open text.
-
-IMPORTANT: For multiple choice questions, you MUST include the correct answer index (0-3) in the "correctAnswer" field.
 
 Respond with JSON in this exact format:
 {
@@ -771,14 +776,9 @@ Respond with JSON in this exact format:
       "id": 1,
       "type": "multiple_choice",
       "text": "Scenario-based question here...",
-      "options": ["Option A with realistic action", "Option B with realistic action", "Option C with realistic action", "Option D with realistic action"],
-      "correctAnswer": 0,
-      "skill": "primary skill being tested"
-    },
-    {
-      "id": 2,
-      "type": "open_text",
-      "text": "Situational or experience-based question here...",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "bestAnswerIndex": 0,
+      "goodAnswerIndex": 2,
       "skill": "primary skill being tested"
     }
   ]
@@ -797,23 +797,54 @@ Respond with JSON in this exact format:
       }
 
       const result = JSON.parse(content);
+      
+      // Validate and ensure all questions are multiple choice with weighted answers
+      const validatedQuestions = (result.questions || []).map((q: any, idx: number) => {
+        // Ensure type is multiple_choice
+        if (q.type !== "multiple_choice" || !Array.isArray(q.options) || q.options.length !== 4) {
+          return null; // Invalid question
+        }
+        // Ensure bestAnswerIndex and goodAnswerIndex exist and are valid
+        if (typeof q.bestAnswerIndex !== "number" || q.bestAnswerIndex < 0 || q.bestAnswerIndex > 3) {
+          q.bestAnswerIndex = 0; // Default to first option
+        }
+        if (typeof q.goodAnswerIndex !== "number" || q.goodAnswerIndex < 0 || q.goodAnswerIndex > 3 || q.goodAnswerIndex === q.bestAnswerIndex) {
+          q.goodAnswerIndex = q.bestAnswerIndex === 0 ? 1 : 0; // Default to different option
+        }
+        return {
+          id: q.id || idx + 1,
+          type: "multiple_choice" as const,
+          text: q.text,
+          options: q.options,
+          bestAnswerIndex: q.bestAnswerIndex,
+          goodAnswerIndex: q.goodAnswerIndex,
+          skill: q.skill || skills.split(",")[0]?.trim() || "general",
+        };
+      }).filter(Boolean);
+      
+      if (validatedQuestions.length === 0) {
+        throw new Error("No valid questions generated");
+      }
+      
       const skillsArray = skills.split(",").map((s: string) => s.trim());
       
-      // Save test to database
+      // Save test to database with timePerQuestion
       const savedTest = await storage.createSkillsTest({
         roleName,
         difficulty,
         skills: skillsArray,
-        questions: JSON.stringify(result.questions),
+        questions: JSON.stringify(validatedQuestions),
         status: "active",
+        timePerQuestion: questionTimeLimit,
       });
       
       res.json({
         id: savedTest.id,
         roleName: savedTest.roleName,
         skills: savedTest.skills,
-        questions: result.questions,
+        questions: validatedQuestions,
         status: savedTest.status,
+        timePerQuestion: savedTest.timePerQuestion,
         candidatesCompleted: 0,
         avgScore: 0,
       });
@@ -1115,6 +1146,7 @@ Make the description professional but engaging. Use bullet points for responsibi
           difficulty: test.difficulty,
           skills: test.skills,
           questions: JSON.parse(test.questions),
+          timePerQuestion: test.timePerQuestion || 15,
         },
       });
     } catch (error) {
@@ -1198,8 +1230,21 @@ Make the description professional but engaging. Use bullet points for responsibi
             
             if (question) {
               if (question.type === "multiple_choice") {
-                // For multiple choice: check if answer matches correct option text
-                if (question.correctAnswer !== undefined && question.options) {
+                // For multiple choice: check weighted answers (bestAnswerIndex = 100%, goodAnswerIndex = 70%)
+                if (question.bestAnswerIndex !== undefined && question.goodAnswerIndex !== undefined && question.options) {
+                  const bestOptionText = question.options[question.bestAnswerIndex];
+                  const goodOptionText = question.options[question.goodAnswerIndex];
+                  if (answer === bestOptionText) {
+                    score = 100;
+                  } else if (answer === goodOptionText) {
+                    score = 70;
+                  } else {
+                    score = 0;
+                  }
+                  totalScore += score;
+                  scoredCount++;
+                } else if (question.correctAnswer !== undefined && question.options) {
+                  // Legacy: single correct answer
                   const correctOptionText = question.options[question.correctAnswer];
                   score = answer === correctOptionText ? 100 : 0;
                   totalScore += score;
@@ -1361,7 +1406,21 @@ Respond with ONLY a number between 0 and 100.`;
 
         if (question) {
           if (question.type === "multiple_choice") {
-            if (question.correctAnswer !== undefined && question.options) {
+            // For multiple choice: check weighted answers (bestAnswerIndex = 100%, goodAnswerIndex = 70%)
+            if (question.bestAnswerIndex !== undefined && question.goodAnswerIndex !== undefined && question.options) {
+              const bestOptionText = question.options[question.bestAnswerIndex];
+              const goodOptionText = question.options[question.goodAnswerIndex];
+              if (response.answer === bestOptionText) {
+                score = 100;
+              } else if (response.answer === goodOptionText) {
+                score = 70;
+              } else {
+                score = 0;
+              }
+              totalScore += score;
+              scoredCount++;
+            } else if (question.correctAnswer !== undefined && question.options) {
+              // Legacy: single correct answer
               const correctOptionText = question.options[question.correctAnswer];
               score = response.answer === correctOptionText ? 100 : 0;
               totalScore += score;

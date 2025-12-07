@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, Trash2, CheckCircle2, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, Copy, Mail, Clock, Eye, FileText, ExternalLink, ChevronRight, RotateCcw, ClipboardList, RefreshCw } from "lucide-react";
+import { Loader2, Trash2, CheckCircle2, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, Copy, Mail, Clock, Eye, FileText, ExternalLink, ChevronRight, RotateCcw, ClipboardList, RefreshCw, AlertCircle } from "lucide-react";
 import type { SkillsTestRecommendation, SkillsTest, SkillsTestInvitation, SkillsTestResponse } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -55,6 +55,7 @@ const formSchema = z.object({
   difficulty: z.string().min(1, "Difficulty is required"),
   skills: z.string().min(2, "Skills are required"),
   questionCount: z.string(),
+  timePerQuestion: z.string(),
 });
 
 type Question = {
@@ -218,6 +219,7 @@ export default function SkillsTestModule() {
       difficulty: "Intermediate",
       skills: "",
       questionCount: "5",
+      timePerQuestion: "15",
     },
   });
 
@@ -267,6 +269,7 @@ export default function SkillsTestModule() {
           difficulty: values.difficulty,
           skills: values.skills,
           questionCount: values.questionCount,
+          timePerQuestion: values.timePerQuestion,
           jobDescription: pendingJobDescription || undefined,
         }),
       });
@@ -618,6 +621,36 @@ export default function SkillsTestModule() {
                       )}
                     />
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="timePerQuestion"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Time Per Question (seconds)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min="5" 
+                            max="120" 
+                            {...field} 
+                            data-testid="input-time-per-question"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {parseInt(field.value) > 20 ? (
+                            <span className="text-amber-600 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" />
+                              Times over 20 seconds may allow candidates to look up answers
+                            </span>
+                          ) : (
+                            "Recommended: 15 seconds to prevent answer lookup"
+                          )}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={form.control}
