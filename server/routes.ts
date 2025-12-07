@@ -14,6 +14,7 @@ import { z } from "zod";
 import OpenAI from "openai";
 import multer from "multer";
 import * as mammoth from "mammoth";
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const upload = multer({ storage: multer.memoryStorage() });
@@ -368,6 +369,28 @@ export async function registerRoutes(
     }
   }
 
+  async function extractTextFromPdf(buffer: Buffer): Promise<string> {
+    try {
+      const data = new Uint8Array(buffer);
+      const pdf = await pdfjs.getDocument({ data }).promise;
+      let fullText = "";
+      
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(" ");
+        fullText += pageText + "\n";
+      }
+      
+      return fullText.trim();
+    } catch (error) {
+      console.error("PDF extraction error:", error);
+      throw new Error("Failed to extract text from PDF");
+    }
+  }
+
   app.post("/api/upload-resume", upload.single("file"), async (req, res) => {
     try {
       const { candidateId } = req.body;
@@ -383,8 +406,7 @@ export async function registerRoutes(
       const fileExt = fileName.split(".").pop()?.toLowerCase();
 
       if (fileExt === "pdf") {
-        // For PDFs, extract basic text - for now use a placeholder that can be analyzed
-        resumeText = `[PDF Resume: ${fileName}]\n\nNote: PDF text extraction requires advanced processing. Please ensure your resume is in DOCX format for best results.`;
+        resumeText = await extractTextFromPdf(file.buffer);
       } else if (fileExt === "docx" || fileExt === "doc") {
         resumeText = await extractTextFromDocx(file.buffer);
       } else {
