@@ -10,6 +10,8 @@ import ModulePlaceholder from "@/pages/module-placeholder";
 import { Layout } from "@/components/layout/Layout";
 import { MODULES } from "@/lib/constants";
 
+import JobDescriptionModule from "@/pages/modules/job-description";
+
 function Router() {
   return (
     <Switch>
@@ -24,9 +26,10 @@ function Router() {
             <Layout>
               <Switch>
                 <Route path="/" component={Dashboard} />
+                <Route path="/jobs" component={JobDescriptionModule} />
                 
                 {/* Dynamically generate routes for all modules */}
-                {MODULES.filter(m => m.path !== "/").map(module => (
+                {MODULES.filter(m => m.path !== "/" && m.path !== "/jobs").map(module => (
                   <Route key={module.path} path={module.path} component={ModulePlaceholder} />
                 ))}
                 
