@@ -1554,7 +1554,7 @@ Respond with ONLY a number between 0 and 100.`;
   // Generate AI-powered interview questions based on resume, test results, and AI detection
   app.post("/api/generate-interview-questions", async (req, res) => {
     try {
-      const { candidateId, candidateName, jobTitle, testScore, strengths, weaknesses } = req.body;
+      const { candidateId, candidateName, jobTitle, testScore, strengths, weaknesses, recommendationId } = req.body;
       
       if (!candidateName || !jobTitle) {
         res.status(400).json({ error: "candidateName and jobTitle are required" });
@@ -1566,6 +1566,10 @@ Respond with ONLY a number between 0 and 100.`;
       let resumeAnalysisData: any = null;
       let testResponses: any[] = [];
       let skillsTestInfo: any = null;
+      
+      // Derived strengths and weaknesses from actual data
+      let derivedStrengths: string[] = strengths || [];
+      let derivedWeaknesses: string[] = weaknesses || [];
 
       if (candidateId) {
         // Get resume text from documents
@@ -1577,6 +1581,14 @@ Respond with ONLY a number between 0 and 100.`;
         const analyses = await storage.getResumeAnalysisByCandidateId(candidateId);
         if (analyses.length > 0) {
           resumeAnalysisData = analyses[0]; // Most recent analysis
+          // Derive strengths from matched skills
+          if (resumeAnalysisData.matchedSkills && resumeAnalysisData.matchedSkills.length > 0) {
+            derivedStrengths = Array.from(new Set([...derivedStrengths, ...resumeAnalysisData.matchedSkills]));
+          }
+          // Derive weaknesses from missing skills
+          if (resumeAnalysisData.missingSkills && resumeAnalysisData.missingSkills.length > 0) {
+            derivedWeaknesses = Array.from(new Set([...derivedWeaknesses, ...resumeAnalysisData.missingSkills]));
+          }
         }
 
         // Get test responses and skills test info
@@ -1591,6 +1603,30 @@ Respond with ONLY a number between 0 and 100.`;
               skills: test.skills,
               questions: JSON.parse(test.questions)
             };
+            
+            // Analyze test responses to derive strengths/weaknesses
+            const questionPerformance: Record<string, { total: number; scored: number }> = {};
+            testResponses.forEach((r) => {
+              const question = skillsTestInfo.questions[r.questionIndex];
+              if (question && r.score !== null) {
+                const skill = question.skill || "General";
+                if (!questionPerformance[skill]) {
+                  questionPerformance[skill] = { total: 0, scored: 0 };
+                }
+                questionPerformance[skill].total += r.score;
+                questionPerformance[skill].scored += 1;
+              }
+            });
+            
+            // Skills with high scores are strengths, low scores are weaknesses
+            for (const [skill, perf] of Object.entries(questionPerformance)) {
+              const avg = perf.scored > 0 ? perf.total / perf.scored : 0;
+              if (avg >= 75 && !derivedStrengths.includes(skill)) {
+                derivedStrengths.push(skill);
+              } else if (avg < 50 && !derivedWeaknesses.includes(skill)) {
+                derivedWeaknesses.push(skill);
+              }
+            }
           }
         }
       }
@@ -1603,9 +1639,9 @@ Name: ${candidateName}
 Position: ${jobTitle}
 Test Score: ${testScore ? `${testScore}%` : "Not available"}
 
-${strengths && strengths.length > 0 ? `IDENTIFIED STRENGTHS:\n${strengths.join(", ")}` : ""}
+${derivedStrengths.length > 0 ? `IDENTIFIED STRENGTHS:\n${derivedStrengths.join(", ")}` : ""}
 
-${weaknesses && weaknesses.length > 0 ? `AREAS TO PROBE:\n${weaknesses.join(", ")}` : ""}
+${derivedWeaknesses.length > 0 ? `AREAS TO PROBE:\n${derivedWeaknesses.join(", ")}` : ""}
 
 ${resumeText ? `RESUME CONTENT:\n${resumeText.substring(0, 3000)}${resumeText.length > 3000 ? "..." : ""}` : "No resume available"}
 
@@ -1743,6 +1779,17 @@ Respond in this exact JSON format:
         } catch {
           aiDetectionLevel = null;
         }
+      }
+      
+      // Save the generated questions to the recommendation if recommendationId is provided
+      if (recommendationId) {
+        const questionTexts = finalQuestions.map((q: any) => q.text);
+        await storage.updateInterviewRecommendation(recommendationId, {
+          recommendedQuestions: questionTexts,
+          strengths: derivedStrengths,
+          weaknesses: derivedWeaknesses,
+          status: "interview_started"
+        });
       }
       
       res.json({

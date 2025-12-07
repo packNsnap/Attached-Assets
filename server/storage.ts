@@ -79,6 +79,7 @@ export interface IStorage {
   createInterviewRecommendation(rec: InsertInterviewRecommendation): Promise<InterviewRecommendation>;
   getInterviewRecommendations(): Promise<InterviewRecommendation[]>;
   updateInterviewRecommendationStatus(id: string, status: string): Promise<InterviewRecommendation | undefined>;
+  updateInterviewRecommendation(id: string, data: { recommendedQuestions?: string[]; strengths?: string[]; weaknesses?: string[]; status?: string }): Promise<InterviewRecommendation | undefined>;
   
   updateCandidate(id: string, data: Partial<InsertCandidate>): Promise<Candidate | undefined>;
   
@@ -263,6 +264,15 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .update(interviewRecommendations)
       .set({ status })
+      .where(eq(interviewRecommendations.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async updateInterviewRecommendation(id: string, data: { recommendedQuestions?: string[]; strengths?: string[]; weaknesses?: string[]; status?: string }): Promise<InterviewRecommendation | undefined> {
+    const result = await db
+      .update(interviewRecommendations)
+      .set(data)
       .where(eq(interviewRecommendations.id, id))
       .returning();
     return result[0];

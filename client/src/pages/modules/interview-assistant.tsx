@@ -180,6 +180,7 @@ export default function InterviewAssistantModule() {
           testScore: rec.testScore,
           strengths: rec.strengths,
           weaknesses: rec.weaknesses,
+          recommendationId: rec.id,
         }),
       });
 
@@ -212,7 +213,8 @@ export default function InterviewAssistantModule() {
       setNotes({});
       setActiveTab("interview");
       
-      updateRecommendationStatus.mutate({ id: rec.id, status: "interview_started" });
+      // Refresh the recommendations list to show updated questions and status
+      queryClient.invalidateQueries({ queryKey: ["/api/interview-recommendations"] });
       
       toast({
         title: "AI Interview Guide Ready",
