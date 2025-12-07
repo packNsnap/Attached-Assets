@@ -87,6 +87,8 @@ export default function CandidatesModule() {
 
   const [newNote, setNewNote] = useState({ content: "", authorName: "", noteType: "general" });
   const [newDocument, setNewDocument] = useState({ fileName: "", fileUrl: "", fileType: "", documentType: "resume" });
+  const [resumeText, setResumeText] = useState("");
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["jobs-with-candidates"],
@@ -284,6 +286,29 @@ export default function CandidatesModule() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete document", variant: "destructive" });
+    }
+  });
+
+  const uploadResumeMutation = useMutation({
+    mutationFn: async (data: { candidateId: string; resumeText: string; fileName: string }) => {
+      const res = await fetch("/api/upload-resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error("Failed to upload resume");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      if (selectedCandidate) setSelectedCandidate(data.candidate);
+      setResumeText("");
+      setIsUploadingResume(false);
+      toast({ title: "Resume Uploaded", description: "Resume is now available for analysis." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to upload resume", variant: "destructive" });
+      setIsUploadingResume(false);
     }
   });
 
@@ -713,6 +738,20 @@ export default function CandidatesModule() {
                     </div>
                   </div>
 
+                  {selectedCandidate.resumeUrl && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Resume</h4>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                          <a href={selectedCandidate.resumeUrl} target="_blank" rel="noopener noreferrer">
+                            <FileText className="h-4 w-4 mr-1" /> View Uploaded Resume
+                          </a>
+                        </Button>
+                      </div>
+                    </>
+                  )}
+
                   {(selectedCandidate.linkedinUrl || selectedCandidate.portfolioUrl) && (
                     <>
                       <Separator />
@@ -832,6 +871,36 @@ export default function CandidatesModule() {
                 </TabsContent>
 
                 <TabsContent value="documents" className="px-6 pb-6 space-y-4 mt-4">
+                  <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                    <h4 className="text-sm font-medium">Upload Resume</h4>
+                    <div className="space-y-2">
+                      <Textarea 
+                        placeholder="Paste resume content here... (for Resume Logic Analysis)"
+                        value={resumeText}
+                        onChange={e => setResumeText(e.target.value)}
+                        rows={4}
+                        data-testid="input-resume-content"
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          if (resumeText.trim()) {
+                            setIsUploadingResume(true);
+                            uploadResumeMutation.mutate({
+                              candidateId: selectedCandidate.id,
+                              resumeText: resumeText,
+                              fileName: `${selectedCandidate.name}-resume`
+                            });
+                          }
+                        }}
+                        disabled={!resumeText.trim() || uploadResumeMutation.isPending}
+                        data-testid="button-upload-resume"
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> {uploadResumeMutation.isPending ? "Uploading..." : "Upload Resume"}
+                      </Button>
+                    </div>
+                  </div>
+
                   <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
                     <h4 className="text-sm font-medium">Add Document Link</h4>
                     <div className="space-y-2">

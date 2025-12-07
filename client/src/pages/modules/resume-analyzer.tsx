@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import * as z from "zod";
 import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 
 import { Button } from "@/components/ui/button";
@@ -64,8 +63,18 @@ export default function ResumeAnalyzerModule() {
   const [result, setResult] = useState<AnalysisResult>(null);
   const [fileName, setFileName] = useState<string>("");
   const [resumeText, setResumeText] = useState<string>("");
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
   const { toast } = useToast();
   const [, navigate] = useLocation();
+
+  const { data: candidates = [] } = useQuery<{ id: string; name: string; resumeUrl?: string }[]>({
+    queryKey: ["candidates-with-resumes"],
+    queryFn: async () => {
+      const res = await fetch("/api/candidates");
+      if (!res.ok) throw new Error("Failed to fetch candidates");
+      return res.json();
+    }
+  });
 
   const recommendMutation = useMutation({
     mutationFn: async (data: { candidateName: string; jobId: string; jobTitle: string; skillsNeeded: string[]; fitScore: number }) => {
@@ -118,6 +127,15 @@ export default function ResumeAnalyzerModule() {
     if (e.target.files && e.target.files[0]) {
       setFileName(e.target.files[0].name);
       form.setValue("resumeName", e.target.files[0].name);
+    }
+  };
+
+  const handleCandidateSelect = (candidateId: string) => {
+    setSelectedCandidateId(candidateId);
+    const candidate = candidates.find(c => c.id === candidateId);
+    if (candidate && candidate.resumeUrl) {
+      setFileName(`${candidate.name}'s Resume`);
+      setResumeText(`[Resume from candidate ${candidate.name} - use this for analysis]`);
     }
   };
 
@@ -175,7 +193,28 @@ export default function ResumeAnalyzerModule() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 
                 <div className="space-y-2">
-                  <Label>Candidate Resume (PDF/Docx)</Label>
+                  <Label>Select Candidate from System</Label>
+                  <Select value={selectedCandidateId} onValueChange={handleCandidateSelect}>
+                    <SelectTrigger data-testid="select-candidate-resume">
+                      <SelectValue placeholder="Choose a candidate with uploaded resume" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {candidates
+                        .filter(c => c.resumeUrl)
+                        .map((candidate) => (
+                          <SelectItem key={candidate.id} value={candidate.id} data-testid={`option-candidate-${candidate.id}`}>
+                            {candidate.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  {candidates.filter(c => c.resumeUrl).length === 0 && (
+                    <p className="text-xs text-muted-foreground">No candidates with uploaded resumes. Add one in the Candidates module first.</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Or Upload Resume (PDF/Docx)</Label>
                   <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer relative">
                     <Input 
                       type="file" 

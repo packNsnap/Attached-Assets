@@ -353,6 +353,43 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/upload-resume", async (req, res) => {
+    try {
+      const { candidateId, resumeText, fileName } = req.body;
+      
+      if (!candidateId || !resumeText) {
+        res.status(400).json({ error: "candidateId and resumeText are required" });
+        return;
+      }
+
+      const resumeUrl = `/api/resume/${candidateId}`;
+      const candidate = await storage.updateCandidate(candidateId, { resumeUrl });
+      
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+
+      res.json({ success: true, resumeUrl, candidate });
+    } catch (error) {
+      console.error("Resume upload error:", error);
+      res.status(500).json({ error: "Failed to upload resume" });
+    }
+  });
+
+  app.get("/api/resume/:candidateId", async (req, res) => {
+    try {
+      const candidate = await storage.getCandidate(req.params.candidateId);
+      if (!candidate || !candidate.resumeUrl) {
+        res.status(404).json({ error: "Resume not found" });
+        return;
+      }
+      res.json({ candidateId: candidate.id, resumeUrl: candidate.resumeUrl });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch resume" });
+    }
+  });
+
   app.post("/api/generate-job-description", async (req, res) => {
     try {
       const { title, level, location, skills, notes } = req.body;
