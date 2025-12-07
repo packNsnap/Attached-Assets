@@ -1123,7 +1123,8 @@ Make the description professional but engaging. Use bullet points for responsibi
   // Public endpoint - Submit test answers (no auth required)
   app.post("/api/public/skills-test/:token/submit", async (req, res) => {
     try {
-      const { answers } = req.body;
+      // Accept both "answers" and "responses" for flexibility
+      const answers = req.body.answers || req.body.responses;
       
       if (!answers || !Array.isArray(answers)) {
         res.status(400).json({ error: "Answers array is required" });
