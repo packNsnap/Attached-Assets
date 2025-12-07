@@ -60,9 +60,9 @@ const formSchema = z.object({
 
 type Question = {
   id: number;
-  type: "multiple_choice" | "open_text";
+  type: "multiple_choice";
   text: string;
-  options?: string[];
+  options: string[];
   skill?: string;
 };
 
@@ -80,9 +80,9 @@ function isValidQuestion(q: any): q is Question {
     typeof q === "object" &&
     typeof q.id === "number" &&
     typeof q.text === "string" &&
-    (q.type === "multiple_choice" || q.type === "open_text") &&
+    q.type === "multiple_choice" &&
     (q.skill === undefined || typeof q.skill === "string") &&
-    (q.options === undefined || (Array.isArray(q.options) && q.options.every((opt: any) => typeof opt === "string")))
+    Array.isArray(q.options) && q.options.every((opt: any) => typeof opt === "string")
   );
 }
 
@@ -219,7 +219,7 @@ export default function SkillsTestModule() {
       difficulty: "Intermediate",
       skills: "",
       questionCount: "5",
-      timePerQuestion: "15",
+      timePerQuestion: "25",
     },
   });
 
@@ -711,18 +711,13 @@ export default function SkillsTestModule() {
                             {q.skill && (
                               <Badge variant="outline" className="text-xs">{q.skill}</Badge>
                             )}
-                            {q.type === "multiple_choice" && q.options && (
-                              <div className="space-y-1 mt-2">
-                                {q.options.map((opt, i) => (
-                                  <p key={i} className="text-xs text-muted-foreground pl-2 border-l-2 border-muted">
-                                    {opt}
-                                  </p>
-                                ))}
-                              </div>
-                            )}
-                            {q.type === "open_text" && (
-                              <p className="text-xs text-muted-foreground italic">Open-ended response</p>
-                            )}
+                            <div className="space-y-1 mt-2">
+                              {q.options.map((opt, i) => (
+                                <p key={i} className="text-xs text-muted-foreground pl-2 border-l-2 border-muted">
+                                  {opt}
+                                </p>
+                              ))}
+                            </div>
                           </div>
                         </div>
                       </CardContent>

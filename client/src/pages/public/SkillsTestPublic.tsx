@@ -18,9 +18,9 @@ import {
 
 type Question = {
   id: number;
-  type: "multiple_choice" | "open_text";
+  type: "multiple_choice";
   text: string;
-  options?: string[];
+  options: string[];
   correctAnswer?: string;
   bestAnswerIndex?: number;
   goodAnswerIndex?: number;
@@ -32,8 +32,8 @@ function isValidQuestion(q: any): q is Question {
     typeof q === "object" &&
     typeof q.id === "number" &&
     typeof q.text === "string" &&
-    (q.type === "multiple_choice" || q.type === "open_text") &&
-    (q.options === undefined || (Array.isArray(q.options) && q.options.every((opt: any) => typeof opt === "string")))
+    q.type === "multiple_choice" &&
+    Array.isArray(q.options) && q.options.every((opt: any) => typeof opt === "string")
   );
 }
 
