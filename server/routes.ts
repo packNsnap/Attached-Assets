@@ -409,6 +409,16 @@ export async function registerRoutes(
         return;
       }
 
+      // Also save to the documents table for persistence
+      await storage.createCandidateDocument({
+        candidateId,
+        fileName: fileName,
+        fileType: fileExt || "unknown",
+        fileUrl: fileName,
+        documentType: "Resume",
+        resumeText: resumeText
+      });
+
       res.json({ success: true, fileName, resumeText, candidate });
     } catch (error) {
       console.error("Resume upload error:", error);
@@ -423,7 +433,13 @@ export async function registerRoutes(
         res.status(404).json({ error: "Resume not found" });
         return;
       }
-      const resumeText = resumeStore.get(req.params.candidateId) || "[Resume text not available]";
+      // First try in-memory, then fall back to database
+      let resumeText = resumeStore.get(req.params.candidateId);
+      if (!resumeText) {
+        const documents = await storage.getCandidateDocuments(req.params.candidateId);
+        const resumeDoc = documents.find(d => d.documentType === "Resume" && d.resumeText);
+        resumeText = resumeDoc?.resumeText || "[Resume text not available]";
+      }
       res.json({ candidateId: candidate.id, resumeUrl: candidate.resumeUrl, resumeText });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch resume" });

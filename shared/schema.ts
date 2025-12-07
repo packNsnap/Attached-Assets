@@ -88,6 +88,7 @@ export const candidateDocuments = pgTable("candidate_documents", {
   fileType: text("file_type").notNull(),
   fileUrl: text("file_url").notNull(),
   documentType: text("document_type").notNull(),
+  resumeText: text("resume_text"),
   uploadedAt: timestamp("uploaded_at").notNull().default(sql`now()`),
 });
 
