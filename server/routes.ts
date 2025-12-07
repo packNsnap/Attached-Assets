@@ -1083,6 +1083,17 @@ Make the description professional but engaging. Use bullet points for responsibi
     }
   });
 
+  // Get recent completed invitations (limited) - must be before /:id route
+  app.get("/api/skills-test-invitations/recent-completed", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 5;
+      const invitations = await storage.getRecentCompletedInvitations(limit);
+      res.json(invitations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch recent completed invitations" });
+    }
+  });
+
   app.get("/api/skills-test-invitations/:id", async (req, res) => {
     try {
       const invitation = await storage.getSkillsTestInvitation(req.params.id);
@@ -1537,17 +1548,6 @@ Respond with ONLY a number between 0 and 100.`;
     } catch (error) {
       console.error("Rescore error:", error);
       res.status(500).json({ error: "Failed to rescore test" });
-    }
-  });
-
-  // Get recent completed invitations (limited)
-  app.get("/api/skills-test-invitations/recent-completed", async (req, res) => {
-    try {
-      const limit = parseInt(req.query.limit as string) || 5;
-      const invitations = await storage.getRecentCompletedInvitations(limit);
-      res.json(invitations);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch recent completed invitations" });
     }
   });
 
