@@ -65,7 +65,36 @@ export async function registerRoutes(
 
   app.patch("/api/jobs/:id", async (req, res) => {
     try {
-      const jobData = req.body;
+      const rawData = req.body;
+      
+      // Coerce and validate the data before updating
+      const jobData: Record<string, any> = {};
+      
+      if (rawData.title !== undefined) jobData.title = String(rawData.title);
+      if (rawData.level !== undefined) jobData.level = String(rawData.level);
+      if (rawData.location !== undefined) jobData.location = String(rawData.location);
+      if (rawData.status !== undefined) jobData.status = String(rawData.status);
+      if (rawData.description !== undefined) jobData.description = String(rawData.description);
+      
+      // Handle skills - convert string to array if needed
+      if (rawData.skills !== undefined) {
+        if (typeof rawData.skills === "string") {
+          jobData.skills = rawData.skills.split(",").map((s: string) => s.trim()).filter(Boolean);
+        } else if (Array.isArray(rawData.skills)) {
+          jobData.skills = rawData.skills;
+        }
+      }
+      
+      // Parse salary values to numbers
+      if (rawData.salaryMin !== undefined) {
+        const parsed = parseInt(String(rawData.salaryMin), 10);
+        if (!isNaN(parsed)) jobData.salaryMin = parsed;
+      }
+      if (rawData.salaryMax !== undefined) {
+        const parsed = parseInt(String(rawData.salaryMax), 10);
+        if (!isNaN(parsed)) jobData.salaryMax = parsed;
+      }
+      
       const job = await storage.updateJob(req.params.id, jobData);
       if (!job) {
         res.status(404).json({ error: "Job not found" });
@@ -73,6 +102,7 @@ export async function registerRoutes(
       }
       res.json(job);
     } catch (error) {
+      console.error("Job update error:", error);
       res.status(500).json({ error: "Failed to update job" });
     }
   });
