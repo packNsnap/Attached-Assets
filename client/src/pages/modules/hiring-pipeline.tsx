@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   MoreHorizontal, 
@@ -11,7 +12,8 @@ import {
   XCircle, 
   GripVertical,
   Briefcase,
-  Filter
+  Filter,
+  UserCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +66,7 @@ export default function HiringPipelineModule() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string>("all");
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -242,6 +245,12 @@ export default function HiringPipelineModule() {
                               }} data-testid={`menu-item-email-${candidate.id}`}>
                                 <Mail className="mr-2 h-3 w-3" />
                                 Email Candidate
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                navigate(`/candidates?id=${candidate.id}`);
+                              }} data-testid={`menu-item-profile-${candidate.id}`}>
+                                <UserCircle className="mr-2 h-3 w-3" />
+                                View Profile
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

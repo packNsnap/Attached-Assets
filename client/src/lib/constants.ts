@@ -9,7 +9,8 @@ import {
   GraduationCap, 
   Target, 
   BarChart,
-  LayoutDashboard
+  LayoutDashboard,
+  UserCircle
 } from "lucide-react";
 
 export const APP_NAME = "HR Nexus";
@@ -50,6 +51,12 @@ export const MODULES = [
     path: "/references",
     icon: UserCheck,
     description: "Automated reference request templates"
+  },
+  {
+    title: "Candidates",
+    path: "/candidates",
+    icon: UserCircle,
+    description: "View and manage all candidates"
   },
   {
     title: "Hiring Pipeline",

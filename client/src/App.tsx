@@ -17,6 +17,7 @@ import PoliciesDocsModule from "@/pages/modules/policies-docs";
 import OnboardingModule from "@/pages/modules/onboarding";
 import PerformanceModule from "@/pages/modules/performance";
 import AnalyticsModule from "@/pages/modules/analytics";
+import CandidatesModule from "@/pages/modules/candidates";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
             <Route path="/resume-analyzer" component={ResumeAnalyzerModule} />
             <Route path="/skills-test" component={SkillsTestModule} />
             <Route path="/interviews" component={InterviewAssistantModule} />
+            <Route path="/candidates" component={CandidatesModule} />
             <Route path="/hiring" component={HiringPipelineModule} />
             <Route path="/references" component={ReferenceCheckModule} />
             <Route path="/policies" component={PoliciesDocsModule} />
