@@ -141,10 +141,9 @@ export default function CandidatesModule() {
     queryKey: ["resume-analysis", selectedCandidate?.id],
     queryFn: async () => {
       if (!selectedCandidate) return [];
-      const res = await fetch(`/api/candidates/${selectedCandidate.id}/assessments`);
-      if (!res.ok) throw new Error("Failed to fetch assessments");
-      const data = await res.json();
-      return (data.resumeAnalysis || []) as ResumeAnalysis[];
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/resume-analyses`);
+      if (!res.ok) throw new Error("Failed to fetch resume analyses");
+      return res.json() as Promise<ResumeAnalysis[]>;
     },
     enabled: !!selectedCandidate
   });
@@ -343,6 +342,22 @@ export default function CandidatesModule() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete document", variant: "destructive" });
+    }
+  });
+
+  const deleteAnalysisMutation = useMutation({
+    mutationFn: async (analysisId: string) => {
+      if (!selectedCandidate) throw new Error("No candidate selected");
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/resume-analyses/${analysisId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete analysis");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resume-analysis", selectedCandidate?.id] });
+      toast({ title: "Analysis Deleted", description: "Resume analysis has been removed." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete analysis", variant: "destructive" });
     }
   });
 
@@ -912,11 +927,32 @@ export default function CandidatesModule() {
                           }
                         })();
                         
+                        const authenticitySignals = (() => {
+                          try {
+                            return analysis.authenticitySignals ? JSON.parse(analysis.authenticitySignals) as { aiStyleLikelihood: number; genericWritingScore: number; specificityScore: number; fluffRatio: number } : null;
+                          } catch {
+                            return null;
+                          }
+                        })();
+                        
                         return (
                           <Card key={analysis.id} className="p-4 space-y-4">
-                            {index === 0 && (
-                              <Badge variant="secondary" className="mb-2">Latest Analysis</Badge>
-                            )}
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-2">
+                                {index === 0 && (
+                                  <Badge variant="secondary">Latest Analysis</Badge>
+                                )}
+                              </div>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6"
+                                onClick={() => deleteAnalysisMutation.mutate(analysis.id)}
+                                data-testid={`button-delete-analysis-${analysis.id}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
                             
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-1">
@@ -950,6 +986,40 @@ export default function CandidatesModule() {
                                 <Progress value={analysis.logicScore} className="h-1.5" />
                               </div>
                             </div>
+
+                            {authenticitySignals && (
+                              <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-lg">
+                                <div className="space-y-1">
+                                  <p className="text-xs text-muted-foreground">AI Detection</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className={cn(
+                                      "text-lg font-bold",
+                                      authenticitySignals.aiStyleLikelihood < 40 ? "text-green-600" : 
+                                      authenticitySignals.aiStyleLikelihood < 60 ? "text-yellow-600" : "text-red-600"
+                                    )} data-testid="text-ai-score">
+                                      {authenticitySignals.aiStyleLikelihood}%
+                                    </span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {authenticitySignals.aiStyleLikelihood < 40 ? "Likely Human" : authenticitySignals.aiStyleLikelihood < 60 ? "Uncertain" : "Likely AI"}
+                                    </Badge>
+                                  </div>
+                                  <Progress value={authenticitySignals.aiStyleLikelihood} className="h-1.5" />
+                                </div>
+                                <div className="space-y-1">
+                                  <p className="text-xs text-muted-foreground">Specificity</p>
+                                  <div className="flex items-center gap-2">
+                                    <span className={cn(
+                                      "text-lg font-bold",
+                                      authenticitySignals.specificityScore >= 60 ? "text-green-600" : 
+                                      authenticitySignals.specificityScore >= 40 ? "text-yellow-600" : "text-red-600"
+                                    )} data-testid="text-specificity-score">
+                                      {authenticitySignals.specificityScore}%
+                                    </span>
+                                  </div>
+                                  <Progress value={authenticitySignals.specificityScore} className="h-1.5" />
+                                </div>
+                              </div>
+                            )}
 
                             {analysis.jobTitle && (
                               <div className="text-xs text-muted-foreground">
