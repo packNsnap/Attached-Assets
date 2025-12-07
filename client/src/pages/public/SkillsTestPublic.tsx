@@ -17,6 +17,22 @@ type Question = {
   correctAnswer?: string;
 };
 
+function isValidQuestion(q: any): q is Question {
+  return (
+    q &&
+    typeof q === "object" &&
+    typeof q.id === "number" &&
+    typeof q.text === "string" &&
+    (q.type === "multiple_choice" || q.type === "open_text") &&
+    (q.options === undefined || (Array.isArray(q.options) && q.options.every((opt: any) => typeof opt === "string")))
+  );
+}
+
+function filterValidQuestions(questions: any[]): Question[] {
+  if (!Array.isArray(questions)) return [];
+  return questions.filter(isValidQuestion);
+}
+
 type TestData = {
   invitation: {
     id: string;
@@ -143,7 +159,26 @@ export default function SkillsTestPublic() {
   }
 
   const { invitation, test } = data;
-  const questions = test.questions;
+  const questions = filterValidQuestions(test.questions);
+  
+  if (questions.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
+              <h2 className="mt-4 text-xl font-semibold">Test Configuration Error</h2>
+              <p className="mt-2 text-muted-foreground">
+                This test has no valid questions. Please contact the employer.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  
   const currentQuestion = questions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
   const allAnswered = questions.every((_, idx) => answers[idx] !== undefined && answers[idx] !== "");
