@@ -97,7 +97,7 @@ export default function ResumeAnalyzerModule() {
   });
 
   const recommendMutation = useMutation({
-    mutationFn: async (data: { candidateName: string; jobId: string; jobTitle: string; skillsNeeded: string[]; fitScore: number }) => {
+    mutationFn: async (data: { candidateId?: string; candidateName: string; jobId: string; jobTitle: string; skillsNeeded: string[]; fitScore: number }) => {
       const res = await fetch("/api/skills-test-recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -524,15 +524,18 @@ export default function ResumeAnalyzerModule() {
                     <div className="pt-4 border-t">
                       <Button
                         onClick={() => {
+                          const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
+                          if (!selectedCandidate) return;
                           recommendMutation.mutate({
-                            candidateName: fileName || "Unknown Candidate",
+                            candidateId: selectedCandidateId,
+                            candidateName: selectedCandidate.name,
                             jobId: result.selectedJob!.id,
                             jobTitle: result.selectedJob!.title,
                             skillsNeeded: result.skillMatch.missing.length > 0 ? result.skillMatch.missing : result.selectedJob!.skills,
                             fitScore: result.fitScore,
                           });
                         }}
-                        disabled={recommendMutation.isPending}
+                        disabled={recommendMutation.isPending || !selectedCandidateId}
                         className="w-full"
                         variant="outline"
                         data-testid="button-recommend-skills-test"
@@ -550,7 +553,9 @@ export default function ResumeAnalyzerModule() {
                         )}
                       </Button>
                       <p className="text-xs text-muted-foreground mt-2 text-center">
-                        Send this candidate to the Skills Test module for assessment
+                        {selectedCandidateId 
+                          ? "Send this candidate to the Skills Test module for assessment"
+                          : "Select a candidate from the dropdown to enable recommendations"}
                       </p>
                     </div>
                   )}
