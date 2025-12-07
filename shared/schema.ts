@@ -190,6 +190,7 @@ export const skillsTests = pgTable("skills_tests", {
   difficulty: text("difficulty").notNull(),
   skills: text("skills").array().notNull(),
   questions: text("questions").notNull(),
+  timePerQuestion: integer("time_per_question").notNull().default(15),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
