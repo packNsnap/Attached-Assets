@@ -3,11 +3,29 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, Plus, Trash2, Eye, Link as LinkIcon, CheckCircle2, ListChecks, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, MessageSquare } from "lucide-react";
-import type { SkillsTestRecommendation } from "@shared/schema";
+import { Loader2, Plus, Trash2, Eye, Link as LinkIcon, CheckCircle2, ListChecks, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, MessageSquare, Copy, Mail, Clock, X } from "lucide-react";
+import type { SkillsTestRecommendation, SkillsTest, SkillsTestInvitation } from "@shared/schema";
 import { useLocation } from "wouter";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Form,
   FormControl,
@@ -109,8 +127,60 @@ export default function SkillsTestModule() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [selectedRecommendation, setSelectedRecommendation] = useState<SkillsTestRecommendation | null>(null);
+  const [candidateEmail, setCandidateEmail] = useState("");
+  const [generatedInvitation, setGeneratedInvitation] = useState<{ token: string; testLink: string } | null>(null);
+
   const { data: recommendations = [] } = useQuery<SkillsTestRecommendation[]>({
     queryKey: ["/api/skills-test-recommendations"],
+  });
+
+  const { data: savedTests = [] } = useQuery<SkillsTest[]>({
+    queryKey: ["/api/skills-tests"],
+  });
+
+  const deleteRecommendation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/skills-test-recommendations/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete recommendation");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/skills-test-recommendations"] });
+      toast({
+        title: "Recommendation Deleted",
+        description: "The recommendation has been removed.",
+      });
+      setDeleteConfirmId(null);
+    },
+  });
+
+  const createInvitation = useMutation({
+    mutationFn: async (data: { testId: string; candidateName: string; candidateEmail: string; jobTitle: string }) => {
+      const res = await fetch("/api/skills-test-invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to create invitation");
+      return res.json();
+    },
+    onSuccess: (invitation) => {
+      const testLink = `${window.location.origin}/test/${invitation.token}`;
+      setGeneratedInvitation({ token: invitation.token, testLink });
+      if (selectedRecommendation) {
+        updateRecommendationStatus.mutate({ id: selectedRecommendation.id, status: "sent" });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/skills-test-invitations"] });
+      toast({
+        title: "Invitation Created",
+        description: "Test link generated. Copy and send to candidate.",
+      });
+    },
   });
 
   const updateRecommendationStatus = useMutation({
@@ -329,6 +399,43 @@ export default function SkillsTestModule() {
                             Create Test
                           </Button>
                         )}
+                        {rec.status === "test_created" && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            data-testid={`button-send-test-${rec.id}`}
+                            onClick={() => {
+                              setSelectedRecommendation(rec);
+                              setCandidateEmail("");
+                              setGeneratedInvitation(null);
+                              setSendDialogOpen(true);
+                            }}
+                          >
+                            <Send className="mr-2 h-4 w-4" />
+                            Send to Candidate
+                          </Button>
+                        )}
+                        {rec.status === "sent" && (
+                          <Badge variant="outline" className="text-blue-600 border-blue-600">
+                            <Clock className="mr-1 h-3 w-3" />
+                            Awaiting Response
+                          </Badge>
+                        )}
+                        {rec.status === "completed" && (
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            <CheckCircle2 className="mr-1 h-3 w-3" />
+                            Completed
+                          </Badge>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          data-testid={`button-delete-rec-${rec.id}`}
+                          onClick={() => setDeleteConfirmId(rec.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -651,6 +758,170 @@ export default function SkillsTestModule() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Recommendation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this recommendation? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConfirmId && deleteRecommendation.mutate(deleteConfirmId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteRecommendation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Send Skills Test to Candidate</DialogTitle>
+            <DialogDescription>
+              {selectedRecommendation && (
+                <>
+                  Send a {selectedRecommendation.jobTitle} skills test to {selectedRecommendation.candidateName}.
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {!generatedInvitation ? (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Candidate Email</label>
+                <Input
+                  type="email"
+                  placeholder="candidate@email.com"
+                  value={candidateEmail}
+                  onChange={(e) => setCandidateEmail(e.target.value)}
+                  data-testid="input-candidate-email"
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (selectedRecommendation && candidateEmail) {
+                      const latestTest = savedTests[savedTests.length - 1];
+                      if (latestTest) {
+                        createInvitation.mutate({
+                          testId: latestTest.id,
+                          candidateName: selectedRecommendation.candidateName,
+                          candidateEmail,
+                          jobTitle: selectedRecommendation.jobTitle,
+                        });
+                      }
+                    }
+                  }}
+                  disabled={!candidateEmail || createInvitation.isPending}
+                  data-testid="button-generate-link"
+                >
+                  {createInvitation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <LinkIcon className="mr-2 h-4 w-4" />
+                      Generate Test Link
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <div className="p-4 bg-muted rounded-lg space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Test Link</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(generatedInvitation.testLink);
+                      toast({
+                        title: "Link Copied",
+                        description: "Test link copied to clipboard.",
+                      });
+                    }}
+                    data-testid="button-copy-link"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy Link
+                  </Button>
+                </div>
+                <code className="block text-xs break-all bg-background p-2 rounded border">
+                  {generatedInvitation.testLink}
+                </code>
+              </div>
+
+              <div className="border-t pt-4">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Send this link to the candidate via email:
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    if (selectedRecommendation) {
+                      const subject = encodeURIComponent(`Skills Assessment for ${selectedRecommendation.jobTitle} Position`);
+                      const body = encodeURIComponent(
+`Dear ${selectedRecommendation.candidateName},
+
+We're excited to move forward with your application for the ${selectedRecommendation.jobTitle} position! 
+
+As part of our hiring process, we'd like you to complete a skills assessment. This test will help us better understand your technical abilities.
+
+Please complete the assessment at your earliest convenience using the link below:
+
+${generatedInvitation.testLink}
+
+The assessment typically takes 15-30 minutes to complete. Please find a quiet environment where you can focus without interruptions.
+
+If you have any questions or technical difficulties, please reply to this email.
+
+Best regards,
+HR Team`
+                      );
+                      window.open(`mailto:${candidateEmail}?subject=${subject}&body=${body}`, '_blank');
+                    }
+                  }}
+                  data-testid="button-send-email"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  Open Email Client
+                </Button>
+              </div>
+
+              <DialogFooter>
+                <Button onClick={() => {
+                  setSendDialogOpen(false);
+                  setGeneratedInvitation(null);
+                  setSelectedRecommendation(null);
+                  setCandidateEmail("");
+                }}>
+                  Done
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

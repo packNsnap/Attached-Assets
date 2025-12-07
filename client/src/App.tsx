@@ -18,11 +18,13 @@ import OnboardingModule from "@/pages/modules/onboarding";
 import PerformanceModule from "@/pages/modules/performance";
 import AnalyticsModule from "@/pages/modules/analytics";
 import CandidatesModule from "@/pages/modules/candidates";
+import SkillsTestPublic from "@/pages/public/SkillsTestPublic";
 
 function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/test/:token" component={SkillsTestPublic} />
       
       {/* Protected Routes Wrapper */}
       <Route>

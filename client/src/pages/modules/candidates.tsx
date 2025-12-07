@@ -57,8 +57,9 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis } from "@shared/schema";
+import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation } from "@shared/schema";
 import { Progress } from "@/components/ui/progress";
+import { ListChecks } from "lucide-react";
 
 type JobWithCandidates = Job & { candidateCount: number };
 type Stage = "Applied" | "Screened" | "Interview" | "Offer" | "Hired" | "Rejected";
@@ -144,6 +145,17 @@ export default function CandidatesModule() {
       const res = await fetch(`/api/candidates/${selectedCandidate.id}/resume-analyses`);
       if (!res.ok) throw new Error("Failed to fetch resume analyses");
       return res.json() as Promise<ResumeAnalysis[]>;
+    },
+    enabled: !!selectedCandidate
+  });
+
+  const { data: skillsTestInvitations = [] } = useQuery({
+    queryKey: ["skills-test-invitations", selectedCandidate?.id],
+    queryFn: async () => {
+      if (!selectedCandidate) return [];
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/skills-test-invitations`);
+      if (!res.ok) throw new Error("Failed to fetch skills test invitations");
+      return res.json() as Promise<SkillsTestInvitation[]>;
     },
     enabled: !!selectedCandidate
   });
@@ -699,12 +711,20 @@ export default function CandidatesModule() {
             </CardHeader>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="mx-6 grid grid-cols-4">
+              <TabsList className="mx-6 grid grid-cols-5">
                 <TabsTrigger value="profile" data-testid="tab-profile">
                   <User className="h-4 w-4 mr-1" /> Profile
                 </TabsTrigger>
                 <TabsTrigger value="analysis" data-testid="tab-analysis">
                   <BarChart3 className="h-4 w-4 mr-1" /> Analysis
+                </TabsTrigger>
+                <TabsTrigger value="tests" data-testid="tab-tests">
+                  <ListChecks className="h-4 w-4 mr-1" /> Tests
+                  {skillsTestInvitations.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                      {skillsTestInvitations.length}
+                    </Badge>
+                  )}
                 </TabsTrigger>
                 <TabsTrigger value="notes" data-testid="tab-notes">
                   <StickyNote className="h-4 w-4 mr-1" /> Notes
@@ -1094,6 +1114,68 @@ export default function CandidatesModule() {
                           </Card>
                         );
                       })}
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="tests" className="px-6 pb-6 space-y-4 mt-4">
+                  <h4 className="text-sm font-medium text-muted-foreground">Skills Test Results</h4>
+                  {skillsTestInvitations.length === 0 ? (
+                    <div className="text-center py-8 border rounded-lg border-dashed">
+                      <ListChecks className="h-8 w-8 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mt-2">No skills tests assigned yet</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Skills tests can be sent from the Skills Test Builder module
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {skillsTestInvitations.map((invitation) => (
+                        <Card key={invitation.id} className="p-4" data-testid={`test-result-${invitation.id}`}>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium">{invitation.jobTitle}</span>
+                              <Badge 
+                                variant={invitation.status === "completed" ? "default" : "secondary"}
+                                className={invitation.status === "completed" ? "bg-green-600" : ""}
+                              >
+                                {invitation.status === "completed" ? "Completed" : 
+                                 invitation.status === "sent" ? "Awaiting Response" : invitation.status}
+                              </Badge>
+                            </div>
+                            
+                            {invitation.status === "completed" && invitation.score !== null && (
+                              <div className="space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">Score</span>
+                                  <span className={cn(
+                                    "font-semibold",
+                                    invitation.score >= 70 ? "text-green-600" : 
+                                    invitation.score >= 50 ? "text-yellow-600" : "text-red-600"
+                                  )}>
+                                    {invitation.score}%
+                                  </span>
+                                </div>
+                                <Progress 
+                                  value={invitation.score} 
+                                  className="h-2"
+                                />
+                              </div>
+                            )}
+                            
+                            <div className="text-xs text-muted-foreground">
+                              {invitation.sentAt && (
+                                <span>Sent: {new Date(invitation.sentAt).toLocaleDateString()}</span>
+                              )}
+                              {invitation.completedAt && (
+                                <span className="ml-3">
+                                  Completed: {new Date(invitation.completedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      ))}
                     </div>
                   )}
                 </TabsContent>
