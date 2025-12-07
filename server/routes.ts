@@ -446,6 +446,80 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/analyze-resume", async (req, res) => {
+    try {
+      const { resumeText, jobDescription, jobSkills, jobTitle, jobLevel } = req.body;
+      
+      if (!resumeText) {
+        res.status(400).json({ error: "Resume text is required" });
+        return;
+      }
+
+      const skillsList = jobSkills?.join(", ") || "";
+      const jobContext = jobDescription || `Job: ${jobTitle || "Unknown"}, Level: ${jobLevel || "Unknown"}, Skills: ${skillsList}`;
+
+      const prompt = `You are an expert HR recruiter analyzing a resume for job fit and logical consistency. Analyze the following resume against the job requirements.
+
+JOB CONTEXT:
+${jobContext}
+
+REQUIRED SKILLS:
+${skillsList}
+
+RESUME:
+${resumeText}
+
+Analyze this resume and provide:
+1. A fit score (0-100) based on how well the candidate matches the job requirements
+2. A logic/risk score (0-100) measuring inconsistencies, gaps, or concerns (higher = more risk)
+3. Skills analysis - which required skills are matched, missing, and what extra skills they have
+4. Key findings about the resume (mark each as "risk", "warning", or "good")
+5. A brief summary of the candidate's suitability
+
+Respond in this exact JSON format:
+{
+  "fitScore": 75,
+  "logicScore": 25,
+  "skillMatch": {
+    "matched": ["skill1", "skill2"],
+    "missing": ["skill3"],
+    "extra": ["skill4", "skill5"]
+  },
+  "findings": [
+    {
+      "type": "good",
+      "message": "Strong relevant experience",
+      "details": "Candidate has 5+ years in similar role"
+    },
+    {
+      "type": "warning",
+      "message": "Employment gap detected",
+      "details": "6-month gap between positions in 2022"
+    }
+  ],
+  "summary": "Overall assessment of the candidate in 2-3 sentences"
+}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.3,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No response from AI");
+      }
+
+      const result = JSON.parse(content);
+      res.json(result);
+    } catch (error) {
+      console.error("Resume analysis error:", error);
+      res.status(500).json({ error: "Failed to analyze resume" });
+    }
+  });
+
   app.post("/api/generate-job-description", async (req, res) => {
     try {
       const { title, level, location, skills, notes } = req.body;

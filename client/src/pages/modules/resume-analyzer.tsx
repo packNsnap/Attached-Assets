@@ -149,7 +149,7 @@ export default function ResumeAnalyzerModule() {
     }
   };
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!fileName && !resumeText) {
       toast({
         variant: "destructive",
@@ -170,15 +170,43 @@ export default function ResumeAnalyzerModule() {
 
     setIsAnalyzing(true);
     
-    setTimeout(() => {
-      const generated = generateAnalysis(selectedJob, values.jobDescription || "", resumeText);
-      setResult(generated);
-      setIsAnalyzing(false);
+    try {
+      const response = await fetch("/api/analyze-resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText: resumeText,
+          jobDescription: values.jobDescription || selectedJob?.description,
+          jobSkills: selectedJob?.skills || [],
+          jobTitle: selectedJob?.title || "",
+          jobLevel: selectedJob?.level || "",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to analyze resume");
+      }
+
+      const analysisResult = await response.json();
+      setResult({
+        ...analysisResult,
+        selectedJob,
+      });
+      
       toast({
         title: "Analysis Complete",
-        description: "Resume logic and fit have been analyzed.",
+        description: "Resume logic and fit have been analyzed using AI.",
       });
-    }, 2500);
+    } catch (error) {
+      console.error("Analysis error:", error);
+      toast({
+        variant: "destructive",
+        title: "Analysis Failed",
+        description: "Could not analyze the resume. Please try again.",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   }
 
   return (
@@ -561,107 +589,3 @@ export default function ResumeAnalyzerModule() {
   );
 }
 
-const KNOWN_SKILLS = [
-  "JavaScript", "TypeScript", "React", "Vue", "Angular", "Node.js", "Express",
-  "Python", "Django", "Flask", "FastAPI", "Java", "Spring", "C#", ".NET",
-  "Go", "Rust", "Ruby", "Rails", "PHP", "Laravel", "Swift", "Kotlin",
-  "SQL", "PostgreSQL", "MySQL", "MongoDB", "Redis", "Elasticsearch",
-  "AWS", "Azure", "GCP", "Docker", "Kubernetes", "Terraform", "CI/CD",
-  "Git", "GitHub", "REST APIs", "GraphQL", "Microservices", "Agile", "Scrum",
-  "HTML", "CSS", "Tailwind", "Sass", "Bootstrap", "Figma", "UI/UX",
-  "Machine Learning", "AI", "Data Science", "TensorFlow", "PyTorch",
-  "Linux", "Bash", "DevOps", "Jenkins", "Ansible", "Nginx", "Apache"
-];
-
-function extractSkillsFromText(text: string): string[] {
-  const normalizedText = text.toLowerCase();
-  const foundSkills: string[] = [];
-  
-  for (const skill of KNOWN_SKILLS) {
-    const skillLower = skill.toLowerCase();
-    const variations = [
-      skillLower,
-      skillLower.replace(/\./g, ""),
-      skillLower.replace(/-/g, " "),
-      skillLower.replace(/\s/g, ""),
-    ];
-    
-    if (variations.some(v => normalizedText.includes(v))) {
-      foundSkills.push(skill);
-    }
-  }
-  
-  return [...new Set(foundSkills)];
-}
-
-function generateAnalysis(selectedJob: Job | undefined, jd: string, resumeText: string): AnalysisResult {
-  const extractedResumeSkills = extractSkillsFromText(resumeText);
-  
-  let requiredSkills: string[] = [];
-  if (selectedJob) {
-    requiredSkills = selectedJob.skills;
-  } else if (jd) {
-    requiredSkills = extractSkillsFromText(jd);
-    if (requiredSkills.length === 0) {
-      requiredSkills = ["JavaScript", "React"];
-    }
-  } else {
-    requiredSkills = ["JavaScript", "React"];
-  }
-
-  const matched = requiredSkills.filter(skill => 
-    extractedResumeSkills.some(rs => rs.toLowerCase() === skill.toLowerCase())
-  );
-  const missing = requiredSkills.filter(skill => 
-    !extractedResumeSkills.some(rs => rs.toLowerCase() === skill.toLowerCase())
-  );
-  const extra = extractedResumeSkills.filter(skill => 
-    !requiredSkills.some(rs => rs.toLowerCase() === skill.toLowerCase())
-  );
-
-  const matchRate = requiredSkills.length > 0 
-    ? (matched.length / requiredSkills.length) * 100 
-    : 50;
-  
-  const fitScore = Math.min(100, Math.floor(matchRate * 0.7 + Math.random() * 30));
-  const logicScore = Math.floor(Math.random() * (45 - 5) + 5);
-
-  const findings = [
-    {
-      type: "good" as const,
-      message: "Consistent Career Progression",
-      details: "Titles show a clear upward trajectory (Junior -> Senior) without unexplained demotions.",
-    },
-    {
-      type: "warning" as const,
-      message: "Vague Skill Descriptors",
-      details: "Candidate lists 'Expert' in tools mentioned only once in work history.",
-    },
-    {
-      type: "risk" as const,
-      message: "Timeline Overlap Detected",
-      details: "Role at 'Tech Corp' overlaps with 'Startup Inc' by 3 months. Verify if this was contract work.",
-    },
-    {
-      type: "good" as const,
-      message: "Education Timeline Matches",
-      details: "Graduation dates align with start of professional career.",
-    }
-  ];
-
-  const selectedFindings = findings.sort(() => 0.5 - Math.random()).slice(0, 3);
-
-  const jobTitle = selectedJob?.title || "the role";
-  const skillsSummary = matched.length > 0 
-    ? `The candidate matches ${matched.length} of ${requiredSkills.length} required skills for ${jobTitle}.`
-    : `Skills analysis could not be performed against ${jobTitle}.`;
-
-  return {
-    fitScore,
-    logicScore,
-    skillMatch: { matched, missing, extra },
-    findings: selectedFindings,
-    summary: `${skillsSummary} Fit score is ${fitScore}%. There are minor logic flags regarding timeline consistency that should be clarified in an interview.`,
-    selectedJob,
-  };
-}
