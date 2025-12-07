@@ -9,6 +9,9 @@ import {
   insertInterviewRecommendationSchema
 } from "@shared/schema";
 import { z } from "zod";
+import OpenAI from "openai";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function registerRoutes(
   httpServer: Server,
@@ -206,6 +209,62 @@ export async function registerRoutes(
       res.json(recommendation);
     } catch (error) {
       res.status(500).json({ error: "Failed to update interview recommendation status" });
+    }
+  });
+
+  app.post("/api/generate-job-description", async (req, res) => {
+    try {
+      const { title, level, location, skills, notes } = req.body;
+      
+      if (!title || !level || !location || !skills) {
+        res.status(400).json({ error: "Missing required fields: title, level, location, skills" });
+        return;
+      }
+
+      const prompt = `You are an expert HR professional and technical recruiter. Generate a professional, engaging job description for the following role:
+
+Job Title: ${title}
+Level: ${level}
+Location: ${location}
+Required Skills: ${skills}
+${notes ? `Additional Notes: ${notes}` : ''}
+
+Please provide:
+1. A compelling job description with sections for: About the Role, Key Responsibilities, Requirements, and Why Join Us
+2. An estimated annual salary range in USD based on current market rates for this role, level, and location type
+
+Format your response as JSON with exactly this structure:
+{
+  "description": "The full job description text with markdown formatting",
+  "salaryMin": 80000,
+  "salaryMax": 120000
+}
+
+Make the description professional but engaging. Use bullet points for responsibilities and requirements. The salary should reflect realistic 2024 market rates for the specified level and location type.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No response from AI");
+      }
+
+      const result = JSON.parse(content);
+      res.json({
+        description: result.description,
+        salaryRange: {
+          min: result.salaryMin,
+          max: result.salaryMax,
+        },
+      });
+    } catch (error) {
+      console.error("AI generation error:", error);
+      res.status(500).json({ error: "Failed to generate job description" });
     }
   });
 

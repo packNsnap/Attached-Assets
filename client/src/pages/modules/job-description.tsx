@@ -87,26 +87,45 @@ export default function JobDescriptionModule() {
     }
   });
 
-  function onSubmit(values: FormValues) {
-    const generated = generateContent(values);
-    setResult(generated);
-    
-    if (generated) {
-      const skillList = values.skills.split(",").map(s => s.trim()).filter(Boolean);
+  const generateMutation = useMutation({
+    mutationFn: async (values: FormValues) => {
+      const res = await fetch("/api/generate-job-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values)
+      });
+      if (!res.ok) throw new Error("Failed to generate job description");
+      return res.json();
+    },
+    onSuccess: (data, variables) => {
+      setResult(data);
+      
+      const skillList = variables.skills.split(",").map(s => s.trim()).filter(Boolean);
       
       const jobData: InsertJob = {
-        title: values.title,
-        level: values.level,
-        location: values.location,
+        title: variables.title,
+        level: variables.level,
+        location: variables.location,
         skills: skillList,
-        description: generated.description,
-        salaryMin: generated.salaryRange.min,
-        salaryMax: generated.salaryRange.max,
+        description: data.description,
+        salaryMin: data.salaryRange.min,
+        salaryMax: data.salaryRange.max,
         status: "active"
       };
       
       createJobMutation.mutate(jobData);
+    },
+    onError: () => {
+      toast({
+        title: "AI Error",
+        description: "Failed to generate job description. Please try again.",
+        variant: "destructive",
+      });
     }
+  });
+
+  function onSubmit(values: FormValues) {
+    generateMutation.mutate(values);
   }
 
   const copyToClipboard = () => {
@@ -235,8 +254,13 @@ export default function JobDescriptionModule() {
                   )}
                 />
 
-                <Button type="submit" className="w-full" disabled={createJobMutation.isPending} data-testid="button-generate">
-                  {createJobMutation.isPending ? (
+                <Button type="submit" className="w-full" disabled={generateMutation.isPending || createJobMutation.isPending} data-testid="button-generate">
+                  {generateMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      AI Generating...
+                    </>
+                  ) : createJobMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Saving...
@@ -244,7 +268,7 @@ export default function JobDescriptionModule() {
                   ) : (
                     <>
                       <Wand2 className="mr-2 h-4 w-4" />
-                      Generate & Save Job
+                      Generate with AI
                     </>
                   )}
                 </Button>
@@ -305,61 +329,4 @@ export default function JobDescriptionModule() {
       </div>
     </div>
   );
-}
-
-function generateContent(values: FormValues): GeneratedContent {
-  const { title, level, location, skills } = values;
-  
-  const salaryRanges: Record<string, [number, number]> = {
-    Junior: [60000, 85000],
-    Mid: [90000, 130000],
-    Senior: [130000, 180000],
-    Lead: [170000, 240000],
-  };
-
-  let [min, max] = salaryRanges[level] || [60000, 85000];
-  
-  if (location === "Onsite") {
-    min += 5000;
-    max += 10000;
-  }
-
-  const skillList = skills.split(",").map(s => s.trim()).filter(Boolean);
-
-  const description = `# ${title}
-
-**Level:** ${level}
-**Location:** ${location}
-
-## About the Role
-We're seeking a talented ${title} to join our engineering team. You'll work on impactful projects, mentor team members, and drive technical excellence across our platform.
-
-## Key Responsibilities
-• Design and implement scalable solutions
-• Collaborate with cross-functional teams
-• Conduct code reviews and share knowledge
-• Troubleshoot and optimize performance
-• Contribute to architecture decisions
-
-## Requirements
-${skillList.map((s, i) => `• ${i === 0 ? 'Proven experience with' : 'Knowledge of'} ${s}`).join("\n")}
-• Strong problem-solving skills
-• Excellent communication abilities
-• Bachelor's degree or equivalent experience
-• ${level === "Lead" ? "Team leadership experience" : "Collaborative mindset"}
-
-## Why Join?
-• Competitive compensation and benefits
-• ${location === "Remote" ? "100% remote flexibility" : "Flexible work arrangements"}
-• Professional development opportunities
-• Collaborative, innovative culture
-
----
-
-**How to Apply:** Submit your resume and brief cover letter describing your fit for the role.`;
-
-  return {
-    description,
-    salaryRange: { min, max },
-  };
 }
