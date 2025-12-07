@@ -42,19 +42,62 @@ export const candidates = pgTable("candidates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  phone: text("phone"),
+  location: text("location"),
   role: text("role").notNull(),
   stage: text("stage").notNull().default("Applied"),
   tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
   appliedDate: text("applied_date").notNull(),
   jobId: varchar("job_id"),
+  resumeUrl: text("resume_url"),
+  linkedinUrl: text("linkedin_url"),
+  portfolioUrl: text("portfolio_url"),
+  source: text("source"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
 export const insertCandidateSchema = createInsertSchema(candidates).omit({
   id: true,
+  createdAt: true,
 });
 
 export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
 export type Candidate = typeof candidates.$inferSelect;
+
+export const candidateNotes = pgTable("candidate_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidateId: varchar("candidate_id").notNull(),
+  content: text("content").notNull(),
+  authorName: text("author_name").notNull(),
+  noteType: text("note_type").notNull().default("general"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertCandidateNoteSchema = createInsertSchema(candidateNotes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCandidateNote = z.infer<typeof insertCandidateNoteSchema>;
+export type CandidateNote = typeof candidateNotes.$inferSelect;
+
+export const candidateDocuments = pgTable("candidate_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidateId: varchar("candidate_id").notNull(),
+  fileName: text("file_name").notNull(),
+  fileType: text("file_type").notNull(),
+  fileUrl: text("file_url").notNull(),
+  documentType: text("document_type").notNull(),
+  uploadedAt: timestamp("uploaded_at").notNull().default(sql`now()`),
+});
+
+export const insertCandidateDocumentSchema = createInsertSchema(candidateDocuments).omit({
+  id: true,
+  uploadedAt: true,
+});
+
+export type InsertCandidateDocument = z.infer<typeof insertCandidateDocumentSchema>;
+export type CandidateDocument = typeof candidateDocuments.$inferSelect;
 
 export const interviewNotes = pgTable("interview_notes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
