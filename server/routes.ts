@@ -727,6 +727,61 @@ Generate approximately 60% multiple choice and 40% open text questions. Make sur
     };
   }
 
+  app.post("/api/research-job-description", async (req, res) => {
+    try {
+      const { title, level, location, skills } = req.body;
+      
+      if (!title || !level || !location) {
+        res.status(400).json({ error: "Missing required fields: title, level, location" });
+        return;
+      }
+
+      const prompt = `You are an expert HR recruiter with access to thousands of real job postings. Research and provide key elements from real-world job descriptions for this role:
+
+Job Title: ${title}
+Level: ${level}
+Location Type: ${location}
+Skills: ${skills || "Not specified"}
+
+Based on your knowledge of actual job postings for similar roles, provide:
+1. Common responsibilities found in real ${title} job descriptions
+2. Typical requirements and qualifications employers ask for
+3. Popular benefits and perks companies offer for this role
+4. Industry-standard phrases and keywords used in these postings
+5. Unique selling points that make job postings stand out
+
+Format your response as JSON:
+{
+  "responsibilities": ["responsibility 1", "responsibility 2", ...],
+  "requirements": ["requirement 1", "requirement 2", ...],
+  "benefits": ["benefit 1", "benefit 2", ...],
+  "keywords": ["keyword 1", "keyword 2", ...],
+  "uniqueSellingPoints": ["USP 1", "USP 2", ...],
+  "summary": "A brief summary of what makes a great job posting for this role"
+}
+
+Be specific and practical - these should reflect what real companies actually include in their postings.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No response from AI");
+      }
+
+      const result = JSON.parse(content);
+      res.json(result);
+    } catch (error) {
+      console.error("Job research error:", error);
+      res.status(500).json({ error: "Failed to research job description" });
+    }
+  });
+
   app.post("/api/generate-job-description", async (req, res) => {
     try {
       const { title, level, location, skills, notes } = req.body;

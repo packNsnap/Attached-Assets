@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Wand2, Copy, Users, MapPin, DollarSign, Briefcase, Pencil, Trash2, X, Eye, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Wand2, Copy, Users, MapPin, DollarSign, Briefcase, Pencil, Trash2, X, Eye, ChevronDown, ChevronUp, Search, Lightbulb } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
