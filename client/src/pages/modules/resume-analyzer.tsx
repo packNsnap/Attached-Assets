@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList } from "lucide-react";
+import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info } from "lucide-react";
 import { useLocation } from "wouter";
 
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,24 @@ type SkillMatch = {
   extra: string[];
 };
 
+type AuthenticityWarning = {
+  type: "risk" | "warning";
+  message: string;
+  details: string;
+};
+
+type AuthenticitySignals = {
+  genericWritingScore: number;
+  specificityScore: number;
+  fluffRatio: number;
+  aiStyleLikelihood: number;
+  clichePhrases: string[];
+  metricsFound: string[];
+  toolsMentioned: string[];
+  warnings: AuthenticityWarning[];
+  recommendation: string;
+};
+
 type AnalysisResult = {
   fitScore: number;
   logicScore: number;
@@ -56,6 +74,7 @@ type AnalysisResult = {
   }[];
   summary: string;
   selectedJob?: Job;
+  authenticitySignals?: AuthenticitySignals;
 } | null;
 
 export default function ResumeAnalyzerModule() {
@@ -571,6 +590,178 @@ export default function ResumeAnalyzerModule() {
                   </div>
                 </CardContent>
               </Card>
+
+              {result.authenticitySignals && (
+                <Card className="border-purple-500/30" data-testid="card-authenticity-signals">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Bot className="h-5 w-5 text-purple-500" />
+                      Authenticity & Specificity Signals
+                    </CardTitle>
+                    <CardDescription>
+                      AI-style and content quality indicators. Not a definitive AI detection.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <Quote className="h-3 w-3" />
+                            Generic Writing
+                          </span>
+                          <span className={cn("text-xs font-semibold", 
+                            result.authenticitySignals.genericWritingScore > 60 ? "text-yellow-600" : "text-green-600"
+                          )}>
+                            {result.authenticitySignals.genericWritingScore}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={result.authenticitySignals.genericWritingScore} 
+                          className={cn("h-2", result.authenticitySignals.genericWritingScore > 60 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} 
+                        />
+                        <p className="text-xs text-muted-foreground">Cliché phrases & templated structure</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <Sparkles className="h-3 w-3" />
+                            Specificity
+                          </span>
+                          <span className={cn("text-xs font-semibold", 
+                            result.authenticitySignals.specificityScore < 40 ? "text-yellow-600" : "text-green-600"
+                          )}>
+                            {result.authenticitySignals.specificityScore}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={result.authenticitySignals.specificityScore} 
+                          className={cn("h-2", result.authenticitySignals.specificityScore < 40 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} 
+                        />
+                        <p className="text-xs text-muted-foreground">Concrete metrics & named tools</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <TrendingDown className="h-3 w-3" />
+                            Fluff Ratio
+                          </span>
+                          <span className={cn("text-xs font-semibold", 
+                            result.authenticitySignals.fluffRatio > 50 ? "text-yellow-600" : "text-green-600"
+                          )}>
+                            {result.authenticitySignals.fluffRatio}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={result.authenticitySignals.fluffRatio} 
+                          className={cn("h-2", result.authenticitySignals.fluffRatio > 50 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} 
+                        />
+                        <p className="text-xs text-muted-foreground">Vague content vs measurable impact</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <Bot className="h-3 w-3" />
+                            AI-Style Likelihood
+                          </span>
+                          <span className={cn("text-xs font-semibold", 
+                            result.authenticitySignals.aiStyleLikelihood > 60 ? "text-orange-600" : 
+                            result.authenticitySignals.aiStyleLikelihood > 40 ? "text-yellow-600" : "text-green-600"
+                          )}>
+                            {result.authenticitySignals.aiStyleLikelihood}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={result.authenticitySignals.aiStyleLikelihood} 
+                          className={cn("h-2", 
+                            result.authenticitySignals.aiStyleLikelihood > 60 ? "[&>div]:bg-orange-500" : 
+                            result.authenticitySignals.aiStyleLikelihood > 40 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500"
+                          )} 
+                        />
+                        <p className="text-xs text-muted-foreground">Writing uniformity & machine-like patterns</p>
+                      </div>
+                    </div>
+
+                    {result.authenticitySignals.clichePhrases.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-yellow-600 mb-2 flex items-center gap-1">
+                          <Quote className="h-3 w-3" />
+                          Cliché Phrases Detected
+                        </p>
+                        <div className="flex flex-wrap gap-1" data-testid="list-cliche-phrases">
+                          {result.authenticitySignals.clichePhrases.map((phrase, i) => (
+                            <Badge key={i} variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400">
+                              "{phrase}"
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {result.authenticitySignals.metricsFound.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-green-600 mb-2 flex items-center gap-1">
+                          <Sparkles className="h-3 w-3" />
+                          Concrete Metrics Found
+                        </p>
+                        <div className="flex flex-wrap gap-1" data-testid="list-metrics-found">
+                          {result.authenticitySignals.metricsFound.slice(0, 5).map((metric, i) => (
+                            <Badge key={i} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400">
+                              {metric}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {result.authenticitySignals.toolsMentioned.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-blue-600 mb-2 flex items-center gap-1">
+                          <Wrench className="h-3 w-3" />
+                          Tools & Technologies Mentioned
+                        </p>
+                        <div className="flex flex-wrap gap-1" data-testid="list-tools-mentioned">
+                          {result.authenticitySignals.toolsMentioned.map((tool, i) => (
+                            <Badge key={i} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400">
+                              {tool}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {result.authenticitySignals.warnings.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Authenticity Warnings</p>
+                        {result.authenticitySignals.warnings.map((warning, index) => (
+                          <div key={index} className="flex gap-3 items-start p-3 rounded-lg border bg-yellow-50/50 dark:bg-yellow-900/10" data-testid={`authenticity-warning-${index}`}>
+                            <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
+                            <div className="space-y-1">
+                              <p className="font-medium text-sm">{warning.message}</p>
+                              <p className="text-xs text-muted-foreground">{warning.details}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="p-4 bg-purple-50/50 dark:bg-purple-900/10 rounded-lg border border-purple-200/50 dark:border-purple-800/50">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Recommendation</p>
+                          <p className="text-xs text-muted-foreground mt-1" data-testid="text-authenticity-recommendation">
+                            {result.authenticitySignals.recommendation}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </>
           ) : (
             <Card className="h-full flex items-center justify-center bg-muted/10 border-dashed min-h-[400px]">

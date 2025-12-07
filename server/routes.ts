@@ -548,7 +548,7 @@ export async function registerRoutes(
       const skillsList = jobSkills?.join(", ") || "";
       const jobContext = jobDescription || `Job: ${jobTitle || "Unknown"}, Level: ${jobLevel || "Unknown"}, Skills: ${skillsList}`;
 
-      const prompt = `You are an expert HR recruiter analyzing a resume for job fit and logical consistency. Analyze the following resume against the job requirements.
+      const prompt = `You are an expert HR recruiter analyzing a resume for job fit, logical consistency, and authenticity signals. Analyze the following resume against the job requirements.
 
 JOB CONTEXT:
 ${jobContext}
@@ -565,6 +565,30 @@ Analyze this resume and provide:
 3. Skills analysis - which required skills are matched, missing, and what extra skills they have
 4. Key findings about the resume (mark each as "risk", "warning", or "good")
 5. A brief summary of the candidate's suitability
+
+AUTHENTICITY & AI-STYLE ANALYSIS:
+Also analyze the resume for signs of AI-generated or heavily templated content:
+
+6. Generic Writing Score (0-100): How templated and cliché-filled is the writing?
+   - Look for phrases like "results-driven", "proven track record", "dynamic professional", "detail-oriented"
+   - Check for overly polished, uniform sentence structure
+   - Count repetitive verb patterns ("Led", "Managed", "Implemented" with no variety)
+
+7. Specificity Score (0-100): How concrete and grounded is the content?
+   - Percentage of bullets with concrete metrics (%, $, numbers)
+   - Named tools, technologies, or products mentioned
+   - Real company names and specific project descriptions
+
+8. Fluff Ratio (0-100): What percentage of bullet points are vague vs substantive?
+   - Concrete impact with numbers/clear before-after = substantive
+   - Vague responsibilities with no measurable outcomes = fluff
+
+9. AI-Style Likelihood Score (0-100): Overall probability the resume was AI-assisted
+   - Consider writing uniformity, predictability, and machine-like patterns
+   - Perfect grammar with no natural human artifacts
+   - Extremely consistent sentence length and structure
+
+10. Authenticity warnings - specific concerns about authenticity
 
 Respond in this exact JSON format:
 {
@@ -587,7 +611,24 @@ Respond in this exact JSON format:
       "details": "6-month gap between positions in 2022"
     }
   ],
-  "summary": "Overall assessment of the candidate in 2-3 sentences"
+  "summary": "Overall assessment of the candidate in 2-3 sentences",
+  "authenticitySignals": {
+    "genericWritingScore": 65,
+    "specificityScore": 40,
+    "fluffRatio": 70,
+    "aiStyleLikelihood": 55,
+    "clichePhrases": ["results-driven", "proven track record"],
+    "metricsFound": ["increased sales by 30%", "managed team of 12"],
+    "toolsMentioned": ["Salesforce", "Excel", "Python"],
+    "warnings": [
+      {
+        "type": "warning",
+        "message": "Highly templated language",
+        "details": "Resume contains multiple cliché phrases common in AI-generated content"
+      }
+    ],
+    "recommendation": "The writing style is highly polished and uniform; may have been assisted by AI tools. We recommend deeper probing in interviews to verify specific achievements."
+  }
 }`;
 
       const completion = await openai.chat.completions.create({
