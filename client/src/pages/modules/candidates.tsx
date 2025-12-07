@@ -307,6 +307,7 @@ export default function CandidatesModule() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["candidate-documents", selectedCandidate?.id] });
       if (selectedCandidate) setSelectedCandidate(data.candidate);
       setResumeFile(null);
       setIsUploadingResume(false);
