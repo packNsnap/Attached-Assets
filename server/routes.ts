@@ -380,7 +380,7 @@ export async function registerRoutes(
             await storage.createCandidateNote({
               candidateId,
               content: `Interview Summary (Score: ${averageScore}%)\n\n${noteSummary}`,
-              author: "Interview Assistant"
+              authorName: "Interview Assistant"
             });
           }
         }
