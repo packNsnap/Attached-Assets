@@ -1452,8 +1452,8 @@ export default function CandidatesModule() {
 
       {/* View Test Results Dialog */}
       <Dialog open={!!viewTestResultsInvitation} onOpenChange={() => setViewTestResultsInvitation(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl h-[85vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Test Results</DialogTitle>
             {viewTestResultsInvitation && (
               <p className="text-sm text-muted-foreground">
@@ -1463,7 +1463,7 @@ export default function CandidatesModule() {
           </DialogHeader>
 
           {viewTestResultsInvitation && (
-            <div className="flex items-center justify-between py-3 px-4 bg-muted rounded-lg">
+            <div className="flex items-center justify-between py-3 px-4 bg-muted rounded-lg flex-shrink-0">
               <div>
                 <p className="text-sm text-muted-foreground">Overall Score</p>
                 <p className="text-3xl font-bold">
@@ -1502,7 +1502,7 @@ export default function CandidatesModule() {
             </div>
           )}
 
-          <ScrollArea className="flex-1 pr-4">
+          <div className="flex-1 overflow-y-auto min-h-0 pr-2">
             {isLoadingTestResponses ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1544,7 +1544,7 @@ export default function CandidatesModule() {
                 ))}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
