@@ -222,6 +222,27 @@ export default function SkillsTestModule() {
     }
   };
 
+  const [isSendingToInterview, setIsSendingToInterview] = useState(false);
+  
+  const handleSendForInterview = async (candidateId: string | null | undefined, candidateName: string) => {
+    if (!candidateId || isSendingToInterview) return;
+    setIsSendingToInterview(true);
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/stage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage: "Interview" }),
+      });
+      if (!res.ok) throw new Error("Failed to update stage");
+      toast({ title: "Sent for Interview", description: `${candidateName} has been moved to the Interview stage.` });
+      setViewResultsInvitation(null);
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to send for interview", variant: "destructive" });
+    } finally {
+      setIsSendingToInterview(false);
+    }
+  };
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -942,7 +963,7 @@ HR Team`
                     : "Pending Review"}
                 </p>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
                 <Button
                   size="sm"
                   variant="outline"
@@ -962,7 +983,27 @@ HR Team`
                     </>
                   )}
                 </Button>
-                <div className="text-right text-sm text-muted-foreground">
+                {viewResultsInvitation.candidateId && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleSendForInterview(viewResultsInvitation.candidateId, viewResultsInvitation.candidateName)}
+                    disabled={isSendingToInterview}
+                    data-testid="button-send-interview"
+                  >
+                    {isSendingToInterview ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRight className="h-4 w-4 mr-2" />
+                        Send for Interview
+                      </>
+                    )}
+                  </Button>
+                )}
+                <div className="text-right text-sm text-muted-foreground ml-2">
                   <p>Submitted</p>
                   <p>{viewResultsInvitation.completedAt 
                     ? new Date(viewResultsInvitation.completedAt).toLocaleDateString() 
