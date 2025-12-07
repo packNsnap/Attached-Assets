@@ -1551,5 +1551,215 @@ Respond with ONLY a number between 0 and 100.`;
     }
   });
 
+  // Generate AI-powered interview questions based on resume, test results, and AI detection
+  app.post("/api/generate-interview-questions", async (req, res) => {
+    try {
+      const { candidateId, candidateName, jobTitle, testScore, strengths, weaknesses } = req.body;
+      
+      if (!candidateName || !jobTitle) {
+        res.status(400).json({ error: "candidateName and jobTitle are required" });
+        return;
+      }
+
+      // Gather all available data about the candidate
+      let resumeText = "";
+      let resumeAnalysisData: any = null;
+      let testResponses: any[] = [];
+      let skillsTestInfo: any = null;
+
+      if (candidateId) {
+        // Get resume text from documents
+        const documents = await storage.getCandidateDocuments(candidateId);
+        const resumeDoc = documents.find(d => d.documentType === "Resume" && d.resumeText);
+        resumeText = resumeDoc?.resumeText || resumeStore.get(candidateId) || "";
+
+        // Get resume analysis (includes AI detection signals)
+        const analyses = await storage.getResumeAnalysisByCandidateId(candidateId);
+        if (analyses.length > 0) {
+          resumeAnalysisData = analyses[0]; // Most recent analysis
+        }
+
+        // Get test responses and skills test info
+        const invitations = await storage.getSkillsTestInvitationsByCandidateId(candidateId);
+        const completedInvitation = invitations.find(inv => inv.status === "completed");
+        if (completedInvitation) {
+          testResponses = await storage.getSkillsTestResponsesByInvitationId(completedInvitation.id);
+          const test = await storage.getSkillsTest(completedInvitation.testId);
+          if (test) {
+            skillsTestInfo = {
+              roleName: test.roleName,
+              skills: test.skills,
+              questions: JSON.parse(test.questions)
+            };
+          }
+        }
+      }
+
+      // Build the AI prompt with all available context
+      const prompt = `You are a senior HR professional and expert interviewer. Generate personalized interview questions for a candidate based on their resume, test performance, and authenticity signals.
+
+CANDIDATE INFORMATION:
+Name: ${candidateName}
+Position: ${jobTitle}
+Test Score: ${testScore ? `${testScore}%` : "Not available"}
+
+${strengths && strengths.length > 0 ? `IDENTIFIED STRENGTHS:\n${strengths.join(", ")}` : ""}
+
+${weaknesses && weaknesses.length > 0 ? `AREAS TO PROBE:\n${weaknesses.join(", ")}` : ""}
+
+${resumeText ? `RESUME CONTENT:\n${resumeText.substring(0, 3000)}${resumeText.length > 3000 ? "..." : ""}` : "No resume available"}
+
+${resumeAnalysisData ? `
+RESUME ANALYSIS:
+- Fit Score: ${resumeAnalysisData.fitScore}%
+- Logic/Risk Score: ${resumeAnalysisData.logicScore}%
+- Matched Skills: ${resumeAnalysisData.matchedSkills?.join(", ") || "None"}
+- Missing Skills: ${resumeAnalysisData.missingSkills?.join(", ") || "None"}
+${resumeAnalysisData.authenticitySignals ? `
+AI DETECTION SIGNALS:
+${JSON.stringify(JSON.parse(resumeAnalysisData.authenticitySignals), null, 2)}` : ""}
+` : ""}
+
+${testResponses.length > 0 && skillsTestInfo ? `
+SKILLS TEST PERFORMANCE:
+${testResponses.map((r, idx) => {
+  const question = skillsTestInfo.questions[r.questionIndex];
+  return `Q${idx + 1}: "${question?.text || r.questionText}"
+   Answer: "${r.answer}"
+   Score: ${r.score !== null ? `${r.score}%` : "Not scored"}`;
+}).join("\n\n")}
+` : ""}
+
+GENERATE INTERVIEW QUESTIONS IN THESE CATEGORIES:
+
+1. **Resume Verification Questions (3 questions)**: 
+   - Ask for specific details about claimed achievements that would be difficult to fabricate
+   - Probe for concrete numbers, names, timelines, and challenges faced
+   - Focus on areas that seem potentially AI-generated or embellished
+   - Ask "How" and "Why" questions rather than "What" questions
+
+2. **AI Detection Probing Questions (2 questions)**:
+   - If AI signals are high, ask questions that require genuine personal experience
+   - Ask for stories about failures, mistakes, or unexpected challenges
+   - Request specific anecdotes that only someone with real experience would know
+   - These should be impossible to answer well with generic AI-generated content
+
+3. **Skills Gap Questions (2 questions)**:
+   - Based on missing skills or weak test performance areas
+   - Explore how they would handle scenarios requiring those skills
+   - Assess learning ability and adaptability
+
+4. **Technical Depth Questions (2 questions)**:
+   - Based on their strongest claimed skills
+   - Go deeper than surface-level to verify genuine expertise
+   - Ask about edge cases, trade-offs, or real-world complications
+
+5. **Behavioral & Cultural Questions (2 questions)**:
+   - Standard behavioral questions adapted to role
+   - Focus on teamwork, communication, and problem-solving
+
+For each question, provide:
+- The question text
+- Category (resume_verification, ai_detection, skills_gap, technical_depth, behavioral)
+- A rubric explaining what a strong answer looks like vs red flags
+
+Respond in this exact JSON format:
+{
+  "questions": [
+    {
+      "id": 1,
+      "category": "resume_verification",
+      "text": "The question text...",
+      "rubric": "What to look for in a good answer...",
+      "redFlags": "Warning signs of fabrication or AI content..."
+    }
+  ],
+  "overallGuidance": "Brief guidance for the interviewer about this candidate..."
+}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No response from AI");
+      }
+
+      let result;
+      try {
+        result = JSON.parse(content);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", parseError);
+        throw new Error("Invalid AI response format");
+      }
+
+      // Validate and ensure we have questions
+      const questions = Array.isArray(result.questions) ? result.questions : [];
+      
+      // Validate each question has required fields
+      const validatedQuestions = questions.map((q: any, idx: number) => ({
+        id: q.id || idx + 1,
+        category: q.category || "behavioral",
+        text: q.text || "Tell me about your experience.",
+        rubric: q.rubric || "Look for specific examples and depth of understanding.",
+        redFlags: q.redFlags || null,
+      })).filter((q: any) => q.text && q.text.length > 0);
+
+      // If no valid questions, provide fallback questions
+      const finalQuestions = validatedQuestions.length > 0 ? validatedQuestions : [
+        {
+          id: 1,
+          category: "behavioral",
+          text: "Tell me about a challenging project you worked on. What was your role and what did you accomplish?",
+          rubric: "Look for specific examples, clear role definition, and measurable outcomes.",
+          redFlags: "Vague answers, inability to provide specifics, or confusion about their own contributions."
+        },
+        {
+          id: 2,
+          category: "technical_depth",
+          text: "Describe a technical problem you solved recently. What trade-offs did you consider?",
+          rubric: "Look for technical understanding, awareness of constraints, and clear explanation.",
+          redFlags: "Surface-level answers without technical depth or inability to explain trade-offs."
+        },
+        {
+          id: 3,
+          category: "resume_verification",
+          text: "You mentioned [a specific achievement] on your resume. Can you walk me through exactly how you achieved that?",
+          rubric: "Look for concrete details, timelines, and specific challenges overcome.",
+          redFlags: "Generic answers or inability to provide specifics about their own claimed achievements."
+        }
+      ];
+
+      // Parse AI detection level safely
+      let aiDetectionLevel: number | null = null;
+      if (resumeAnalysisData?.authenticitySignals) {
+        try {
+          const signals = JSON.parse(resumeAnalysisData.authenticitySignals);
+          aiDetectionLevel = typeof signals.aiStyleLikelihood === "number" ? signals.aiStyleLikelihood : null;
+        } catch {
+          aiDetectionLevel = null;
+        }
+      }
+      
+      res.json({
+        questions: finalQuestions,
+        overallGuidance: result.overallGuidance || "Focus on verifying specific claims and look for concrete examples from the candidate's experience.",
+        candidateContext: {
+          hasResume: !!resumeText,
+          hasAnalysis: !!resumeAnalysisData,
+          hasTestResults: testResponses.length > 0,
+          aiDetectionLevel
+        }
+      });
+    } catch (error) {
+      console.error("Interview questions generation error:", error);
+      res.status(500).json({ error: "Failed to generate interview questions" });
+    }
+  });
+
   return httpServer;
 }

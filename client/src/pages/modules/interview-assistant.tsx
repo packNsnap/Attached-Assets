@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle } from "lucide-react";
+import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch } from "lucide-react";
 import type { InterviewRecommendation } from "@shared/schema";
 
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,14 @@ const formSchema = z.object({
   jobDescription: z.string().min(10, "Job description is required"),
 });
 
+type QuestionCategory = "resume_verification" | "ai_detection" | "skills_gap" | "technical_depth" | "behavioral" | "Technical" | "Behavioral" | "Cultural";
+
 type Question = {
   id: number;
-  category: "Technical" | "Behavioral" | "Cultural";
+  category: QuestionCategory;
   text: string;
-  rubric: string; // What a good answer looks like
+  rubric: string;
+  redFlags?: string;
 };
 
 type InterviewSession = {
@@ -44,7 +47,49 @@ type InterviewSession = {
   candidateName: string;
   questions: Question[];
   status: "active" | "completed";
+  overallGuidance?: string;
+  candidateContext?: {
+    hasResume: boolean;
+    hasAnalysis: boolean;
+    hasTestResults: boolean;
+    aiDetectionLevel: number | null;
+  };
 };
+
+function formatCategoryName(category: QuestionCategory): string {
+  const names: Record<string, string> = {
+    resume_verification: "Resume Verification",
+    ai_detection: "AI Detection Probe",
+    skills_gap: "Skills Gap",
+    technical_depth: "Technical Depth",
+    behavioral: "Behavioral",
+    Technical: "Technical",
+    Behavioral: "Behavioral",
+    Cultural: "Cultural Fit",
+  };
+  return names[category] || category;
+}
+
+function getCategoryIcon(category: QuestionCategory): string {
+  const icons: Record<string, string> = {
+    resume_verification: "📋",
+    ai_detection: "🤖",
+    skills_gap: "🎯",
+    technical_depth: "🔧",
+    behavioral: "👥",
+    Technical: "🔧",
+    Behavioral: "👥",
+    Cultural: "🏢",
+  };
+  return icons[category] || "❓";
+}
+
+function getCategoryBadgeVariant(category: QuestionCategory): "default" | "secondary" | "destructive" | "outline" {
+  if (category === "ai_detection") return "destructive";
+  if (category === "resume_verification") return "secondary";
+  if (category === "skills_gap" || category === "technical_depth") return "default";
+  return "outline";
+}
 
 export default function InterviewAssistantModule() {
   const [activeTab, setActiveTab] = useState("recommendations");
@@ -121,51 +166,68 @@ export default function InterviewAssistantModule() {
     }
   };
 
-  const startFromRecommendation = (rec: InterviewRecommendation) => {
-    const questions: Question[] = [];
+  const startFromRecommendation = async (rec: InterviewRecommendation) => {
+    setIsGenerating(true);
     
-    rec.recommendedQuestions.forEach((q, idx) => {
-      questions.push({
-        id: idx + 1,
-        category: "Technical",
-        text: q,
-        rubric: `Focus on ${rec.weaknesses[idx % rec.weaknesses.length] || "problem-solving approach"}. Look for specific examples and depth of understanding.`,
+    try {
+      const response = await fetch("/api/generate-interview-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateId: rec.candidateId,
+          candidateName: rec.candidateName,
+          jobTitle: rec.jobTitle,
+          testScore: rec.testScore,
+          strengths: rec.strengths,
+          weaknesses: rec.weaknesses,
+        }),
       });
-    });
 
-    questions.push({
-      id: questions.length + 1,
-      category: "Behavioral",
-      text: "Tell me about a time you had to handle a difficult situation with a team member or stakeholder.",
-      rubric: "Look for: Specific example (STAR method), emotional intelligence, focus on resolution rather than blame, and a positive outcome."
-    });
+      if (!response.ok) {
+        throw new Error("Failed to generate interview questions");
+      }
 
-    questions.push({
-      id: questions.length + 1,
-      category: "Cultural",
-      text: "What kind of work environment allows you to be most productive?",
-      rubric: "Look for: Alignment with company culture, self-motivation, and communication style."
-    });
+      const result = await response.json();
+      
+      const questions: Question[] = result.questions.map((q: any, idx: number) => ({
+        id: idx + 1,
+        category: q.category,
+        text: q.text,
+        rubric: q.rubric,
+        redFlags: q.redFlags,
+      }));
 
-    const newSession: InterviewSession = {
-      id: "session-" + Date.now(),
-      candidateName: rec.candidateName,
-      status: "active",
-      questions,
-    };
+      const newSession: InterviewSession = {
+        id: "session-" + Date.now(),
+        candidateName: rec.candidateName,
+        status: "active",
+        questions,
+        overallGuidance: result.overallGuidance,
+        candidateContext: result.candidateContext,
+      };
 
-    setSession(newSession);
-    setCurrentQuestionIndex(0);
-    setScores({});
-    setNotes({});
-    setActiveTab("interview");
-    
-    updateRecommendationStatus.mutate({ id: rec.id, status: "interview_started" });
-    
-    toast({
-      title: "Interview Started",
-      description: `Beginning interview for ${rec.candidateName}. Questions tailored to their skills test results.`,
-    });
+      setSession(newSession);
+      setCurrentQuestionIndex(0);
+      setScores({});
+      setNotes({});
+      setActiveTab("interview");
+      
+      updateRecommendationStatus.mutate({ id: rec.id, status: "interview_started" });
+      
+      toast({
+        title: "AI Interview Guide Ready",
+        description: `Generated ${questions.length} personalized questions based on resume, tests, and AI detection.`,
+      });
+    } catch (error) {
+      console.error("Failed to generate interview questions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate AI questions. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const pendingRecommendations = recommendations.filter(r => r.status === "pending");
@@ -386,9 +448,25 @@ export default function InterviewAssistantModule() {
             <CardHeader className="border-b">
               <CardTitle className="text-lg">{session.candidateName}</CardTitle>
               <CardDescription>Interview Progress</CardDescription>
+              {session.candidateContext?.aiDetectionLevel !== null && session.candidateContext?.aiDetectionLevel !== undefined && (
+                <div className="mt-2">
+                  <Badge 
+                    variant={session.candidateContext.aiDetectionLevel > 60 ? "destructive" : session.candidateContext.aiDetectionLevel > 30 ? "secondary" : "outline"}
+                    className="text-xs"
+                  >
+                    <Brain className="h-3 w-3 mr-1" />
+                    AI Detection: {session.candidateContext.aiDetectionLevel}%
+                  </Badge>
+                </div>
+              )}
             </CardHeader>
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-2">
+                {session.overallGuidance && (
+                  <div className="p-3 mb-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-xs text-amber-800 dark:text-amber-200">{session.overallGuidance}</p>
+                  </div>
+                )}
                 {session.questions.map((q, idx) => (
                   <button
                     key={q.id}
@@ -406,9 +484,11 @@ export default function InterviewAssistantModule() {
                     )}>
                       {scores[idx] ? <Check className="h-3 w-3" /> : idx + 1}
                     </div>
-                    <div>
-                      <span className="font-semibold block mb-0.5">{q.category}</span>
-                      <span className="opacity-90 line-clamp-1">{q.text}</span>
+                    <div className="min-w-0">
+                      <span className="font-semibold block mb-0.5 text-xs capitalize">
+                        {getCategoryIcon(q.category)} {formatCategoryName(q.category)}
+                      </span>
+                      <span className="opacity-90 line-clamp-1 text-xs">{q.text}</span>
                     </div>
                   </button>
                 ))}
@@ -425,7 +505,9 @@ export default function InterviewAssistantModule() {
           <Card className="lg:col-span-2 flex flex-col">
             <CardHeader>
               <div className="flex justify-between items-center mb-2">
-                <Badge variant="outline">{session.questions[currentQuestionIndex].category}</Badge>
+                <Badge variant={getCategoryBadgeVariant(session.questions[currentQuestionIndex].category)}>
+                  {getCategoryIcon(session.questions[currentQuestionIndex].category)} {formatCategoryName(session.questions[currentQuestionIndex].category)}
+                </Badge>
                 <span className="text-sm text-muted-foreground">
                   Question {currentQuestionIndex + 1} of {session.questions.length}
                 </span>
@@ -435,7 +517,7 @@ export default function InterviewAssistantModule() {
               </CardTitle>
             </CardHeader>
             
-            <CardContent className="flex-1 space-y-6">
+            <CardContent className="flex-1 space-y-4 overflow-y-auto">
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
                 <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
                   <Star className="h-4 w-4" />
@@ -445,6 +527,18 @@ export default function InterviewAssistantModule() {
                   {session.questions[currentQuestionIndex].rubric}
                 </p>
               </div>
+
+              {session.questions[currentQuestionIndex].redFlags && (
+                <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-100 dark:border-red-800">
+                  <h4 className="font-semibold text-sm text-red-900 dark:text-red-100 mb-2 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Red Flags to Watch For
+                  </h4>
+                  <p className="text-sm text-red-800 dark:text-red-200">
+                    {session.questions[currentQuestionIndex].redFlags}
+                  </p>
+                </div>
+              )}
 
               <Separator />
 
@@ -475,7 +569,7 @@ export default function InterviewAssistantModule() {
                   <label className="text-sm font-medium">Interviewer Notes</label>
                   <Textarea
                     placeholder="Record key points from the candidate's answer..."
-                    className="min-h-[120px]"
+                    className="min-h-[100px]"
                     value={notes[currentQuestionIndex] || ""}
                     onChange={handleNote}
                   />
@@ -500,7 +594,17 @@ export default function InterviewAssistantModule() {
         </div>
           ) : (
             <div className="flex h-[400px] items-center justify-center rounded-lg border border-dashed">
-              <p className="text-muted-foreground">No active interview. Start from Recommendations or Manual Setup.</p>
+              {isGenerating ? (
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="text-center">
+                    <p className="font-medium">Generating AI Interview Questions...</p>
+                    <p className="text-sm text-muted-foreground mt-1">Analyzing resume, test results, and AI detection signals</p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No active interview. Start from Recommendations or Manual Setup.</p>
+              )}
             </div>
           )}
         </TabsContent>
