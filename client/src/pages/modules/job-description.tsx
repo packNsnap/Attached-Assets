@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, Wand2, Copy, CheckCircle2 } from "lucide-react";
+import { Loader2, Wand2, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
@@ -36,12 +35,13 @@ const formSchema = z.object({
   notes: z.string().optional(),
 });
 
+type FormValues = z.infer<typeof formSchema>;
+
 type GeneratedContent = {
   description: string;
   salaryRange: {
     min: number;
     max: number;
-    currency: string;
   };
 } | null;
 
@@ -50,7 +50,7 @@ export default function JobDescriptionModule() {
   const [result, setResult] = useState<GeneratedContent>(null);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "",
@@ -61,19 +61,18 @@ export default function JobDescriptionModule() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  function onSubmit(values: FormValues) {
     setIsGenerating(true);
     
-    // Simulate AI generation delay
     setTimeout(() => {
-      const generated = generateMockContent(values);
+      const generated = generateContent(values);
       setResult(generated);
       setIsGenerating(false);
       toast({
-        title: "Job Description Generated",
-        description: "AI has successfully drafted the job description.",
+        title: "Generated successfully",
+        description: "Job description and salary range created.",
       });
-    }, 2000);
+    }, 1500);
   }
 
   const copyToClipboard = () => {
@@ -81,28 +80,25 @@ export default function JobDescriptionModule() {
     navigator.clipboard.writeText(result.description);
     toast({
       title: "Copied to clipboard",
-      description: "You can now paste this into your ATS or job board.",
+      description: "Ready to use in your ATS.",
     });
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Job Description Generator</h1>
-          <p className="text-muted-foreground mt-2">
-            Enter the role details and let our AI draft a comprehensive job description and salary range.
-          </p>
-        </div>
+    <div className="space-y-6 max-w-6xl">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Job Description Generator</h1>
+        <p className="text-muted-foreground mt-2">
+          Enter role details and AI will generate a professional job description with market salary.
+        </p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Form */}
         <Card>
           <CardHeader>
             <CardTitle>Role Details</CardTitle>
-            <CardDescription>
-              Provide the core requirements for the position.
-            </CardDescription>
+            <CardDescription>Fill in the position requirements</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -131,16 +127,14 @@ export default function JobDescriptionModule() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select level" />
+                              <SelectValue placeholder="Select" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Intern">Intern</SelectItem>
                             <SelectItem value="Junior">Junior</SelectItem>
-                            <SelectItem value="Mid-Level">Mid-Level</SelectItem>
+                            <SelectItem value="Mid">Mid-Level</SelectItem>
                             <SelectItem value="Senior">Senior</SelectItem>
                             <SelectItem value="Lead">Lead</SelectItem>
-                            <SelectItem value="Executive">Executive</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -157,13 +151,13 @@ export default function JobDescriptionModule() {
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select location" />
+                              <SelectValue placeholder="Select" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="Remote">Remote</SelectItem>
-                            <SelectItem value="On-site">On-site</SelectItem>
                             <SelectItem value="Hybrid">Hybrid</SelectItem>
+                            <SelectItem value="Onsite">On-site</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -179,10 +173,10 @@ export default function JobDescriptionModule() {
                     <FormItem>
                       <FormLabel>Required Skills</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. React, TypeScript, Node.js" {...field} />
+                        <Input placeholder="React, TypeScript, Node.js" {...field} />
                       </FormControl>
                       <FormDescription>
-                        Comma-separated list of must-have skills.
+                        Comma-separated skills
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -197,8 +191,8 @@ export default function JobDescriptionModule() {
                       <FormLabel>Additional Notes (Optional)</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Any specific team culture notes, benefits, or unique requirements..." 
-                          className="min-h-[100px]"
+                          placeholder="Team culture, benefits, unique aspects..." 
+                          className="min-h-[80px]"
                           {...field} 
                         />
                       </FormControl>
@@ -211,12 +205,12 @@ export default function JobDescriptionModule() {
                   {isGenerating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating with AI...
+                      Generating...
                     </>
                   ) : (
                     <>
                       <Wand2 className="mr-2 h-4 w-4" />
-                      Generate Job Description
+                      Generate Description & Salary
                     </>
                   )}
                 </Button>
@@ -225,54 +219,51 @@ export default function JobDescriptionModule() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
+        {/* Output */}
+        <div className="space-y-4">
           {result ? (
-            <Card className="h-full border-primary/20 shadow-lg">
-              <CardHeader className="bg-muted/30 pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-xl text-primary">Generated Output</CardTitle>
-                    <CardDescription>
-                      Based on your inputs. Review and edit as needed.
-                    </CardDescription>
+            <>
+              <Card className="border-primary/20">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Market Salary Range</CardTitle>
+                    <Button variant="outline" size="sm" onClick={copyToClipboard}>
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy
+                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" onClick={copyToClipboard}>
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-6">
-                <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
-                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">Estimated Salary Range</h3>
-                  <div className="text-3xl font-bold text-foreground">
-                    ${result.salaryRange.min.toLocaleString()} - ${result.salaryRange.max.toLocaleString()}
-                    <span className="text-lg font-normal text-muted-foreground ml-1">/ year</span>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                    <div className="text-3xl font-bold">
+                      ${result.salaryRange.min.toLocaleString()} - ${result.salaryRange.max.toLocaleString()}
+                      <span className="text-sm font-normal text-muted-foreground ml-2">/ year</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Based on {form.getValues("level")} level, {form.getValues("location")} location
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    *Market estimation based on {form.getValues("level")} level and {form.getValues("location")} location.
-                  </p>
-                </div>
+                </CardContent>
+              </Card>
 
-                <Separator />
-
-                <div className="prose prose-sm max-w-none dark:prose-invert">
-                  <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                    {result.description}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Job Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm max-w-none dark:prose-invert text-sm">
+                    <div className="whitespace-pre-wrap leading-relaxed font-mono bg-muted/30 p-4 rounded border max-h-96 overflow-y-auto">
+                      {result.description}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </>
           ) : (
-            <Card className="h-full flex items-center justify-center bg-muted/10 border-dashed">
-              <CardContent className="text-center py-12">
-                <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Wand2 className="h-8 w-8 text-muted-foreground/50" />
-                </div>
-                <h3 className="text-lg font-medium text-muted-foreground">Ready to Generate</h3>
-                <p className="text-sm text-muted-foreground/70 max-w-xs mx-auto mt-2">
-                  Fill out the form on the left to generate a professional job description and salary insights.
-                </p>
+            <Card className="bg-muted/10 border-dashed h-96 flex items-center justify-center">
+              <CardContent className="text-center">
+                <Wand2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground">Fill the form and generate</p>
               </CardContent>
             </Card>
           )}
@@ -282,65 +273,59 @@ export default function JobDescriptionModule() {
   );
 }
 
-// Mock AI Logic
-function generateMockContent(values: any): GeneratedContent {
-  const { title, level, location, skills, notes } = values;
+function generateContent(values: FormValues): GeneratedContent {
+  const { title, level, location, skills } = values;
   
-  // Simple logic to generate realistic-looking salary ranges
-  let baseMin = 50000;
-  let baseMax = 80000;
+  const salaryRanges: Record<string, [number, number]> = {
+    Junior: [60000, 85000],
+    Mid: [90000, 130000],
+    Senior: [130000, 180000],
+    Lead: [170000, 240000],
+  };
 
-  if (level === "Mid-Level") { baseMin = 80000; baseMax = 120000; }
-  if (level === "Senior") { baseMin = 120000; baseMax = 180000; }
-  if (level === "Lead") { baseMin = 160000; baseMax = 220000; }
-  if (level === "Executive") { baseMin = 200000; baseMax = 350000; }
-
-  // Adjust for location
-  if (location === "On-site" || location === "Hybrid") {
-    baseMin += 10000;
-    baseMax += 15000;
+  let [min, max] = salaryRanges[level] || [60000, 85000];
+  
+  if (location === "Onsite") {
+    min += 5000;
+    max += 10000;
   }
 
-  const skillList = skills.split(",").map((s: string) => s.trim()).filter(Boolean);
+  const skillList = skills.split(",").map(s => s.trim()).filter(Boolean);
 
-  const description = `
-# ${title}
+  const description = `# ${title}
 
 **Level:** ${level}
 **Location:** ${location}
 
 ## About the Role
-We are looking for a talented ${title} to join our growing team. In this role, you will be responsible for driving key initiatives and contributing to our core products. We value innovation, collaboration, and a passion for excellence.
+We're seeking a talented ${title} to join our engineering team. You'll work on impactful projects, mentor team members, and drive technical excellence across our platform.
 
 ## Key Responsibilities
-• Design, develop, and maintain high-quality solutions for our core platform.
-• Collaborate with cross-functional teams to define, design, and ship new features.
-• Ensure the performance, quality, and responsiveness of applications.
-• Identify and correct bottlenecks and fix bugs.
-• Help maintain code quality, organization, and automation.
+• Design and implement scalable solutions
+• Collaborate with cross-functional teams
+• Conduct code reviews and share knowledge
+• Troubleshoot and optimize performance
+• Contribute to architecture decisions
 
 ## Requirements
-${skillList.map((s: string) => `• Proven experience with ${s}`).join("\n")}
-• Strong problem-solving skills and attention to detail.
-• Excellent communication and teamwork abilities.
-• Bachelor's degree in a relevant field or equivalent experience.
+${skillList.map((s, i) => `• ${i === 0 ? 'Proven experience with' : 'Knowledge of'} ${s}`).join("\n")}
+• Strong problem-solving skills
+• Excellent communication abilities
+• Bachelor's degree or equivalent experience
+• ${level === "Lead" ? "Team leadership experience" : "Collaborative mindset"}
 
-## Why Join Us?
-• Competitive compensation and benefits package.
-• Flexible work environment (${location}).
-• Opportunity to work with cutting-edge technologies.
-• ${notes || "A culture that values growth and learning."}
+## Why Join?
+• Competitive compensation and benefits
+• ${location === "Remote" ? "100% remote flexibility" : "Flexible work arrangements"}
+• Professional development opportunities
+• Collaborative, innovative culture
 
-## How to Apply
-Please submit your resume and a brief cover letter outlining your experience and why you are a great fit for this role.
-`.trim();
+---
+
+**How to Apply:** Submit your resume and brief cover letter describing your fit for the role.`;
 
   return {
     description,
-    salaryRange: {
-      min: baseMin,
-      max: baseMax,
-      currency: "USD",
-    },
+    salaryRange: { min, max },
   };
 }
