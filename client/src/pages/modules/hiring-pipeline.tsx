@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -13,7 +13,10 @@ import {
   GripVertical,
   Briefcase,
   Filter,
-  UserCircle
+  UserCircle,
+  FileText,
+  ClipboardCheck,
+  Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,9 +57,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Candidate, Job } from "@shared/schema";
+import type { Candidate, Job, ResumeAnalysis, SkillsTestRecommendation, InterviewRecommendation } from "@shared/schema";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type JobWithCandidates = Job & { candidateCount: number };
+
+type CandidateAssessments = {
+  resumeAnalysis: ResumeAnalysis[];
+  skillsTests: SkillsTestRecommendation[];
+  interviews: InterviewRecommendation[];
+};
 
 type Stage = "Applied" | "Screened" | "Interview" | "Offer" | "Hired" | "Rejected";
 
@@ -87,6 +102,26 @@ export default function HiringPipelineModule() {
       return res.json() as Promise<Candidate[]>;
     }
   });
+
+  const [assessmentsMap, setAssessmentsMap] = useState<Record<string, CandidateAssessments>>({});
+
+  const fetchAssessments = async (candidateId: string) => {
+    if (assessmentsMap[candidateId]) return;
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/assessments`);
+      if (res.ok) {
+        const data = await res.json() as CandidateAssessments;
+        setAssessmentsMap(prev => ({ ...prev, [candidateId]: data }));
+      }
+    } catch (e) {
+      console.error("Failed to fetch assessments", e);
+    }
+  };
+
+  // Fetch assessments when candidates change
+  useEffect(() => {
+    candidates.forEach(c => fetchAssessments(c.id));
+  }, [candidates]);
 
   const filteredCandidates = selectedJobId === "all" 
     ? candidates 
@@ -263,6 +298,74 @@ export default function HiringPipelineModule() {
                             </span>
                           ))}
                         </div>
+                        
+                        {/* Assessment Scores */}
+                        {assessmentsMap[candidate.id] && (
+                          <TooltipProvider>
+                            <div className="flex gap-2 flex-wrap">
+                              {assessmentsMap[candidate.id].resumeAnalysis.length > 0 && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate("/resume-analyzer");
+                                      }}
+                                      className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                                      data-testid={`link-resume-score-${candidate.id}`}
+                                    >
+                                      <FileText className="h-3 w-3" />
+                                      {assessmentsMap[candidate.id].resumeAnalysis[0].overallScore}%
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Resume Score: {assessmentsMap[candidate.id].resumeAnalysis[0].overallScore}%</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              {assessmentsMap[candidate.id].skillsTests.length > 0 && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate("/skills-test");
+                                      }}
+                                      className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                                      data-testid={`link-skills-score-${candidate.id}`}
+                                    >
+                                      <ClipboardCheck className="h-3 w-3" />
+                                      {assessmentsMap[candidate.id].skillsTests[0].fitScore}%
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Skills Test Score: {assessmentsMap[candidate.id].skillsTests[0].fitScore}%</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                              {assessmentsMap[candidate.id].interviews.length > 0 && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate("/interviews");
+                                      }}
+                                      className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                                      data-testid={`link-interview-score-${candidate.id}`}
+                                    >
+                                      <Users className="h-3 w-3" />
+                                      {assessmentsMap[candidate.id].interviews[0].testScore}%
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Interview Score: {assessmentsMap[candidate.id].interviews[0].testScore}%</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          </TooltipProvider>
+                        )}
                         
                         {job && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">

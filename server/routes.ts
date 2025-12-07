@@ -8,7 +8,8 @@ import {
   insertSkillsTestRecommendationSchema,
   insertInterviewRecommendationSchema,
   insertCandidateNoteSchema,
-  insertCandidateDocumentSchema
+  insertCandidateDocumentSchema,
+  insertResumeAnalysisSchema
 } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
@@ -95,6 +96,16 @@ export async function registerRoutes(
       res.json(candidate);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch candidate" });
+    }
+  });
+
+  app.get("/api/candidates/:id/assessments", async (req, res) => {
+    try {
+      const candidateId = req.params.id;
+      const assessments = await storage.getCandidateAssessments(candidateId);
+      res.json(assessments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch candidate assessments" });
     }
   });
 

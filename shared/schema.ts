@@ -139,6 +139,7 @@ export type SkillsTestRecommendation = typeof skillsTestRecommendations.$inferSe
 
 export const interviewRecommendations = pgTable("interview_recommendations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidateId: varchar("candidate_id"),
   candidateName: text("candidate_name").notNull(),
   jobTitle: text("job_title").notNull(),
   testScore: integer("test_score").notNull(),
@@ -156,3 +157,27 @@ export const insertInterviewRecommendationSchema = createInsertSchema(interviewR
 
 export type InsertInterviewRecommendation = z.infer<typeof insertInterviewRecommendationSchema>;
 export type InterviewRecommendation = typeof interviewRecommendations.$inferSelect;
+
+export const resumeAnalysis = pgTable("resume_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidateId: varchar("candidate_id").notNull(),
+  jobId: varchar("job_id"),
+  jobTitle: text("job_title"),
+  overallScore: integer("overall_score").notNull(),
+  skillsMatch: integer("skills_match").notNull(),
+  experienceMatch: integer("experience_match").notNull(),
+  educationMatch: integer("education_match").notNull(),
+  summary: text("summary").notNull(),
+  strengths: text("strengths").array().notNull(),
+  gaps: text("gaps").array().notNull(),
+  status: text("status").notNull().default("completed"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertResumeAnalysisSchema = createInsertSchema(resumeAnalysis).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertResumeAnalysis = z.infer<typeof insertResumeAnalysisSchema>;
+export type ResumeAnalysis = typeof resumeAnalysis.$inferSelect;

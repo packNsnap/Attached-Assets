@@ -15,6 +15,8 @@ import {
   type InsertCandidateNote,
   type CandidateDocument,
   type InsertCandidateDocument,
+  type ResumeAnalysis,
+  type InsertResumeAnalysis,
   users,
   jobs,
   candidates,
@@ -22,7 +24,8 @@ import {
   skillsTestRecommendations,
   interviewRecommendations,
   candidateNotes,
-  candidateDocuments
+  candidateDocuments,
+  resumeAnalysis
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql, desc } from "drizzle-orm";
@@ -74,6 +77,18 @@ export interface IStorage {
   createCandidateDocument(doc: InsertCandidateDocument): Promise<CandidateDocument>;
   getCandidateDocuments(candidateId: string): Promise<CandidateDocument[]>;
   deleteCandidateDocument(id: string, candidateId: string): Promise<boolean>;
+  
+  createResumeAnalysis(analysis: InsertResumeAnalysis): Promise<ResumeAnalysis>;
+  getResumeAnalysisByCandidateId(candidateId: string): Promise<ResumeAnalysis[]>;
+  
+  getSkillsTestRecommendationsByCandidateId(candidateId: string): Promise<SkillsTestRecommendation[]>;
+  getInterviewRecommendationsByCandidateId(candidateId: string): Promise<InterviewRecommendation[]>;
+  
+  getCandidateAssessments(candidateId: string): Promise<{
+    resumeAnalysis: ResumeAnalysis[];
+    skillsTests: SkillsTestRecommendation[];
+    interviews: InterviewRecommendation[];
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -236,6 +251,41 @@ export class DatabaseStorage implements IStorage {
     if (!doc[0] || doc[0].candidateId !== candidateId) return false;
     const result = await db.delete(candidateDocuments).where(eq(candidateDocuments.id, id)).returning();
     return result.length > 0;
+  }
+
+  async createResumeAnalysis(analysis: InsertResumeAnalysis): Promise<ResumeAnalysis> {
+    const result = await db.insert(resumeAnalysis).values(analysis).returning();
+    return result[0];
+  }
+
+  async getResumeAnalysisByCandidateId(candidateId: string): Promise<ResumeAnalysis[]> {
+    return await db.select().from(resumeAnalysis).where(eq(resumeAnalysis.candidateId, candidateId)).orderBy(desc(resumeAnalysis.createdAt));
+  }
+
+  async getSkillsTestRecommendationsByCandidateId(candidateId: string): Promise<SkillsTestRecommendation[]> {
+    return await db.select().from(skillsTestRecommendations).where(eq(skillsTestRecommendations.candidateId, candidateId)).orderBy(desc(skillsTestRecommendations.createdAt));
+  }
+
+  async getInterviewRecommendationsByCandidateId(candidateId: string): Promise<InterviewRecommendation[]> {
+    return await db.select().from(interviewRecommendations).where(eq(interviewRecommendations.candidateId, candidateId)).orderBy(desc(interviewRecommendations.createdAt));
+  }
+
+  async getCandidateAssessments(candidateId: string): Promise<{
+    resumeAnalysis: ResumeAnalysis[];
+    skillsTests: SkillsTestRecommendation[];
+    interviews: InterviewRecommendation[];
+  }> {
+    const [resumeResults, skillsResults, interviewResults] = await Promise.all([
+      this.getResumeAnalysisByCandidateId(candidateId),
+      this.getSkillsTestRecommendationsByCandidateId(candidateId),
+      this.getInterviewRecommendationsByCandidateId(candidateId)
+    ]);
+    
+    return {
+      resumeAnalysis: resumeResults,
+      skillsTests: skillsResults,
+      interviews: interviewResults
+    };
   }
 }
 
