@@ -428,6 +428,28 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/candidates/:id/resume-analyses", async (req, res) => {
+    try {
+      const analyses = await storage.getResumeAnalysisByCandidateId(req.params.id);
+      res.json(analyses);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch resume analyses" });
+    }
+  });
+
+  app.delete("/api/candidates/:id/resume-analyses/:analysisId", async (req, res) => {
+    try {
+      const deleted = await storage.deleteResumeAnalysis(req.params.analysisId, req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: "Resume analysis not found" });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete resume analysis" });
+    }
+  });
+
   async function extractTextFromDocx(buffer: Buffer): Promise<string> {
     try {
       const result = await mammoth.extractRawText({ buffer });
@@ -677,6 +699,7 @@ Respond in this exact JSON format:
             extraSkills: result.skillMatch?.extra || [],
             findings: JSON.stringify(result.findings || []),
             summary: result.summary || "",
+            authenticitySignals: result.authenticitySignals ? JSON.stringify(result.authenticitySignals) : null,
             status: "completed"
           });
         } catch (saveError) {
