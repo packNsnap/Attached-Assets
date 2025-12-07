@@ -46,28 +46,28 @@ export const MODULES = [
     description: "Interview questions and rubrics"
   },
   {
-    title: "Hiring Pipeline",
-    path: "/hiring",
-    icon: Users,
-    description: "Track candidates through stages"
-  },
-  {
     title: "Reference Check",
     path: "/references",
     icon: UserCheck,
     description: "Automated reference request templates"
   },
   {
-    title: "Policies & Docs",
-    path: "/policies",
-    icon: BookOpen,
-    description: "Generate HR policies and templates"
+    title: "Hiring Pipeline",
+    path: "/hiring",
+    icon: Users,
+    description: "Track candidates through stages"
   },
   {
     title: "Onboarding",
     path: "/onboarding",
     icon: GraduationCap,
     description: "Onboarding checklists and plans"
+  },
+  {
+    title: "Policies & Docs",
+    path: "/policies",
+    icon: BookOpen,
+    description: "Generate HR policies and templates"
   },
   {
     title: "Performance",
