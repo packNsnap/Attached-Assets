@@ -542,6 +542,75 @@ Respond in this exact JSON format:
     }
   });
 
+  app.post("/api/generate-skills-test", async (req, res) => {
+    try {
+      const { roleName, difficulty, skills, questionCount } = req.body;
+      
+      if (!roleName || !difficulty || !skills) {
+        res.status(400).json({ error: "Missing required fields: roleName, difficulty, skills" });
+        return;
+      }
+
+      const numQuestions = parseInt(questionCount) || 5;
+
+      const prompt = `You are an expert technical recruiter creating a skills assessment test. Generate exactly ${numQuestions} questions to test a candidate for a ${roleName} position at the ${difficulty} level.
+
+Skills to test: ${skills}
+
+Create a mix of multiple choice and open-ended questions. Each question should:
+- Be practical and scenario-based, not just trivia
+- Test real-world application of the skill
+- Be appropriate for the ${difficulty} difficulty level
+
+Respond with a JSON object in exactly this format:
+{
+  "questions": [
+    {
+      "id": 1,
+      "type": "multiple_choice",
+      "text": "Question text here",
+      "options": ["Option A", "Option B", "Option C", "Option D"]
+    },
+    {
+      "id": 2,
+      "type": "open_text",
+      "text": "Open-ended question text here"
+    }
+  ]
+}
+
+Generate approximately 60% multiple choice and 40% open text questions. Make sure all questions are relevant to the specified skills and difficulty level.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No response from AI");
+      }
+
+      const result = JSON.parse(content);
+      const skillsArray = skills.split(",").map((s: string) => s.trim());
+      
+      res.json({
+        id: `test-${Date.now()}`,
+        roleName,
+        skills: skillsArray,
+        questions: result.questions,
+        status: "draft",
+        candidatesCompleted: 0,
+        avgScore: 0,
+      });
+    } catch (error) {
+      console.error("Skills test generation error:", error);
+      res.status(500).json({ error: "Failed to generate skills test" });
+    }
+  });
+
   app.post("/api/generate-job-description", async (req, res) => {
     try {
       const { title, level, location, skills, notes } = req.body;

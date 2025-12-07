@@ -196,13 +196,27 @@ export default function SkillsTestModule() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsGenerating(true);
     
-    setTimeout(() => {
-      const newTest = generateMockTest(values);
+    try {
+      const response = await fetch("/api/generate-skills-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roleName: values.roleName,
+          difficulty: values.difficulty,
+          skills: values.skills,
+          questionCount: values.questionCount,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to generate test");
+      }
+      
+      const newTest = await response.json();
       setGeneratedTest(newTest);
-      setIsGenerating(false);
       setActiveTab("preview");
       
       if (pendingRecommendationId) {
@@ -214,7 +228,15 @@ export default function SkillsTestModule() {
         title: "Test Generated",
         description: `Created ${newTest.questions.length} questions for ${values.roleName}.`,
       });
-    }, 2000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate test. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   return (
