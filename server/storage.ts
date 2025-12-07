@@ -17,6 +17,12 @@ import {
   type InsertCandidateDocument,
   type ResumeAnalysis,
   type InsertResumeAnalysis,
+  type SkillsTest,
+  type InsertSkillsTest,
+  type SkillsTestInvitation,
+  type InsertSkillsTestInvitation,
+  type SkillsTestResponse,
+  type InsertSkillsTestResponse,
   users,
   jobs,
   candidates,
@@ -25,7 +31,10 @@ import {
   interviewRecommendations,
   candidateNotes,
   candidateDocuments,
-  resumeAnalysis
+  resumeAnalysis,
+  skillsTests,
+  skillsTestInvitations,
+  skillsTestResponses
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql, desc } from "drizzle-orm";
@@ -92,6 +101,21 @@ export interface IStorage {
     skillsTests: SkillsTestRecommendation[];
     interviews: InterviewRecommendation[];
   }>;
+  
+  deleteSkillsTestRecommendation(id: string): Promise<boolean>;
+  
+  createSkillsTest(test: InsertSkillsTest): Promise<SkillsTest>;
+  getSkillsTest(id: string): Promise<SkillsTest | undefined>;
+  getSkillsTests(): Promise<SkillsTest[]>;
+  
+  createSkillsTestInvitation(invitation: InsertSkillsTestInvitation): Promise<SkillsTestInvitation>;
+  getSkillsTestInvitation(id: string): Promise<SkillsTestInvitation | undefined>;
+  getSkillsTestInvitationByToken(token: string): Promise<SkillsTestInvitation | undefined>;
+  getSkillsTestInvitationsByCandidateId(candidateId: string): Promise<SkillsTestInvitation[]>;
+  updateSkillsTestInvitation(id: string, data: Partial<InsertSkillsTestInvitation & { score: number; completedAt: Date }>): Promise<SkillsTestInvitation | undefined>;
+  
+  createSkillsTestResponse(response: InsertSkillsTestResponse): Promise<SkillsTestResponse>;
+  getSkillsTestResponsesByInvitationId(invitationId: string): Promise<SkillsTestResponse[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -306,6 +330,58 @@ export class DatabaseStorage implements IStorage {
       skillsTests: skillsResults,
       interviews: interviewResults
     };
+  }
+
+  async deleteSkillsTestRecommendation(id: string): Promise<boolean> {
+    const result = await db.delete(skillsTestRecommendations).where(eq(skillsTestRecommendations.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async createSkillsTest(test: InsertSkillsTest): Promise<SkillsTest> {
+    const result = await db.insert(skillsTests).values(test).returning();
+    return result[0];
+  }
+
+  async getSkillsTest(id: string): Promise<SkillsTest | undefined> {
+    const result = await db.select().from(skillsTests).where(eq(skillsTests.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getSkillsTests(): Promise<SkillsTest[]> {
+    return await db.select().from(skillsTests).orderBy(desc(skillsTests.createdAt));
+  }
+
+  async createSkillsTestInvitation(invitation: InsertSkillsTestInvitation): Promise<SkillsTestInvitation> {
+    const result = await db.insert(skillsTestInvitations).values(invitation).returning();
+    return result[0];
+  }
+
+  async getSkillsTestInvitation(id: string): Promise<SkillsTestInvitation | undefined> {
+    const result = await db.select().from(skillsTestInvitations).where(eq(skillsTestInvitations.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getSkillsTestInvitationByToken(token: string): Promise<SkillsTestInvitation | undefined> {
+    const result = await db.select().from(skillsTestInvitations).where(eq(skillsTestInvitations.token, token)).limit(1);
+    return result[0];
+  }
+
+  async getSkillsTestInvitationsByCandidateId(candidateId: string): Promise<SkillsTestInvitation[]> {
+    return await db.select().from(skillsTestInvitations).where(eq(skillsTestInvitations.candidateId, candidateId)).orderBy(desc(skillsTestInvitations.createdAt));
+  }
+
+  async updateSkillsTestInvitation(id: string, data: Partial<InsertSkillsTestInvitation & { score: number; completedAt: Date }>): Promise<SkillsTestInvitation | undefined> {
+    const result = await db.update(skillsTestInvitations).set(data).where(eq(skillsTestInvitations.id, id)).returning();
+    return result[0];
+  }
+
+  async createSkillsTestResponse(response: InsertSkillsTestResponse): Promise<SkillsTestResponse> {
+    const result = await db.insert(skillsTestResponses).values(response).returning();
+    return result[0];
+  }
+
+  async getSkillsTestResponsesByInvitationId(invitationId: string): Promise<SkillsTestResponse[]> {
+    return await db.select().from(skillsTestResponses).where(eq(skillsTestResponses.invitationId, invitationId)).orderBy(skillsTestResponses.questionIndex);
   }
 }
 

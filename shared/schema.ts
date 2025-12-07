@@ -182,3 +182,63 @@ export const insertResumeAnalysisSchema = createInsertSchema(resumeAnalysis).omi
 
 export type InsertResumeAnalysis = z.infer<typeof insertResumeAnalysisSchema>;
 export type ResumeAnalysis = typeof resumeAnalysis.$inferSelect;
+
+export const skillsTests = pgTable("skills_tests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roleName: text("role_name").notNull(),
+  difficulty: text("difficulty").notNull(),
+  skills: text("skills").array().notNull(),
+  questions: text("questions").notNull(),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertSkillsTestSchema = createInsertSchema(skillsTests).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSkillsTest = z.infer<typeof insertSkillsTestSchema>;
+export type SkillsTest = typeof skillsTests.$inferSelect;
+
+export const skillsTestInvitations = pgTable("skills_test_invitations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  testId: varchar("test_id").notNull(),
+  candidateId: varchar("candidate_id"),
+  candidateName: text("candidate_name").notNull(),
+  candidateEmail: text("candidate_email").notNull(),
+  jobTitle: text("job_title").notNull(),
+  token: text("token").notNull().unique(),
+  status: text("status").notNull().default("pending"),
+  score: integer("score"),
+  sentAt: timestamp("sent_at"),
+  completedAt: timestamp("completed_at"),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertSkillsTestInvitationSchema = createInsertSchema(skillsTestInvitations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSkillsTestInvitation = z.infer<typeof insertSkillsTestInvitationSchema>;
+export type SkillsTestInvitation = typeof skillsTestInvitations.$inferSelect;
+
+export const skillsTestResponses = pgTable("skills_test_responses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invitationId: varchar("invitation_id").notNull(),
+  questionIndex: integer("question_index").notNull(),
+  questionText: text("question_text").notNull(),
+  answer: text("answer").notNull(),
+  score: integer("score"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertSkillsTestResponseSchema = createInsertSchema(skillsTestResponses).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSkillsTestResponse = z.infer<typeof insertSkillsTestResponseSchema>;
+export type SkillsTestResponse = typeof skillsTestResponses.$inferSelect;
