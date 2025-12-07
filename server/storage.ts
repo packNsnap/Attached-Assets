@@ -7,10 +7,13 @@ import {
   type InsertCandidate,
   type InterviewNote,
   type InsertInterviewNote,
+  type SkillsTestRecommendation,
+  type InsertSkillsTestRecommendation,
   users,
   jobs,
   candidates,
-  interviewNotes
+  interviewNotes,
+  skillsTestRecommendations
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq } from "drizzle-orm";
@@ -40,6 +43,10 @@ export interface IStorage {
   
   createInterviewNote(note: InsertInterviewNote): Promise<InterviewNote>;
   getInterviewNotesByCandidateId(candidateId: string): Promise<InterviewNote[]>;
+  
+  createSkillsTestRecommendation(rec: InsertSkillsTestRecommendation): Promise<SkillsTestRecommendation>;
+  getSkillsTestRecommendations(): Promise<SkillsTestRecommendation[]>;
+  updateSkillsTestRecommendationStatus(id: string, status: string): Promise<SkillsTestRecommendation | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -102,6 +109,24 @@ export class DatabaseStorage implements IStorage {
 
   async getInterviewNotesByCandidateId(candidateId: string): Promise<InterviewNote[]> {
     return await db.select().from(interviewNotes).where(eq(interviewNotes.candidateId, candidateId));
+  }
+
+  async createSkillsTestRecommendation(rec: InsertSkillsTestRecommendation): Promise<SkillsTestRecommendation> {
+    const result = await db.insert(skillsTestRecommendations).values(rec).returning();
+    return result[0];
+  }
+
+  async getSkillsTestRecommendations(): Promise<SkillsTestRecommendation[]> {
+    return await db.select().from(skillsTestRecommendations);
+  }
+
+  async updateSkillsTestRecommendationStatus(id: string, status: string): Promise<SkillsTestRecommendation | undefined> {
+    const result = await db
+      .update(skillsTestRecommendations)
+      .set({ status })
+      .where(eq(skillsTestRecommendations.id, id))
+      .returning();
+    return result[0];
   }
 }
 

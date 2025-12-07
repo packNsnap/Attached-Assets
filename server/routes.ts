@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { 
   insertJobSchema, 
   insertCandidateSchema, 
-  insertInterviewNoteSchema 
+  insertInterviewNoteSchema,
+  insertSkillsTestRecommendationSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -122,6 +123,47 @@ export async function registerRoutes(
       res.json(notes);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch interview notes" });
+    }
+  });
+
+  app.post("/api/skills-test-recommendations", async (req, res) => {
+    try {
+      const recData = insertSkillsTestRecommendationSchema.parse(req.body);
+      const recommendation = await storage.createSkillsTestRecommendation(recData);
+      res.json(recommendation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create skills test recommendation" });
+      }
+    }
+  });
+
+  app.get("/api/skills-test-recommendations", async (req, res) => {
+    try {
+      const recommendations = await storage.getSkillsTestRecommendations();
+      res.json(recommendations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch skills test recommendations" });
+    }
+  });
+
+  app.patch("/api/skills-test-recommendations/:id/status", async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!status || typeof status !== "string") {
+        res.status(400).json({ error: "Status is required and must be a string" });
+        return;
+      }
+      const recommendation = await storage.updateSkillsTestRecommendationStatus(req.params.id, status);
+      if (!recommendation) {
+        res.status(404).json({ error: "Recommendation not found" });
+        return;
+      }
+      res.json(recommendation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update recommendation status" });
     }
   });
 
