@@ -63,8 +63,19 @@ type GeneratedContent = {
   };
 } | null;
 
+type ResearchResults = {
+  responsibilities: string[];
+  requirements: string[];
+  benefits: string[];
+  keywords: string[];
+  uniqueSellingPoints: string[];
+  summary: string;
+} | null;
+
 export default function JobDescriptionModule() {
   const [result, setResult] = useState<GeneratedContent>(null);
+  const [researchResults, setResearchResults] = useState<ResearchResults>(null);
+  const [researchOpen, setResearchOpen] = useState(true);
   const [editingJob, setEditingJob] = useState<JobWithCandidates | null>(null);
   const [viewingJob, setViewingJob] = useState<JobWithCandidates | null>(null);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
@@ -126,6 +137,7 @@ export default function JobDescriptionModule() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
       setResult(null);
+      setResearchResults(null);
       form.reset();
       toast({
         title: "Job Created",
@@ -166,6 +178,46 @@ export default function JobDescriptionModule() {
       });
     }
   });
+
+  const researchMutation = useMutation({
+    mutationFn: async (values: FormValues) => {
+      const res = await fetch("/api/research-job-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values)
+      });
+      if (!res.ok) throw new Error("Failed to research job description");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setResearchResults(data);
+      setResearchOpen(true);
+      toast({
+        title: "Research Complete",
+        description: "Found insights from real job postings. Review and use for your description.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Research Error",
+        description: "Failed to research job description. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleResearch = () => {
+    const values = form.getValues();
+    if (!values.title || !values.level || !values.location) {
+      toast({
+        title: "Missing Fields",
+        description: "Please fill in Job Title, Level, and Location before researching.",
+        variant: "destructive",
+      });
+      return;
+    }
+    researchMutation.mutate(values);
+  };
 
   const saveGeneratedJob = () => {
     if (!result) return;
@@ -404,28 +456,131 @@ export default function JobDescriptionModule() {
                   )}
                 />
 
-                <Button type="submit" className="w-full" disabled={generateMutation.isPending || createJobMutation.isPending} data-testid="button-generate">
-                  {generateMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      AI Generating...
-                    </>
-                  ) : createJobMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2 h-4 w-4" />
-                      Generate with AI
-                    </>
-                  )}
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    className="flex-1" 
+                    disabled={researchMutation.isPending || generateMutation.isPending} 
+                    onClick={handleResearch}
+                    data-testid="button-research"
+                  >
+                    {researchMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Researching...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="mr-2 h-4 w-4" />
+                        Research from Web
+                      </>
+                    )}
+                  </Button>
+                  <Button type="submit" className="flex-1" disabled={generateMutation.isPending || createJobMutation.isPending} data-testid="button-generate">
+                    {generateMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        AI Generating...
+                      </>
+                    ) : createJobMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        Generate with AI
+                      </>
+                    )}
+                  </Button>
+                </div>
               </form>
             </Form>
           </CardContent>
         </Card>
+
+        {/* Research Results */}
+        {researchResults && (
+          <Collapsible open={researchOpen} onOpenChange={setResearchOpen}>
+            <Card className="border-blue-500/30 bg-blue-500/5">
+              <CardHeader className="pb-2">
+                <CollapsibleTrigger className="flex items-center justify-between w-full">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-blue-500" />
+                    Research Insights
+                  </CardTitle>
+                  {researchOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </CollapsibleTrigger>
+                <CardDescription>From real job postings for similar roles</CardDescription>
+              </CardHeader>
+              <CollapsibleContent>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground italic">{researchResults.summary}</p>
+                  
+                  <div className="grid gap-4">
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Common Responsibilities</h4>
+                      <ul className="text-sm space-y-1" data-testid="list-responsibilities">
+                        {researchResults.responsibilities.slice(0, 5).map((item, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-blue-500 mt-1">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Typical Requirements</h4>
+                      <ul className="text-sm space-y-1" data-testid="list-requirements">
+                        {researchResults.requirements.slice(0, 5).map((item, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <span className="text-blue-500 mt-1">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Popular Benefits</h4>
+                      <div className="flex flex-wrap gap-1" data-testid="list-benefits">
+                        {researchResults.benefits.slice(0, 6).map((item, i) => (
+                          <Badge key={i} variant="secondary" className="text-xs">{item}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-medium text-sm mb-2">Keywords to Include</h4>
+                      <div className="flex flex-wrap gap-1" data-testid="list-keywords">
+                        {researchResults.keywords.slice(0, 8).map((item, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">{item}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {researchResults.uniqueSellingPoints.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-sm mb-2">Unique Selling Points</h4>
+                        <ul className="text-sm space-y-1" data-testid="list-usp">
+                          {researchResults.uniqueSellingPoints.slice(0, 3).map((item, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="text-green-500 mt-1">✓</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
 
         {/* Output */}
         <div className="space-y-4">
