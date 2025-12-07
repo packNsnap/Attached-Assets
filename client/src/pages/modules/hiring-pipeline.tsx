@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   MoreHorizontal, 
   Plus, 
@@ -42,43 +43,61 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import type { Candidate } from "@shared/schema";
 
 type Stage = "Applied" | "Screened" | "Interview" | "Offer" | "Hired" | "Rejected";
-
-type Candidate = {
-  id: string;
-  name: string;
-  role: string;
-  stage: Stage;
-  email: string;
-  tags: string[];
-  appliedDate: string;
-};
-
-const INITIAL_CANDIDATES: Candidate[] = [
-  { id: "c1", name: "Sarah Miller", role: "Frontend Engineer", stage: "Applied", email: "sarah.m@example.com", tags: ["React", "Senior"], appliedDate: "2 days ago" },
-  { id: "c2", name: "David Chen", role: "Product Designer", stage: "Screened", email: "david.c@example.com", tags: ["Figma", "UX"], appliedDate: "1 week ago" },
-  { id: "c3", name: "James Wilson", role: "Backend Engineer", stage: "Interview", email: "j.wilson@example.com", tags: ["Node.js", "Postgres"], appliedDate: "3 days ago" },
-  { id: "c4", name: "Emily Davis", role: "Marketing Lead", stage: "Offer", email: "emily.d@example.com", tags: ["Growth", "B2B"], appliedDate: "2 weeks ago" },
-  { id: "c5", name: "Michael Brown", role: "Sales Rep", stage: "Rejected", email: "m.brown@example.com", tags: ["Junior"], appliedDate: "1 month ago" },
-];
 
 const STAGES: Stage[] = ["Applied", "Screened", "Interview", "Offer", "Hired", "Rejected"];
 
 export default function HiringPipelineModule() {
-  const [candidates, setCandidates] = useState<Candidate[]>(INITIAL_CANDIDATES);
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: candidates = [], isLoading } = useQuery({
+    queryKey: ["candidates"],
+    queryFn: async () => {
+      const res = await fetch("/api/candidates");
+      if (!res.ok) throw new Error("Failed to fetch candidates");
+      return res.json() as Promise<Candidate[]>;
+    }
+  });
+
+  const updateStageMutation = useMutation({
+    mutationFn: async ({ id, stage }: { id: string; stage: string }) => {
+      const res = await fetch(`/api/candidates/${id}/stage`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stage })
+      });
+      if (!res.ok) throw new Error("Failed to update stage");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+    }
+  });
 
   const moveCandidate = (id: string, newStage: Stage) => {
-    setCandidates(prev => prev.map(c => 
-      c.id === id ? { ...c, stage: newStage } : c
-    ));
-    toast({
-      title: "Stage Updated",
-      description: `Moved candidate to ${newStage}`,
-    });
+    updateStageMutation.mutate(
+      { id, stage: newStage },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Stage Updated",
+            description: `Moved candidate to ${newStage}`,
+          });
+        },
+        onError: () => {
+          toast({
+            title: "Error",
+            description: "Failed to update candidate stage",
+            variant: "destructive",
+          });
+        }
+      }
+    );
   };
 
   const getStageColor = (stage: Stage) => {
@@ -101,21 +120,29 @@ export default function HiringPipelineModule() {
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-140px)]">
+        <div className="text-muted-foreground">Loading candidates...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col">
       <div className="flex items-center justify-between shrink-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Hiring Pipeline</h1>
+          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Hiring Pipeline</h1>
           <p className="text-muted-foreground mt-2">
             Manage candidates through the hiring process.
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" data-testid="button-search">
             <Search className="mr-2 h-4 w-4" />
             Search
           </Button>
-          <Button>
+          <Button data-testid="button-add-candidate">
             <Plus className="mr-2 h-4 w-4" />
             Add Candidate
           </Button>
@@ -128,7 +155,7 @@ export default function HiringPipelineModule() {
             <div key={stage} className="flex-1 min-w-[280px] flex flex-col rounded-lg bg-muted/40 border">
               <div className="p-3 border-b bg-muted/40 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className={cn("rounded-full px-2 font-semibold", getStageColor(stage))}>
+                  <Badge variant="secondary" className={cn("rounded-full px-2 font-semibold", getStageColor(stage))} data-testid={`badge-count-${stage.toLowerCase()}`}>
                     {candidates.filter(c => c.stage === stage).length}
                   </Badge>
                   <span className="font-medium text-sm">{stage}</span>
@@ -139,16 +166,16 @@ export default function HiringPipelineModule() {
               <ScrollArea className="flex-1 p-3">
                 <div className="space-y-3">
                   {candidates.filter(c => c.stage === stage).map((candidate) => (
-                    <Card key={candidate.id} className="cursor-pointer hover:shadow-md transition-shadow group relative bg-card">
+                    <Card key={candidate.id} className="cursor-pointer hover:shadow-md transition-shadow group relative bg-card" data-testid={`card-candidate-${candidate.id}`}>
                       <CardContent className="p-4 space-y-3">
                         <div className="flex justify-between items-start">
                           <div>
-                            <h3 className="font-semibold text-sm">{candidate.name}</h3>
-                            <p className="text-xs text-muted-foreground">{candidate.role}</p>
+                            <h3 className="font-semibold text-sm" data-testid={`text-candidate-name-${candidate.id}`}>{candidate.name}</h3>
+                            <p className="text-xs text-muted-foreground" data-testid={`text-candidate-role-${candidate.id}`}>{candidate.role}</p>
                           </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1 -mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1 -mr-2 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-menu-${candidate.id}`}>
                                 <MoreHorizontal className="h-3 w-3" />
                               </Button>
                             </DropdownMenuTrigger>
@@ -156,7 +183,7 @@ export default function HiringPipelineModule() {
                               <DropdownMenuLabel>Move to</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               {STAGES.filter(s => s !== stage).map(s => (
-                                <DropdownMenuItem key={s} onClick={() => moveCandidate(candidate.id, s)}>
+                                <DropdownMenuItem key={s} onClick={() => moveCandidate(candidate.id, s)} data-testid={`menu-item-move-${s.toLowerCase()}`}>
                                   {s}
                                 </DropdownMenuItem>
                               ))}
@@ -164,7 +191,7 @@ export default function HiringPipelineModule() {
                               <DropdownMenuItem onClick={() => {
                                 setSelectedCandidate(candidate);
                                 setEmailOpen(true);
-                              }}>
+                              }} data-testid={`menu-item-email-${candidate.id}`}>
                                 <Mail className="mr-2 h-3 w-3" />
                                 Email Candidate
                               </DropdownMenuItem>
@@ -174,7 +201,7 @@ export default function HiringPipelineModule() {
                         
                         <div className="flex flex-wrap gap-1">
                           {candidate.tags.map(tag => (
-                            <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                            <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20" data-testid={`tag-${tag.toLowerCase()}`}>
                               {tag}
                             </span>
                           ))}
@@ -208,19 +235,20 @@ export default function HiringPipelineModule() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Subject</label>
-              <Input defaultValue={`Update on your application for ${selectedCandidate?.role}`} />
+              <Input defaultValue={`Update on your application for ${selectedCandidate?.role}`} data-testid="input-email-subject" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Message</label>
               <Textarea 
                 className="min-h-[150px]"
-                defaultValue={`Hi ${selectedCandidate?.name},\n\nThank you for your interest in the ${selectedCandidate?.role} position. We have reviewed your application and...`} 
+                defaultValue={`Hi ${selectedCandidate?.name},\n\nThank you for your interest in the ${selectedCandidate?.role} position. We have reviewed your application and...`}
+                data-testid="input-email-message"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEmailOpen(false)}>Cancel</Button>
-            <Button onClick={handleSendEmail}>
+            <Button variant="outline" onClick={() => setEmailOpen(false)} data-testid="button-cancel-email">Cancel</Button>
+            <Button onClick={handleSendEmail} data-testid="button-send-email">
               <Mail className="mr-2 h-4 w-4" />
               Send Email
             </Button>

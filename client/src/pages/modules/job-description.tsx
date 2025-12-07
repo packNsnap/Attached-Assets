@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useMutation } from "@tanstack/react-query";
 import { Loader2, Wand2, Copy } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import type { InsertJob } from "@shared/schema";
 
 const formSchema = z.object({
   title: z.string().min(2, "Job title is required"),
@@ -46,7 +48,6 @@ type GeneratedContent = {
 } | null;
 
 export default function JobDescriptionModule() {
-  const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<GeneratedContent>(null);
   const { toast } = useToast();
 
@@ -61,18 +62,51 @@ export default function JobDescriptionModule() {
     },
   });
 
-  function onSubmit(values: FormValues) {
-    setIsGenerating(true);
-    
-    setTimeout(() => {
-      const generated = generateContent(values);
-      setResult(generated);
-      setIsGenerating(false);
-      toast({
-        title: "Generated successfully",
-        description: "Job description and salary range created.",
+  const createJobMutation = useMutation({
+    mutationFn: async (jobData: InsertJob) => {
+      const res = await fetch("/api/jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(jobData)
       });
-    }, 1500);
+      if (!res.ok) throw new Error("Failed to create job");
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Job Created",
+        description: "Job description saved successfully to database.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save job to database",
+        variant: "destructive",
+      });
+    }
+  });
+
+  function onSubmit(values: FormValues) {
+    const generated = generateContent(values);
+    setResult(generated);
+    
+    if (generated) {
+      const skillList = values.skills.split(",").map(s => s.trim()).filter(Boolean);
+      
+      const jobData: InsertJob = {
+        title: values.title,
+        level: values.level,
+        location: values.location,
+        skills: skillList,
+        description: generated.description,
+        salaryMin: generated.salaryRange.min,
+        salaryMax: generated.salaryRange.max,
+        status: "active"
+      };
+      
+      createJobMutation.mutate(jobData);
+    }
   }
 
   const copyToClipboard = () => {
@@ -110,7 +144,7 @@ export default function JobDescriptionModule() {
                     <FormItem>
                       <FormLabel>Job Title</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Senior Frontend Engineer" {...field} />
+                        <Input placeholder="e.g. Senior Frontend Engineer" {...field} data-testid="input-job-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -173,7 +207,7 @@ export default function JobDescriptionModule() {
                     <FormItem>
                       <FormLabel>Required Skills</FormLabel>
                       <FormControl>
-                        <Input placeholder="React, TypeScript, Node.js" {...field} />
+                        <Input placeholder="React, TypeScript, Node.js" {...field} data-testid="input-skills" />
                       </FormControl>
                       <FormDescription>
                         Comma-separated skills
@@ -201,16 +235,16 @@ export default function JobDescriptionModule() {
                   )}
                 />
 
-                <Button type="submit" className="w-full" disabled={isGenerating}>
-                  {isGenerating ? (
+                <Button type="submit" className="w-full" disabled={createJobMutation.isPending} data-testid="button-generate">
+                  {createJobMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
+                      Saving...
                     </>
                   ) : (
                     <>
                       <Wand2 className="mr-2 h-4 w-4" />
-                      Generate Description & Salary
+                      Generate & Save Job
                     </>
                   )}
                 </Button>
