@@ -301,11 +301,14 @@ export default function SkillsTestModule() {
     }
   }
 
-  // Get status counts
+  // Get status counts - use invitations for accurate awaiting count
   const pendingCount = recommendations.filter(r => r.status === "pending").length;
   const readyCount = recommendations.filter(r => r.status === "test_created").length;
-  const sentCount = recommendations.filter(r => r.status === "sent").length;
+  const awaitingInvitations = invitations.filter(inv => inv.status === "pending" || inv.status === "sent");
   const completedInvitations = invitations.filter(inv => inv.status === "completed");
+  
+  // Filter candidate queue to only show non-completed recommendations
+  const activeRecommendations = recommendations.filter(r => r.status !== "completed");
 
   // Get test preview
   const getTestForPreview = (testId: string) => {
@@ -364,7 +367,7 @@ export default function SkillsTestModule() {
                 <Clock className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold" data-testid="count-sent">{sentCount}</p>
+                <p className="text-2xl font-bold" data-testid="count-sent">{awaitingInvitations.length}</p>
                 <p className="text-sm text-muted-foreground">Awaiting</p>
               </div>
             </div>
@@ -391,7 +394,7 @@ export default function SkillsTestModule() {
         <div className="lg:col-span-2 space-y-4">
           <h2 className="text-lg font-semibold">Candidate Queue</h2>
           
-          {recommendations.length === 0 ? (
+          {activeRecommendations.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -405,7 +408,7 @@ export default function SkillsTestModule() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {recommendations.map((rec) => (
+              {activeRecommendations.map((rec) => (
                 <Card 
                   key={rec.id} 
                   className="cursor-pointer hover:border-primary/50 transition-colors"

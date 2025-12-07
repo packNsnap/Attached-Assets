@@ -1218,6 +1218,9 @@ Make the description professional but engaging. Use bullet points for responsibi
         completedAt: new Date(),
       });
       
+      // Update recommendation status to completed
+      await storage.updateSkillsTestRecommendationStatusByTestId(invitation.testId, "completed");
+      
       // Score responses in the background
       (async () => {
         try {
