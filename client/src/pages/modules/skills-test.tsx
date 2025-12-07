@@ -922,7 +922,7 @@ HR Team`
 
       {/* View Test Results Dialog */}
       <Dialog open={!!viewResultsInvitation} onOpenChange={() => setViewResultsInvitation(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="sm:max-w-2xl h-[85vh] flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Test Results</DialogTitle>
             {viewResultsInvitation && (
@@ -972,7 +972,7 @@ HR Team`
             </div>
           )}
 
-          <ScrollArea className="flex-1 min-h-0 pr-4">
+          <div className="flex-1 overflow-y-auto min-h-0 pr-2">
             {isLoadingResponses ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1060,7 +1060,7 @@ HR Team`
                 })}
               </div>
             )}
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
