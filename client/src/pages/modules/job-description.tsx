@@ -125,9 +125,11 @@ export default function JobDescriptionModule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
+      setResult(null);
+      form.reset();
       toast({
         title: "Job Created",
-        description: "Job description saved successfully to database.",
+        description: "Job description saved successfully.",
       });
     },
     onError: () => {
@@ -149,23 +151,12 @@ export default function JobDescriptionModule() {
       if (!res.ok) throw new Error("Failed to generate job description");
       return res.json();
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       setResult(data);
-      
-      const skillList = variables.skills.split(",").map(s => s.trim()).filter(Boolean);
-      
-      const jobData: InsertJob = {
-        title: variables.title,
-        level: variables.level,
-        location: variables.location,
-        skills: skillList,
-        description: data.description,
-        salaryMin: data.salaryRange.min,
-        salaryMax: data.salaryRange.max,
-        status: "active"
-      };
-      
-      createJobMutation.mutate(jobData);
+      toast({
+        title: "Description Generated",
+        description: "Review the job description and click Save to create the position.",
+      });
     },
     onError: () => {
       toast({
@@ -175,6 +166,30 @@ export default function JobDescriptionModule() {
       });
     }
   });
+
+  const saveGeneratedJob = () => {
+    if (!result) return;
+    const values = form.getValues();
+    const skillList = values.skills.split(",").map(s => s.trim()).filter(Boolean);
+    
+    const jobData: InsertJob = {
+      title: values.title,
+      level: values.level,
+      location: values.location,
+      skills: skillList,
+      description: result.description,
+      salaryMin: result.salaryRange.min,
+      salaryMax: result.salaryRange.max,
+      status: "active"
+    };
+    
+    createJobMutation.mutate(jobData);
+  };
+
+  const regenerateDescription = () => {
+    const values = form.getValues();
+    generateMutation.mutate(values);
+  };
 
   const updateJobMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<InsertJob> }) => {
@@ -444,9 +459,45 @@ export default function JobDescriptionModule() {
                 </CardHeader>
                 <CardContent>
                   <div className="prose prose-sm max-w-none dark:prose-invert text-sm">
-                    <div className="whitespace-pre-wrap leading-relaxed font-mono bg-muted/30 p-4 rounded border max-h-96 overflow-y-auto">
+                    <div className="whitespace-pre-wrap leading-relaxed font-mono bg-muted/30 p-4 rounded border max-h-72 overflow-y-auto">
                       {result.description}
                     </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={regenerateDescription}
+                      disabled={generateMutation.isPending}
+                      data-testid="button-regenerate"
+                    >
+                      {generateMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Regenerating...
+                        </>
+                      ) : (
+                        <>
+                          <Wand2 className="mr-2 h-4 w-4" />
+                          Regenerate
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      className="flex-1"
+                      onClick={saveGeneratedJob}
+                      disabled={createJobMutation.isPending}
+                      data-testid="button-save-position"
+                    >
+                      {createJobMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Position"
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -547,7 +598,10 @@ export default function JobDescriptionModule() {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-7 w-7"
-                                onClick={() => openEditDialog(job)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditDialog(job);
+                                }}
                                 data-testid={`button-edit-job-${job.id}`}
                               >
                                 <Pencil className="h-3 w-3" />
@@ -556,7 +610,8 @@ export default function JobDescriptionModule() {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   if (window.confirm("Are you sure you want to delete this job?")) {
                                     deleteJobMutation.mutate(job.id);
                                   }
