@@ -180,6 +180,8 @@ export default function ResumeAnalyzerModule() {
           jobSkills: selectedJob?.skills || [],
           jobTitle: selectedJob?.title || "",
           jobLevel: selectedJob?.level || "",
+          candidateId: selectedCandidateId || undefined,
+          jobId: selectedJob?.id || undefined,
         }),
       });
 

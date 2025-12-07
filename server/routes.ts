@@ -481,7 +481,7 @@ export async function registerRoutes(
 
   app.post("/api/analyze-resume", async (req, res) => {
     try {
-      const { resumeText, jobDescription, jobSkills, jobTitle, jobLevel } = req.body;
+      const { resumeText, jobDescription, jobSkills, jobTitle, jobLevel, candidateId, jobId } = req.body;
       
       if (!resumeText) {
         res.status(400).json({ error: "Resume text is required" });
@@ -546,6 +546,27 @@ Respond in this exact JSON format:
       }
 
       const result = JSON.parse(content);
+      
+      if (candidateId) {
+        try {
+          await storage.createResumeAnalysis({
+            candidateId,
+            jobId: jobId || null,
+            jobTitle: jobTitle || null,
+            fitScore: result.fitScore,
+            logicScore: result.logicScore,
+            matchedSkills: result.skillMatch?.matched || [],
+            missingSkills: result.skillMatch?.missing || [],
+            extraSkills: result.skillMatch?.extra || [],
+            findings: JSON.stringify(result.findings || []),
+            summary: result.summary || "",
+            status: "completed"
+          });
+        } catch (saveError) {
+          console.error("Failed to save analysis to database:", saveError);
+        }
+      }
+      
       res.json(result);
     } catch (error) {
       console.error("Resume analysis error:", error);

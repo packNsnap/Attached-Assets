@@ -19,7 +19,13 @@ import {
   ExternalLink,
   User,
   StickyNote,
-  FolderOpen
+  FolderOpen,
+  BarChart3,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,7 +57,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Candidate, Job, CandidateNote, CandidateDocument } from "@shared/schema";
+import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis } from "@shared/schema";
+import { Progress } from "@/components/ui/progress";
 
 type JobWithCandidates = Job & { candidateCount: number };
 type Stage = "Applied" | "Screened" | "Interview" | "Offer" | "Hired" | "Rejected";
@@ -128,6 +135,56 @@ export default function CandidatesModule() {
       return res.json() as Promise<CandidateDocument[]>;
     },
     enabled: !!selectedCandidate
+  });
+
+  const { data: resumeAnalyses = [], isLoading: analysisLoading } = useQuery({
+    queryKey: ["resume-analysis", selectedCandidate?.id],
+    queryFn: async () => {
+      if (!selectedCandidate) return [];
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/assessments`);
+      if (!res.ok) throw new Error("Failed to fetch assessments");
+      const data = await res.json();
+      return (data.resumeAnalysis || []) as ResumeAnalysis[];
+    },
+    enabled: !!selectedCandidate
+  });
+
+  const [isRerunningAnalysis, setIsRerunningAnalysis] = useState(false);
+
+  const rerunAnalysisMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedCandidate) throw new Error("No candidate selected");
+      const resumeDoc = documents.find(d => d.documentType === "Resume" && d.resumeText);
+      if (!resumeDoc?.resumeText) throw new Error("No resume text found");
+      
+      const assignedJob = jobs.find(j => j.id === selectedCandidate.jobId);
+      
+      setIsRerunningAnalysis(true);
+      const res = await fetch("/api/analyze-resume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeText: resumeDoc.resumeText,
+          jobDescription: assignedJob?.description || "",
+          jobSkills: assignedJob?.skills || [],
+          jobTitle: assignedJob?.title || selectedCandidate.role,
+          jobLevel: assignedJob?.level || "",
+          candidateId: selectedCandidate.id,
+          jobId: assignedJob?.id
+        })
+      });
+      if (!res.ok) throw new Error("Failed to analyze resume");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resume-analysis", selectedCandidate?.id] });
+      toast({ title: "Analysis Complete", description: "Resume has been re-analyzed." });
+      setIsRerunningAnalysis(false);
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: error.message || "Failed to analyze resume", variant: "destructive" });
+      setIsRerunningAnalysis(false);
+    }
   });
 
   useEffect(() => {
@@ -627,9 +684,12 @@ export default function CandidatesModule() {
             </CardHeader>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="mx-6 grid grid-cols-3">
+              <TabsList className="mx-6 grid grid-cols-4">
                 <TabsTrigger value="profile" data-testid="tab-profile">
                   <User className="h-4 w-4 mr-1" /> Profile
+                </TabsTrigger>
+                <TabsTrigger value="analysis" data-testid="tab-analysis">
+                  <BarChart3 className="h-4 w-4 mr-1" /> Analysis
                 </TabsTrigger>
                 <TabsTrigger value="notes" data-testid="tab-notes">
                   <StickyNote className="h-4 w-4 mr-1" /> Notes
@@ -799,6 +859,172 @@ export default function CandidatesModule() {
                         </div>
                       </div>
                     </>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="analysis" className="px-6 pb-6 space-y-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium text-muted-foreground">Resume Analysis</h4>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => rerunAnalysisMutation.mutate()}
+                      disabled={isRerunningAnalysis || !documents.some(d => d.documentType === "Resume" && d.resumeText)}
+                      data-testid="button-rerun-analysis"
+                    >
+                      {isRerunningAnalysis ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-1" /> Run Analysis
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {analysisLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : resumeAnalyses.length === 0 ? (
+                    <Card className="p-6">
+                      <div className="text-center space-y-2">
+                        <BarChart3 className="h-8 w-8 mx-auto text-muted-foreground/50" />
+                        <p className="text-sm text-muted-foreground">No resume analysis yet.</p>
+                        <p className="text-xs text-muted-foreground">
+                          {documents.some(d => d.documentType === "Resume" && d.resumeText) 
+                            ? "Click 'Run Analysis' to analyze the candidate's resume."
+                            : "Upload a resume first to run analysis."
+                          }
+                        </p>
+                      </div>
+                    </Card>
+                  ) : (
+                    <div className="space-y-4">
+                      {resumeAnalyses.map((analysis, index) => {
+                        const findings = (() => {
+                          try {
+                            return JSON.parse(analysis.findings) as { type: string; message: string; details: string }[];
+                          } catch {
+                            return [];
+                          }
+                        })();
+                        
+                        return (
+                          <Card key={analysis.id} className="p-4 space-y-4">
+                            {index === 0 && (
+                              <Badge variant="secondary" className="mb-2">Latest Analysis</Badge>
+                            )}
+                            
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Fit Score</p>
+                                <div className="flex items-center gap-2">
+                                  <span className={cn(
+                                    "text-2xl font-bold",
+                                    analysis.fitScore >= 70 ? "text-green-600" : 
+                                    analysis.fitScore >= 50 ? "text-yellow-600" : "text-red-600"
+                                  )} data-testid="text-fit-score">
+                                    {analysis.fitScore}%
+                                  </span>
+                                </div>
+                                <Progress value={analysis.fitScore} className="h-1.5" />
+                              </div>
+                              
+                              <div className="space-y-1">
+                                <p className="text-xs text-muted-foreground">Logic Risk</p>
+                                <div className="flex items-center gap-2">
+                                  <span className={cn(
+                                    "text-2xl font-bold",
+                                    analysis.logicScore < 30 ? "text-green-600" : 
+                                    analysis.logicScore < 60 ? "text-yellow-600" : "text-red-600"
+                                  )} data-testid="text-logic-score">
+                                    {analysis.logicScore}%
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {analysis.logicScore < 30 ? "Low Risk" : analysis.logicScore < 60 ? "Medium" : "High Risk"}
+                                  </Badge>
+                                </div>
+                                <Progress value={analysis.logicScore} className="h-1.5" />
+                              </div>
+                            </div>
+
+                            {analysis.jobTitle && (
+                              <div className="text-xs text-muted-foreground">
+                                Analyzed for: <span className="font-medium">{analysis.jobTitle}</span>
+                              </div>
+                            )}
+
+                            <Separator />
+
+                            <div className="space-y-2">
+                              <p className="text-xs font-medium text-muted-foreground">Skills Match</p>
+                              <div className="flex flex-wrap gap-1">
+                                {analysis.matchedSkills.map((skill, i) => (
+                                  <Badge key={i} variant="default" className="text-xs bg-green-100 text-green-800 hover:bg-green-100">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    {skill}
+                                  </Badge>
+                                ))}
+                                {analysis.missingSkills.map((skill, i) => (
+                                  <Badge key={i} variant="destructive" className="text-xs">
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    {skill}
+                                  </Badge>
+                                ))}
+                              </div>
+                              {analysis.extraSkills.length > 0 && (
+                                <div className="mt-1">
+                                  <p className="text-xs text-muted-foreground mb-1">Extra skills:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {analysis.extraSkills.map((skill, i) => (
+                                      <Badge key={i} variant="secondary" className="text-xs">
+                                        {skill}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {findings.length > 0 && (
+                              <>
+                                <Separator />
+                                <div className="space-y-2">
+                                  <p className="text-xs font-medium text-muted-foreground">Key Findings</p>
+                                  <div className="space-y-2">
+                                    {findings.slice(0, 4).map((finding, i) => (
+                                      <div key={i} className="flex items-start gap-2 text-xs">
+                                        {finding.type === "good" && <CheckCircle className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />}
+                                        {finding.type === "warning" && <AlertTriangle className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />}
+                                        {finding.type === "risk" && <XCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />}
+                                        <div>
+                                          <p className="font-medium">{finding.message}</p>
+                                          <p className="text-muted-foreground">{finding.details}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+
+                            <Separator />
+                            
+                            <div className="space-y-1">
+                              <p className="text-xs font-medium text-muted-foreground">Summary</p>
+                              <p className="text-sm">{analysis.summary}</p>
+                            </div>
+
+                            <div className="text-xs text-muted-foreground text-right">
+                              {new Date(analysis.createdAt).toLocaleDateString()} at {new Date(analysis.createdAt).toLocaleTimeString()}
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
                   )}
                 </TabsContent>
 
