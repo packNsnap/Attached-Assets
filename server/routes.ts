@@ -548,7 +548,7 @@ export async function registerRoutes(
       const skillsList = jobSkills?.join(", ") || "";
       const jobContext = jobDescription || `Job: ${jobTitle || "Unknown"}, Level: ${jobLevel || "Unknown"}, Skills: ${skillsList}`;
 
-      const prompt = `You are an expert HR recruiter analyzing a resume for job fit, logical consistency, and authenticity signals. Analyze the following resume against the job requirements.
+      const prompt = `You are an expert HR recruiter and AI-content forensics specialist. Your PRIMARY focus is detecting AI-generated or AI-assisted content. Be SKEPTICAL by default - modern AI generates convincing resumes with metrics and tools.
 
 JOB CONTEXT:
 ${jobContext}
@@ -559,36 +559,54 @@ ${skillsList}
 RESUME:
 ${resumeText}
 
-Analyze this resume and provide:
-1. A fit score (0-100) based on how well the candidate matches the job requirements
-2. A logic/risk score (0-100) measuring inconsistencies, gaps, or concerns (higher = more risk)
-3. Skills analysis - which required skills are matched, missing, and what extra skills they have
-4. Key findings about the resume (mark each as "risk", "warning", or "good")
-5. A brief summary of the candidate's suitability
+PART 1 - JOB FIT ANALYSIS:
+1. Fit score (0-100): How well does the candidate match job requirements?
+2. Logic/risk score (0-100): Inconsistencies, gaps, or concerns (higher = more risk)
+3. Skills analysis: matched, missing, and extra skills
+4. Key findings (mark as "risk", "warning", or "good")
+5. Brief summary of suitability
 
-AUTHENTICITY & AI-STYLE ANALYSIS:
-Also analyze the resume for signs of AI-generated or heavily templated content:
+PART 2 - AI DETECTION (BE AGGRESSIVE - Modern AI is sophisticated):
 
-6. Generic Writing Score (0-100): How templated and cliché-filled is the writing?
-   - Look for phrases like "results-driven", "proven track record", "dynamic professional", "detail-oriented"
-   - Check for overly polished, uniform sentence structure
-   - Count repetitive verb patterns ("Led", "Managed", "Implemented" with no variety)
+6. Generic Writing Score (0-100) - Score HIGH (60+) if you see:
+   - ANY clichés: "results-driven", "proven track record", "dynamic", "passionate", "detail-oriented", "self-starter", "team player", "go-getter", "leveraged", "spearheaded", "synergy", "cross-functional"
+   - Buzzwords without substance: "innovative", "strategic", "cutting-edge", "state-of-the-art"
+   - Perfect parallel structure in ALL bullets (AI loves consistency)
+   - Every bullet starts with past-tense action verbs in identical patterns
+   - Suspiciously polished language with no casual/natural voice
 
-7. Specificity Score (0-100): How concrete and grounded is the content?
-   - Percentage of bullets with concrete metrics (%, $, numbers)
-   - Named tools, technologies, or products mentioned
-   - Real company names and specific project descriptions
+7. Specificity Score (0-100) - Score LOW (under 50) if:
+   - Metrics use round numbers (20%, 30%, 50% instead of 23%, 37%, 48%)
+   - Company descriptions are vague ("leading company", "innovative firm")
+   - Project descriptions lack unique details that only someone who did it would know
+   - Tools mentioned are just popular keywords without specific use cases
+   - No mention of specific challenges, failures, or lessons learned
 
-8. Fluff Ratio (0-100): What percentage of bullet points are vague vs substantive?
-   - Concrete impact with numbers/clear before-after = substantive
-   - Vague responsibilities with no measurable outcomes = fluff
+8. Fluff Ratio (0-100) - Score HIGH if:
+   - Bullets describe responsibilities rather than achievements
+   - Impact statements are generic ("improved efficiency", "enhanced productivity")
+   - No before/after comparisons with specifics
+   - Metrics seem fabricated (too perfect, too convenient)
 
-9. AI-Style Likelihood Score (0-100): Overall probability the resume was AI-assisted
-   - Consider writing uniformity, predictability, and machine-like patterns
-   - Perfect grammar with no natural human artifacts
-   - Extremely consistent sentence length and structure
+9. AI-Style Likelihood Score (0-100) - THIS IS THE KEY SCORE. Score HIGH (60+) if:
+   - Sentence lengths are suspiciously uniform (within 5-10 words of each other)
+   - Perfect grammar with ZERO typos, abbreviations, or informal elements
+   - No personality or unique voice - reads like a template
+   - Every section is perfectly balanced in length
+   - Vocabulary is consistently formal throughout (no natural variation)
+   - Writing feels "optimized" - every word seems deliberately chosen
+   - Too comprehensive - covers everything perfectly with no gaps
+   - Achievements are suspiciously well-distributed across all roles
+   - Numbers follow patterns (all multiples of 5 or 10)
+   - Lacks specific anecdotes or stories that feel personal
+   - Uses trendy keywords that AI tends to insert
 
-10. Authenticity warnings - specific concerns about authenticity
+10. Additional red flags to look for:
+    - Does the resume feel like it could apply to anyone in this field?
+    - Are there unique human touches (casual phrasing, specific anecdotes)?
+    - Does the writing have natural rhythm variations or is it robotically consistent?
+
+IMPORTANT: Err on the side of HIGHER AI detection scores. A 100% AI-generated resume should score 70-90+ on aiStyleLikelihood. If the resume seems "too perfect", that itself is suspicious. "Perfect" resumes with metrics ARE often AI-generated.
 
 Respond in this exact JSON format:
 {
@@ -613,21 +631,22 @@ Respond in this exact JSON format:
   ],
   "summary": "Overall assessment of the candidate in 2-3 sentences",
   "authenticitySignals": {
-    "genericWritingScore": 65,
-    "specificityScore": 40,
-    "fluffRatio": 70,
-    "aiStyleLikelihood": 55,
-    "clichePhrases": ["results-driven", "proven track record"],
+    "genericWritingScore": 75,
+    "specificityScore": 35,
+    "fluffRatio": 65,
+    "aiStyleLikelihood": 80,
+    "clichePhrases": ["results-driven", "proven track record", "leveraged", "spearheaded"],
     "metricsFound": ["increased sales by 30%", "managed team of 12"],
     "toolsMentioned": ["Salesforce", "Excel", "Python"],
+    "structuralPatterns": ["All bullets 15-20 words", "Every bullet starts with past-tense verb", "Round percentages only"],
     "warnings": [
       {
-        "type": "warning",
-        "message": "Highly templated language",
-        "details": "Resume contains multiple cliché phrases common in AI-generated content"
+        "type": "risk",
+        "message": "High AI-generation probability",
+        "details": "Resume exhibits multiple AI writing patterns including uniform structure, perfect grammar, and optimized buzzword placement"
       }
     ],
-    "recommendation": "The writing style is highly polished and uniform; may have been assisted by AI tools. We recommend deeper probing in interviews to verify specific achievements."
+    "recommendation": "This resume shows strong indicators of AI-assisted writing. In interviews, ask for specific stories behind achievements, request examples of challenges faced, and verify metrics with follow-up questions about methodology."
   }
 }`;
 
@@ -635,7 +654,7 @@ Respond in this exact JSON format:
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
-        temperature: 0.3,
+        temperature: 0.2,
       });
 
       const content = completion.choices[0]?.message?.content;

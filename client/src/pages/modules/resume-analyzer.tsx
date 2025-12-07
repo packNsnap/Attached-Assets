@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info } from "lucide-react";
+import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns } from "lucide-react";
 import { useLocation } from "wouter";
 
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,7 @@ type AuthenticitySignals = {
   clichePhrases: string[];
   metricsFound: string[];
   toolsMentioned: string[];
+  structuralPatterns?: string[];
   warnings: AuthenticityWarning[];
   recommendation: string;
 };
@@ -727,6 +728,22 @@ export default function ResumeAnalyzerModule() {
                           {result.authenticitySignals.toolsMentioned.map((tool, i) => (
                             <Badge key={i} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400">
                               {tool}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {result.authenticitySignals.structuralPatterns && result.authenticitySignals.structuralPatterns.length > 0 && (
+                      <div>
+                        <p className="text-xs font-medium text-orange-600 mb-2 flex items-center gap-1">
+                          <Columns className="h-3 w-3" />
+                          AI Writing Patterns Detected
+                        </p>
+                        <div className="flex flex-wrap gap-1" data-testid="list-structural-patterns">
+                          {result.authenticitySignals.structuralPatterns.map((pattern, i) => (
+                            <Badge key={i} variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400">
+                              {pattern}
                             </Badge>
                           ))}
                         </div>
