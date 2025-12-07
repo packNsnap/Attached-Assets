@@ -25,7 +25,9 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  Loader2
+  Loader2,
+  Star,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +59,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation, SkillsTestResponse } from "@shared/schema";
+import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation, SkillsTestResponse, InterviewRecommendation } from "@shared/schema";
 import { Progress } from "@/components/ui/progress";
 import { ListChecks } from "lucide-react";
 
@@ -156,6 +158,18 @@ export default function CandidatesModule() {
       const res = await fetch(`/api/candidates/${selectedCandidate.id}/skills-test-invitations`);
       if (!res.ok) throw new Error("Failed to fetch skills test invitations");
       return res.json() as Promise<SkillsTestInvitation[]>;
+    },
+    enabled: !!selectedCandidate
+  });
+
+  const { data: interviewRecommendations = [] } = useQuery({
+    queryKey: ["interview-recommendations", selectedCandidate?.id],
+    queryFn: async () => {
+      if (!selectedCandidate) return [];
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/assessments`);
+      if (!res.ok) throw new Error("Failed to fetch assessments");
+      const data = await res.json();
+      return (data.interviews || []) as InterviewRecommendation[];
     },
     enabled: !!selectedCandidate
   });
@@ -876,6 +890,58 @@ export default function CandidatesModule() {
                       )}
                     </div>
                   </div>
+
+                  {(() => {
+                    const completedInterviews = interviewRecommendations.filter(
+                      rec => rec.status === "completed" && rec.interviewScore !== null
+                    );
+                    return completedInterviews.length > 0 && (
+                      <>
+                        <Separator />
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium text-muted-foreground">Interview Results</h4>
+                          <div className="space-y-3">
+                            {completedInterviews.map((rec) => (
+                              <div 
+                                key={rec.id} 
+                                className="p-3 rounded-lg border bg-muted/30"
+                                data-testid={`interview-result-${rec.id}`}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-sm font-medium">{rec.jobTitle}</span>
+                                  <div className="flex items-center gap-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Star
+                                        key={star}
+                                        className={cn(
+                                          "h-4 w-4",
+                                          star <= (rec.interviewScore ?? 0)
+                                            ? "fill-yellow-400 text-yellow-400"
+                                            : "text-muted-foreground"
+                                        )}
+                                      />
+                                    ))}
+                                    <span className="ml-1 text-sm font-medium">{rec.interviewScore}/5</span>
+                                  </div>
+                                </div>
+                                {rec.interviewSummary && (
+                                  <div className="flex gap-2 text-sm text-muted-foreground">
+                                    <MessageSquare className="h-4 w-4 shrink-0 mt-0.5" />
+                                    <p>{rec.interviewSummary}</p>
+                                  </div>
+                                )}
+                                {rec.completedAt && (
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    Completed: {new Date(rec.completedAt).toLocaleDateString()}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
 
                   {selectedCandidate.resumeUrl && (
                     <>
