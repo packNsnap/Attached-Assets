@@ -82,6 +82,7 @@ export interface IStorage {
   
   createResumeAnalysis(analysis: InsertResumeAnalysis): Promise<ResumeAnalysis>;
   getResumeAnalysisByCandidateId(candidateId: string): Promise<ResumeAnalysis[]>;
+  deleteResumeAnalysis(id: string, candidateId: string): Promise<boolean>;
   
   getSkillsTestRecommendationsByCandidateId(candidateId: string): Promise<SkillsTestRecommendation[]>;
   getInterviewRecommendationsByCandidateId(candidateId: string): Promise<InterviewRecommendation[]>;
@@ -272,6 +273,13 @@ export class DatabaseStorage implements IStorage {
 
   async getResumeAnalysisByCandidateId(candidateId: string): Promise<ResumeAnalysis[]> {
     return await db.select().from(resumeAnalysis).where(eq(resumeAnalysis.candidateId, candidateId)).orderBy(desc(resumeAnalysis.createdAt));
+  }
+
+  async deleteResumeAnalysis(id: string, candidateId: string): Promise<boolean> {
+    const analysis = await db.select().from(resumeAnalysis).where(eq(resumeAnalysis.id, id)).limit(1);
+    if (!analysis[0] || analysis[0].candidateId !== candidateId) return false;
+    const result = await db.delete(resumeAnalysis).where(eq(resumeAnalysis.id, id)).returning();
+    return result.length > 0;
   }
 
   async getSkillsTestRecommendationsByCandidateId(candidateId: string): Promise<SkillsTestRecommendation[]> {
