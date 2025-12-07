@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Wand2, Copy, Users, MapPin, DollarSign, Briefcase, Pencil, Trash2, X } from "lucide-react";
+import { Loader2, Wand2, Copy, Users, MapPin, DollarSign, Briefcase, Pencil, Trash2, X, Eye, ChevronDown, ChevronUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +36,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import type { InsertJob, Job } from "@shared/schema";
 
 type JobWithCandidates = Job & { candidateCount: number };
@@ -61,6 +66,8 @@ type GeneratedContent = {
 export default function JobDescriptionModule() {
   const [result, setResult] = useState<GeneratedContent>(null);
   const [editingJob, setEditingJob] = useState<JobWithCandidates | null>(null);
+  const [viewingJob, setViewingJob] = useState<JobWithCandidates | null>(null);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     title: "",
     level: "",
@@ -68,7 +75,8 @@ export default function JobDescriptionModule() {
     skills: "",
     salaryMin: 0,
     salaryMax: 0,
-    status: "active"
+    status: "active",
+    description: ""
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -227,7 +235,8 @@ export default function JobDescriptionModule() {
       skills: job.skills.join(", "),
       salaryMin: job.salaryMin,
       salaryMax: job.salaryMax,
-      status: job.status
+      status: job.status,
+      description: job.description
     });
     setEditingJob(job);
   };
@@ -243,7 +252,8 @@ export default function JobDescriptionModule() {
         skills: editForm.skills.split(",").map(s => s.trim()).filter(Boolean),
         salaryMin: editForm.salaryMin,
         salaryMax: editForm.salaryMax,
-        status: editForm.status
+        status: editForm.status,
+        description: editForm.description
       }
     });
   };
@@ -484,57 +494,131 @@ export default function JobDescriptionModule() {
               ) : (
                 <div className="divide-y">
                   {savedJobs.map((job) => (
-                    <div key={job.id} className="p-4 hover:bg-muted/50 transition-colors" data-testid={`job-item-${job.id}`}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <h4 className="font-medium text-sm truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h4>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Badge variant="outline" className="text-xs px-1.5 py-0">{job.level}</Badge>
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {job.location}
-                            </span>
+                    <Collapsible 
+                      key={job.id} 
+                      open={expandedJobId === job.id}
+                      onOpenChange={(open) => setExpandedJobId(open ? job.id : null)}
+                    >
+                      <div className="p-4 hover:bg-muted/50 transition-colors" data-testid={`job-item-${job.id}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-1 min-w-0 flex-1">
+                            <h4 className="font-medium text-sm truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h4>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Badge variant="outline" className="text-xs px-1.5 py-0">{job.level}</Badge>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {job.location}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <DollarSign className="h-3 w-3" />
+                              {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {job.skills.slice(0, 3).map((skill, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs px-1.5 py-0">
+                                  {skill}
+                                </Badge>
+                              ))}
+                              {job.skills.length > 3 && (
+                                <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                                  +{job.skills.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <DollarSign className="h-3 w-3" />
-                            {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
+                          <div className="flex flex-col items-end gap-1">
+                            <div className="flex items-center gap-1">
+                              <CollapsibleTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-7 w-7"
+                                  data-testid={`button-view-job-${job.id}`}
+                                >
+                                  {expandedJobId === job.id ? (
+                                    <ChevronUp className="h-3 w-3" />
+                                  ) : (
+                                    <ChevronDown className="h-3 w-3" />
+                                  )}
+                                </Button>
+                              </CollapsibleTrigger>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7"
+                                onClick={() => openEditDialog(job)}
+                                data-testid={`button-edit-job-${job.id}`}
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  if (window.confirm("Are you sure you want to delete this job?")) {
+                                    deleteJobMutation.mutate(job.id);
+                                  }
+                                }}
+                                data-testid={`button-delete-job-${job.id}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <Badge variant={job.status === "active" ? "default" : "secondary"} className="text-xs">
+                              {job.status}
+                            </Badge>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`text-candidate-count-${job.id}`}>
+                              <Users className="h-3 w-3" />
+                              {job.candidateCount} candidates
+                            </div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1">
-                          <div className="flex items-center gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7"
-                              onClick={() => openEditDialog(job)}
-                              data-testid={`button-edit-job-${job.id}`}
-                            >
-                              <Pencil className="h-3 w-3" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-7 w-7 text-destructive hover:text-destructive"
-                              onClick={() => {
-                                if (window.confirm("Are you sure you want to delete this job?")) {
-                                  deleteJobMutation.mutate(job.id);
-                                }
-                              }}
-                              data-testid={`button-delete-job-${job.id}`}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                        <CollapsibleContent className="mt-3">
+                          <div className="border-t pt-3 space-y-3">
+                            <div>
+                              <h5 className="text-xs font-medium text-muted-foreground mb-1">All Skills</h5>
+                              <div className="flex flex-wrap gap-1">
+                                {job.skills.map((skill, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            <div>
+                              <h5 className="text-xs font-medium text-muted-foreground mb-1">Job Description</h5>
+                              <div className="text-xs bg-muted/30 p-3 rounded border max-h-48 overflow-y-auto whitespace-pre-wrap">
+                                {job.description}
+                              </div>
+                            </div>
+                            <div className="flex gap-2 pt-2">
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(job.description);
+                                  toast({ title: "Copied", description: "Job description copied to clipboard" });
+                                }}
+                              >
+                                <Copy className="h-3 w-3 mr-1" />
+                                Copy Description
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                className="flex-1"
+                                onClick={() => openEditDialog(job)}
+                              >
+                                <Pencil className="h-3 w-3 mr-1" />
+                                Edit Position
+                              </Button>
+                            </div>
                           </div>
-                          <Badge variant={job.status === "active" ? "default" : "secondary"} className="text-xs">
-                            {job.status}
-                          </Badge>
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`text-candidate-count-${job.id}`}>
-                            <Users className="h-3 w-3" />
-                            {job.candidateCount} candidates
-                          </div>
-                        </div>
+                        </CollapsibleContent>
                       </div>
-                    </div>
+                    </Collapsible>
                   ))}
                 </div>
               )}
@@ -545,7 +629,7 @@ export default function JobDescriptionModule() {
 
       {/* Edit Job Dialog */}
       <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Job Position</DialogTitle>
           </DialogHeader>
@@ -640,6 +724,16 @@ export default function JobDescriptionModule() {
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Job Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editForm.description}
+                onChange={(e) => setEditForm(p => ({ ...p, description: e.target.value }))}
+                className="min-h-[200px] font-mono text-xs"
+                data-testid="textarea-edit-job-description"
+              />
             </div>
             <div className="flex gap-2 pt-4">
               <Button
