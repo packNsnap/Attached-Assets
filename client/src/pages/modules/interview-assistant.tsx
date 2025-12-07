@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, Check } from "lucide-react";
+import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle } from "lucide-react";
+import type { InterviewRecommendation } from "@shared/schema";
 
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Form,
   FormControl,
@@ -44,12 +47,33 @@ type InterviewSession = {
 };
 
 export default function InterviewAssistantModule() {
+  const [activeTab, setActiveTab] = useState("recommendations");
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: recommendations = [] } = useQuery<InterviewRecommendation[]>({
+    queryKey: ["/api/interview-recommendations"],
+  });
+
+  const updateRecommendationStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await fetch(`/api/interview-recommendations/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/interview-recommendations"] });
+    },
+  });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,7 +89,11 @@ export default function InterviewAssistantModule() {
     setTimeout(() => {
       const newSession = generateMockSession(values);
       setSession(newSession);
+      setCurrentQuestionIndex(0);
+      setScores({});
+      setNotes({});
       setIsGenerating(false);
+      setActiveTab("interview");
       toast({
         title: "Interview Guide Ready",
         description: "Questions and rubrics generated.",
@@ -93,76 +121,265 @@ export default function InterviewAssistantModule() {
     }
   };
 
+  const startFromRecommendation = (rec: InterviewRecommendation) => {
+    const questions: Question[] = [];
+    
+    rec.recommendedQuestions.forEach((q, idx) => {
+      questions.push({
+        id: idx + 1,
+        category: "Technical",
+        text: q,
+        rubric: `Focus on ${rec.weaknesses[idx % rec.weaknesses.length] || "problem-solving approach"}. Look for specific examples and depth of understanding.`,
+      });
+    });
+
+    questions.push({
+      id: questions.length + 1,
+      category: "Behavioral",
+      text: "Tell me about a time you had to handle a difficult situation with a team member or stakeholder.",
+      rubric: "Look for: Specific example (STAR method), emotional intelligence, focus on resolution rather than blame, and a positive outcome."
+    });
+
+    questions.push({
+      id: questions.length + 1,
+      category: "Cultural",
+      text: "What kind of work environment allows you to be most productive?",
+      rubric: "Look for: Alignment with company culture, self-motivation, and communication style."
+    });
+
+    const newSession: InterviewSession = {
+      id: "session-" + Date.now(),
+      candidateName: rec.candidateName,
+      status: "active",
+      questions,
+    };
+
+    setSession(newSession);
+    setCurrentQuestionIndex(0);
+    setScores({});
+    setNotes({});
+    setActiveTab("interview");
+    
+    updateRecommendationStatus.mutate({ id: rec.id, status: "interview_started" });
+    
+    toast({
+      title: "Interview Started",
+      description: `Beginning interview for ${rec.candidateName}. Questions tailored to their skills test results.`,
+    });
+  };
+
+  const pendingRecommendations = recommendations.filter(r => r.status === "pending");
+
   return (
     <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Interview Assistant</h1>
-        <p className="text-muted-foreground mt-2">
-          AI-generated structured interview questions with real-time scoring rubrics.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Interview Assistant</h1>
+          <p className="text-muted-foreground mt-2">
+            AI-generated structured interview questions with real-time scoring rubrics.
+          </p>
+        </div>
+        {session && (
+          <Button variant="outline" onClick={() => { setSession(null); setActiveTab("recommendations"); }}>
+            End Session
+          </Button>
+        )}
       </div>
 
-      {!session ? (
-        <Card className="max-w-2xl">
-          <CardHeader>
-            <CardTitle>Start New Interview</CardTitle>
-            <CardDescription>
-              Enter details to generate a tailored interview script.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="candidateName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Candidate Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g. Alex Johnson" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[450px]">
+          <TabsTrigger value="recommendations" data-testid="tab-recommendations">
+            Recommendations
+            {pendingRecommendations.length > 0 && (
+              <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                {pendingRecommendations.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="manual" data-testid="tab-manual">Manual Setup</TabsTrigger>
+          <TabsTrigger value="interview" disabled={!session} data-testid="tab-interview">
+            {session ? "Active Interview" : "Interview"}
+          </TabsTrigger>
+        </TabsList>
 
-                <FormField
-                  control={form.control}
-                  name="jobDescription"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Job Description</FormLabel>
-                      <FormControl>
-                        <Textarea 
-                          placeholder="Paste the job description here to tailor the questions..." 
-                          className="min-h-[150px]"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        <TabsContent value="recommendations" className="mt-6">
+          <div className="space-y-4">
+            {recommendations.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Inbox className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium text-muted-foreground">No Recommendations</h3>
+                  <p className="text-sm text-muted-foreground/70 max-w-sm text-center mt-2">
+                    When candidates pass skills tests with a score of 70% or higher, they'll appear here with AI-tailored interview questions.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              recommendations.map((rec) => (
+                <Card key={rec.id} data-testid={`interview-rec-${rec.id}`}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-3 flex-1">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium" data-testid={`text-rec-name-${rec.id}`}>{rec.candidateName}</span>
+                          <Badge variant={rec.status === "pending" ? "default" : "secondary"}>
+                            {rec.status === "pending" ? "Ready for Interview" : rec.status === "interview_started" ? "In Progress" : rec.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="h-4 w-4" />
+                          <span>{rec.jobTitle}</span>
+                          <span className="font-medium">
+                            • <Trophy className="h-3 w-3 inline" /> Test Score: {rec.testScore}%
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div>
+                            <h4 className="text-xs font-medium text-green-600 mb-1 flex items-center gap-1">
+                              <Check className="h-3 w-3" /> Strengths
+                            </h4>
+                            <div className="flex flex-wrap gap-1">
+                              {rec.strengths.map((skill) => (
+                                <Badge key={skill} variant="outline" className="text-xs border-green-200 text-green-700 bg-green-50">
+                                  {skill}
+                                </Badge>
+                              ))}
+                              {rec.strengths.length === 0 && (
+                                <span className="text-xs text-muted-foreground italic">None identified</span>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-medium text-orange-600 mb-1 flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" /> Areas to Probe
+                            </h4>
+                            <div className="flex flex-wrap gap-1">
+                              {rec.weaknesses.map((skill) => (
+                                <Badge key={skill} variant="outline" className="text-xs border-orange-200 text-orange-700 bg-orange-50">
+                                  {skill}
+                                </Badge>
+                              ))}
+                              {rec.weaknesses.length === 0 && (
+                                <span className="text-xs text-muted-foreground italic">None identified</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
 
-                <Button type="submit" className="w-full" disabled={isGenerating}>
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating Guide...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Start Interview
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-      ) : (
+                        <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                          <h4 className="text-xs font-medium mb-2">AI-Recommended Questions ({rec.recommendedQuestions.length})</h4>
+                          <ul className="text-xs text-muted-foreground space-y-1">
+                            {rec.recommendedQuestions.slice(0, 2).map((q, idx) => (
+                              <li key={idx} className="flex gap-2">
+                                <span className="text-primary">•</span>
+                                <span className="line-clamp-1">{q}</span>
+                              </li>
+                            ))}
+                            {rec.recommendedQuestions.length > 2 && (
+                              <li className="text-primary text-xs">+ {rec.recommendedQuestions.length - 2} more questions</li>
+                            )}
+                          </ul>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 ml-4">
+                        {rec.status === "pending" && (
+                          <Button
+                            size="sm"
+                            data-testid={`button-start-interview-${rec.id}`}
+                            onClick={() => startFromRecommendation(rec)}
+                          >
+                            <ArrowRight className="mr-2 h-4 w-4" />
+                            Start Interview
+                          </Button>
+                        )}
+                        {rec.status === "interview_started" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            data-testid={`button-continue-interview-${rec.id}`}
+                            onClick={() => startFromRecommendation(rec)}
+                          >
+                            Continue
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="manual" className="mt-6">
+          <Card className="max-w-2xl">
+            <CardHeader>
+              <CardTitle>Start New Interview</CardTitle>
+              <CardDescription>
+                Enter details to generate a tailored interview script manually.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="candidateName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Candidate Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. Alex Johnson" {...field} data-testid="input-candidate-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="jobDescription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Job Description</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            placeholder="Paste the job description here to tailor the questions..." 
+                            className="min-h-[150px]"
+                            data-testid="textarea-job-description"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" className="w-full" disabled={isGenerating} data-testid="button-start-interview">
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Guide...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        Start Interview
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="interview" className="mt-6">
+          {session ? (
         <div className="grid gap-6 lg:grid-cols-3 h-[600px]">
           {/* Sidebar Navigation */}
           <Card className="lg:col-span-1 flex flex-col">
@@ -281,7 +498,13 @@ export default function InterviewAssistantModule() {
             </CardFooter>
           </Card>
         </div>
-      )}
+          ) : (
+            <div className="flex h-[400px] items-center justify-center rounded-lg border border-dashed">
+              <p className="text-muted-foreground">No active interview. Start from Recommendations or Manual Setup.</p>
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

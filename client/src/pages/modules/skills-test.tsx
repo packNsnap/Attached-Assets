@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, Plus, Trash2, Eye, Link as LinkIcon, CheckCircle2, ListChecks, BrainCircuit, Inbox, ArrowRight, User, Briefcase } from "lucide-react";
+import { Loader2, Plus, Trash2, Eye, Link as LinkIcon, CheckCircle2, ListChecks, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, MessageSquare } from "lucide-react";
 import type { SkillsTestRecommendation } from "@shared/schema";
+import { useLocation } from "wouter";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -54,11 +55,57 @@ type Test = {
   avgScore: number;
 };
 
+type TestResult = {
+  id: string;
+  candidateName: string;
+  roleName: string;
+  skills: string[];
+  score: number;
+  skillScores: Record<string, number>;
+  completedAt: string;
+  sentToInterview: boolean;
+};
+
+const mockTestResults: TestResult[] = [
+  {
+    id: "result-1",
+    candidateName: "Sarah Chen",
+    roleName: "Backend Developer",
+    skills: ["Python", "SQL", "System Design"],
+    score: 85,
+    skillScores: { "Python": 90, "SQL": 80, "System Design": 85 },
+    completedAt: "2024-01-15",
+    sentToInterview: false,
+  },
+  {
+    id: "result-2",
+    candidateName: "Marcus Johnson",
+    roleName: "Frontend Developer",
+    skills: ["React", "TypeScript", "CSS"],
+    score: 72,
+    skillScores: { "React": 80, "TypeScript": 65, "CSS": 70 },
+    completedAt: "2024-01-14",
+    sentToInterview: false,
+  },
+  {
+    id: "result-3",
+    candidateName: "Emily Rodriguez",
+    roleName: "Full Stack Developer",
+    skills: ["Node.js", "React", "PostgreSQL"],
+    score: 58,
+    skillScores: { "Node.js": 55, "React": 60, "PostgreSQL": 60 },
+    completedAt: "2024-01-13",
+    sentToInterview: false,
+  },
+];
+
 export default function SkillsTestModule() {
   const [activeTab, setActiveTab] = useState("builder");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedTest, setGeneratedTest] = useState<Test | null>(null);
   const [pendingRecommendationId, setPendingRecommendationId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<TestResult[]>(mockTestResults);
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -78,6 +125,64 @@ export default function SkillsTestModule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/skills-test-recommendations"] });
+    },
+  });
+
+  const sendToInterview = useMutation({
+    mutationFn: async (result: TestResult) => {
+      const strengths = Object.entries(result.skillScores)
+        .filter(([_, score]) => score >= 75)
+        .map(([skill]) => skill);
+      
+      const weaknesses = Object.entries(result.skillScores)
+        .filter(([_, score]) => score < 75)
+        .map(([skill]) => skill);
+      
+      const recommendedQuestions = weaknesses.map(skill => 
+        `Describe a challenging project where you used ${skill}. What obstacles did you face?`
+      );
+      if (recommendedQuestions.length === 0) {
+        recommendedQuestions.push("Tell me about a time you had to learn a new technology quickly.");
+      }
+
+      const res = await fetch("/api/interview-recommendations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateName: result.candidateName,
+          jobTitle: result.roleName,
+          testScore: result.score,
+          strengths,
+          weaknesses,
+          recommendedQuestions,
+          status: "pending",
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to send to interview");
+      return res.json();
+    },
+    onSuccess: (_, result) => {
+      setTestResults(prev => 
+        prev.map(r => r.id === result.id ? { ...r, sentToInterview: true } : r)
+      );
+      queryClient.invalidateQueries({ queryKey: ["/api/interview-recommendations"] });
+      toast({
+        title: "Sent to Interview",
+        description: (
+          <div className="flex flex-col gap-2">
+            <span>{result.candidateName} has been sent to the Interview module.</span>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="w-fit"
+              onClick={() => setLocation("/modules/interview-assistant")}
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              View in Interview Assistant
+            </Button>
+          </div>
+        ),
+      });
     },
   });
 
@@ -445,20 +550,80 @@ export default function SkillsTestModule() {
             <CardHeader>
               <CardTitle>Assessment Results</CardTitle>
               <CardDescription>
-                Recent candidate performance on this test.
+                Recent candidate performance. Candidates with 70%+ can be sent to interview.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
-                <div className="grid grid-cols-4 gap-4 p-4 font-medium text-sm bg-muted/50">
+                <div className="grid grid-cols-5 gap-4 p-4 font-medium text-sm bg-muted/50">
                   <div>Candidate</div>
+                  <div>Role</div>
                   <div>Score</div>
-                  <div>Status</div>
                   <div>Date</div>
+                  <div className="text-right">Action</div>
                 </div>
-                <div className="p-8 text-center text-sm text-muted-foreground">
-                  No results yet. Send the test link to candidates to start collecting data.
-                </div>
+                {testResults.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    No results yet. Send the test link to candidates to start collecting data.
+                  </div>
+                ) : (
+                  testResults.map((result) => (
+                    <div 
+                      key={result.id} 
+                      className="grid grid-cols-5 gap-4 p-4 items-center border-t text-sm"
+                      data-testid={`result-row-${result.id}`}
+                    >
+                      <div className="font-medium" data-testid={`text-result-name-${result.id}`}>
+                        {result.candidateName}
+                      </div>
+                      <div className="text-muted-foreground">{result.roleName}</div>
+                      <div>
+                        <Badge 
+                          variant={result.score >= 70 ? "default" : "secondary"}
+                          className={result.score >= 70 ? "bg-green-600" : ""}
+                        >
+                          {result.score}%
+                        </Badge>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {Object.entries(result.skillScores).map(([skill, score]) => (
+                            <span key={skill} className="mr-2">
+                              {skill}: {score}%
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="text-muted-foreground">{result.completedAt}</div>
+                      <div className="text-right">
+                        {result.score >= 70 ? (
+                          result.sentToInterview ? (
+                            <Badge variant="outline" className="text-green-600 border-green-600">
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              Sent
+                            </Badge>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => sendToInterview.mutate(result)}
+                              disabled={sendToInterview.isPending}
+                              data-testid={`button-send-interview-${result.id}`}
+                            >
+                              {sendToInterview.isPending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="mr-2 h-4 w-4" />
+                              )}
+                              Send to Interview
+                            </Button>
+                          )
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">
+                            Below threshold
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
