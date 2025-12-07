@@ -73,6 +73,23 @@ type GeneratedTest = {
   status: string;
 };
 
+function isValidQuestion(q: any): q is Question {
+  return (
+    q &&
+    typeof q === "object" &&
+    typeof q.id === "number" &&
+    typeof q.text === "string" &&
+    (q.type === "multiple_choice" || q.type === "open_text") &&
+    (q.skill === undefined || typeof q.skill === "string") &&
+    (q.options === undefined || (Array.isArray(q.options) && q.options.every((opt: any) => typeof opt === "string")))
+  );
+}
+
+function filterValidQuestions(questions: any[]): Question[] {
+  if (!Array.isArray(questions)) return [];
+  return questions.filter(isValidQuestion);
+}
+
 export default function SkillsTestModule() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -226,7 +243,7 @@ export default function SkillsTestModule() {
           id: test.id,
           roleName: test.roleName,
           skills: test.skills,
-          questions: JSON.parse(test.questions),
+          questions: filterValidQuestions(JSON.parse(test.questions)),
           status: test.status,
         });
       }
@@ -257,7 +274,11 @@ export default function SkillsTestModule() {
       if (!response.ok) throw new Error("Failed to generate test");
       
       const newTest = await response.json();
-      setGeneratedTest(newTest);
+      const validatedTest = {
+        ...newTest,
+        questions: filterValidQuestions(newTest.questions || []),
+      };
+      setGeneratedTest(validatedTest);
       
       if (selectedRecommendation) {
         await updateRecommendationStatus.mutateAsync({ 
@@ -269,7 +290,7 @@ export default function SkillsTestModule() {
       }
       
       setWorkflowStep("preview");
-      toast({ title: "Test Generated", description: `Created ${newTest.questions.length} questions.` });
+      toast({ title: "Test Generated", description: `Created ${validatedTest.questions.length} questions.` });
     } catch (error) {
       toast({ title: "Error", description: "Failed to generate test.", variant: "destructive" });
     } finally {
@@ -289,7 +310,7 @@ export default function SkillsTestModule() {
     if (test) {
       return {
         ...test,
-        questions: JSON.parse(test.questions) as Question[],
+        questions: filterValidQuestions(JSON.parse(test.questions)),
       };
     }
     return null;
