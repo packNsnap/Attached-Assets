@@ -117,6 +117,7 @@ export interface IStorage {
   
   createSkillsTestResponse(response: InsertSkillsTestResponse): Promise<SkillsTestResponse>;
   getSkillsTestResponsesByInvitationId(invitationId: string): Promise<SkillsTestResponse[]>;
+  updateSkillsTestResponse(id: string, data: Partial<InsertSkillsTestResponse>): Promise<SkillsTestResponse | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -391,6 +392,11 @@ export class DatabaseStorage implements IStorage {
 
   async getSkillsTestResponsesByInvitationId(invitationId: string): Promise<SkillsTestResponse[]> {
     return await db.select().from(skillsTestResponses).where(eq(skillsTestResponses.invitationId, invitationId)).orderBy(skillsTestResponses.questionIndex);
+  }
+
+  async updateSkillsTestResponse(id: string, data: Partial<InsertSkillsTestResponse>): Promise<SkillsTestResponse | undefined> {
+    const result = await db.update(skillsTestResponses).set(data).where(eq(skillsTestResponses.id, id)).returning();
+    return result[0];
   }
 }
 

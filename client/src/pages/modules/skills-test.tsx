@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, Trash2, CheckCircle2, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, Copy, Mail, Clock, Eye, FileText, ExternalLink, ChevronRight, RotateCcw, ClipboardList } from "lucide-react";
+import { Loader2, Trash2, CheckCircle2, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, Copy, Mail, Clock, Eye, FileText, ExternalLink, ChevronRight, RotateCcw, ClipboardList, RefreshCw } from "lucide-react";
 import type { SkillsTestRecommendation, SkillsTest, SkillsTestInvitation, SkillsTestResponse } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -119,6 +119,8 @@ export default function SkillsTestModule() {
     enabled: !!viewResultsInvitation,
   });
 
+  const [isRescoring, setIsRescoring] = useState(false);
+
   // Mutations
   const deleteRecommendation = useMutation({
     mutationFn: async (id: string) => {
@@ -168,6 +170,29 @@ export default function SkillsTestModule() {
       toast({ title: "Test Link Ready", description: "Copy the link and send it to the candidate." });
     },
   });
+
+  const handleRescore = async (invitationId: string) => {
+    if (isRescoring) return;
+    setIsRescoring(true);
+    try {
+      const res = await fetch(`/api/skills-test-invitations/${invitationId}/rescore`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to rescore");
+      const data = await res.json();
+      toast({ title: "Rescored", description: `Test scored: ${data.score}%` });
+      queryClient.invalidateQueries({ queryKey: ["/api/skills-test-invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/skills-test-invitations", invitationId, "responses"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "skills-test-invitations" });
+      if (viewResultsInvitation && viewResultsInvitation.id === invitationId) {
+        setViewResultsInvitation({ ...viewResultsInvitation, score: data.score });
+      }
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to rescore test", variant: "destructive" });
+    } finally {
+      setIsRescoring(false);
+    }
+  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -855,11 +880,32 @@ HR Team`
                     : "Pending Review"}
                 </p>
               </div>
-              <div className="text-right text-sm text-muted-foreground">
-                <p>Submitted</p>
-                <p>{viewResultsInvitation.completedAt 
-                  ? new Date(viewResultsInvitation.completedAt).toLocaleDateString() 
-                  : "N/A"}</p>
+              <div className="flex items-center gap-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleRescore(viewResultsInvitation.id)}
+                  disabled={isRescoring}
+                  data-testid="button-rescore"
+                >
+                  {isRescoring ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Scoring...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {viewResultsInvitation.score !== null && viewResultsInvitation.score !== undefined ? "Rescore" : "Score Now"}
+                    </>
+                  )}
+                </Button>
+                <div className="text-right text-sm text-muted-foreground">
+                  <p>Submitted</p>
+                  <p>{viewResultsInvitation.completedAt 
+                    ? new Date(viewResultsInvitation.completedAt).toLocaleDateString() 
+                    : "N/A"}</p>
+                </div>
               </div>
             </div>
           )}

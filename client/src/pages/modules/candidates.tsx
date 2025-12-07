@@ -161,6 +161,7 @@ export default function CandidatesModule() {
   });
 
   const [viewTestResultsInvitation, setViewTestResultsInvitation] = useState<SkillsTestInvitation | null>(null);
+  const [isRescoring, setIsRescoring] = useState(false);
 
   const { data: testResponses = [], isLoading: isLoadingTestResponses } = useQuery({
     queryKey: ["test-responses", viewTestResultsInvitation?.id],
@@ -174,6 +175,29 @@ export default function CandidatesModule() {
   });
 
   const [isRerunningAnalysis, setIsRerunningAnalysis] = useState(false);
+
+  const handleRescore = async (invitationId: string) => {
+    if (isRescoring) return;
+    setIsRescoring(true);
+    try {
+      const res = await fetch(`/api/skills-test-invitations/${invitationId}/rescore`, {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error("Failed to rescore");
+      const data = await res.json();
+      toast({ title: "Rescored", description: `Test scored: ${data.score}%` });
+      queryClient.invalidateQueries({ queryKey: ["skills-test-invitations", selectedCandidate?.id] });
+      queryClient.invalidateQueries({ queryKey: ["test-responses", invitationId] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "skills-test-invitations" || query.queryKey[0] === "/api/skills-test-invitations" });
+      if (viewTestResultsInvitation && viewTestResultsInvitation.id === invitationId) {
+        setViewTestResultsInvitation({ ...viewTestResultsInvitation, score: data.score });
+      }
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to rescore test", variant: "destructive" });
+    } finally {
+      setIsRescoring(false);
+    }
+  };
 
   const rerunAnalysisMutation = useMutation({
     mutationFn: async () => {
@@ -1448,11 +1472,32 @@ export default function CandidatesModule() {
                     : "Pending Review"}
                 </p>
               </div>
-              <div className="text-right text-sm text-muted-foreground">
-                <p>Submitted</p>
-                <p>{viewTestResultsInvitation.completedAt 
-                  ? new Date(viewTestResultsInvitation.completedAt).toLocaleDateString() 
-                  : "N/A"}</p>
+              <div className="flex items-center gap-4">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleRescore(viewTestResultsInvitation.id)}
+                  disabled={isRescoring}
+                  data-testid="button-rescore"
+                >
+                  {isRescoring ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Scoring...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      {viewTestResultsInvitation.score !== null && viewTestResultsInvitation.score !== undefined ? "Rescore" : "Score Now"}
+                    </>
+                  )}
+                </Button>
+                <div className="text-right text-sm text-muted-foreground">
+                  <p>Submitted</p>
+                  <p>{viewTestResultsInvitation.completedAt 
+                    ? new Date(viewTestResultsInvitation.completedAt).toLocaleDateString() 
+                    : "N/A"}</p>
+                </div>
               </div>
             </div>
           )}

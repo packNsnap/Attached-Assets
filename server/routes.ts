@@ -1160,44 +1160,158 @@ Make the description professional but engaging. Use bullet points for responsibi
       }
       
       const questions = JSON.parse(test.questions);
-      let totalScore = 0;
-      let scoredCount = 0;
+      const savedResponses: { id: string; questionIndex: number; answer: string; question: any }[] = [];
       
-      // Save each response and calculate score for multiple choice
+      // First, save all responses
       for (const answer of answers) {
         const question = questions[answer.questionIndex];
-        let score: number | null = null;
-        
-        if (question && question.type === "multiple_choice" && question.correctAnswer !== undefined) {
-          // Auto-score multiple choice
-          score = answer.answer === question.correctAnswer ? 100 : 0;
-          totalScore += score;
-          scoredCount++;
-        }
-        
-        await storage.createSkillsTestResponse({
+        const response = await storage.createSkillsTestResponse({
           invitationId: invitation.id,
           questionIndex: answer.questionIndex,
           questionText: question?.text || "",
           answer: answer.answer,
-          score,
+          score: null,
+        });
+        savedResponses.push({ 
+          id: response.id, 
+          questionIndex: answer.questionIndex, 
+          answer: answer.answer, 
+          question 
         });
       }
       
-      // Calculate final score (average of scored questions)
-      const finalScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : undefined;
-      
-      // Update invitation status
+      // Update invitation to completed immediately
       await storage.updateSkillsTestInvitation(invitation.id, {
         status: "completed",
-        score: finalScore,
         completedAt: new Date(),
       });
       
+      // Score responses in the background
+      (async () => {
+        try {
+          let totalScore = 0;
+          let scoredCount = 0;
+          
+          for (const item of savedResponses) {
+            const { id, answer, question } = item;
+            let score: number | null = null;
+            
+            if (question) {
+              if (question.type === "multiple_choice") {
+                // For multiple choice: check if answer matches correct option text
+                if (question.correctAnswer !== undefined && question.options) {
+                  const correctOptionText = question.options[question.correctAnswer];
+                  score = answer === correctOptionText ? 100 : 0;
+                  totalScore += score;
+                  scoredCount++;
+                } else if (question.options) {
+                  // No correct answer defined, use AI to evaluate the response
+                  try {
+                    const mcGradingPrompt = `You are grading a multiple choice skills test response.
+
+Question: ${question.text}
+Skill being assessed: ${question.skill || "general knowledge"}
+
+Available options:
+${question.options.map((opt: string, i: number) => `${i + 1}. ${opt}`).join('\n')}
+
+Candidate's chosen answer: "${answer}"
+
+Evaluate if the candidate chose the BEST answer for this question. Consider:
+- Which option best demonstrates the assessed skill
+- Which option reflects best professional practice
+- Which option is most appropriate for the scenario
+
+If the candidate chose the best or an excellent answer: score 90-100
+If the candidate chose a good but not optimal answer: score 60-80
+If the candidate chose a mediocre answer: score 30-50
+If the candidate chose a poor or incorrect answer: score 0-20
+
+Respond with ONLY a number between 0 and 100.`;
+
+                    const result = await openai.chat.completions.create({
+                      model: "gpt-4o",
+                      messages: [{ role: "user", content: mcGradingPrompt }],
+                      max_tokens: 10,
+                      temperature: 0.1,
+                    });
+                    
+                    const scoreText = result.choices[0]?.message?.content?.trim() || "50";
+                    score = Math.min(100, Math.max(0, parseInt(scoreText) || 50));
+                    totalScore += score;
+                    scoredCount++;
+                  } catch (e) {
+                    console.error("AI MC grading error:", e);
+                    score = 50;
+                    totalScore += score;
+                    scoredCount++;
+                  }
+                } else {
+                  score = answer ? 50 : 0;
+                  totalScore += score;
+                  scoredCount++;
+                }
+              } else if (question.type === "open_text") {
+                // Use AI to grade open-text responses
+                try {
+                  const gradingPrompt = `You are grading a skills test response. 
+
+Question: ${question.text}
+Skill being assessed: ${question.skill || "general knowledge"}
+
+Candidate's Answer: "${answer}"
+
+Grade this response on a scale of 0-100 based on:
+- Relevance to the question
+- Depth and specificity of the answer
+- Demonstration of the assessed skill
+- Professional quality of the response
+
+Very short answers like "yes", "no", or single words should receive low scores (0-20).
+Generic or vague answers should receive moderate scores (30-50).
+Detailed, specific, and well-reasoned answers should receive high scores (70-100).
+
+Respond with ONLY a number between 0 and 100.`;
+
+                  const result = await openai.chat.completions.create({
+                    model: "gpt-4o",
+                    messages: [{ role: "user", content: gradingPrompt }],
+                    max_tokens: 10,
+                    temperature: 0.1,
+                  });
+                  
+                  const scoreText = result.choices[0]?.message?.content?.trim() || "50";
+                  score = Math.min(100, Math.max(0, parseInt(scoreText) || 50));
+                  totalScore += score;
+                  scoredCount++;
+                } catch (e) {
+                  console.error("AI grading error:", e);
+                  score = 50; // Default score on error
+                  totalScore += score;
+                  scoredCount++;
+                }
+              }
+            }
+            
+            // Update response with score
+            if (score !== null) {
+              await storage.updateSkillsTestResponse(id, { score });
+            }
+          }
+          
+          // Update final score on invitation
+          const finalScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : null;
+          if (finalScore !== null) {
+            await storage.updateSkillsTestInvitation(invitation.id, { score: finalScore });
+          }
+        } catch (e) {
+          console.error("Background scoring error:", e);
+        }
+      })();
+      
       res.json({ 
         success: true, 
-        message: "Test submitted successfully",
-        score: finalScore,
+        message: "Test submitted successfully. Scoring in progress.",
       });
     } catch (error) {
       console.error("Test submission error:", error);
@@ -1212,6 +1326,146 @@ Make the description professional but engaging. Use bullet points for responsibi
       res.json(responses);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch test responses" });
+    }
+  });
+
+  // Rescore a completed test invitation
+  app.post("/api/skills-test-invitations/:id/rescore", async (req, res) => {
+    try {
+      const invitation = await storage.getSkillsTestInvitation(req.params.id);
+      if (!invitation) {
+        res.status(404).json({ error: "Invitation not found" });
+        return;
+      }
+
+      if (invitation.status !== "completed") {
+        res.status(400).json({ error: "Can only rescore completed tests" });
+        return;
+      }
+
+      const test = await storage.getSkillsTest(invitation.testId);
+      if (!test) {
+        res.status(404).json({ error: "Test not found" });
+        return;
+      }
+
+      const questions = JSON.parse(test.questions);
+      const responses = await storage.getSkillsTestResponsesByInvitationId(invitation.id);
+      
+      let totalScore = 0;
+      let scoredCount = 0;
+
+      for (const response of responses) {
+        const question = questions[response.questionIndex];
+        let score: number | null = null;
+
+        if (question) {
+          if (question.type === "multiple_choice") {
+            if (question.correctAnswer !== undefined && question.options) {
+              const correctOptionText = question.options[question.correctAnswer];
+              score = response.answer === correctOptionText ? 100 : 0;
+              totalScore += score;
+              scoredCount++;
+            } else if (question.options) {
+              // No correct answer defined, use AI to evaluate the response
+              try {
+                const mcGradingPrompt = `You are grading a multiple choice skills test response.
+
+Question: ${question.text}
+Skill being assessed: ${question.skill || "general knowledge"}
+
+Available options:
+${question.options.map((opt: string, i: number) => `${i + 1}. ${opt}`).join('\n')}
+
+Candidate's chosen answer: "${response.answer}"
+
+Evaluate if the candidate chose the BEST answer for this question. Consider:
+- Which option best demonstrates the assessed skill
+- Which option reflects best professional practice
+- Which option is most appropriate for the scenario
+
+If the candidate chose the best or an excellent answer: score 90-100
+If the candidate chose a good but not optimal answer: score 60-80
+If the candidate chose a mediocre answer: score 30-50
+If the candidate chose a poor or incorrect answer: score 0-20
+
+Respond with ONLY a number between 0 and 100.`;
+
+                const result = await openai.chat.completions.create({
+                  model: "gpt-4o",
+                  messages: [{ role: "user", content: mcGradingPrompt }],
+                  max_tokens: 10,
+                  temperature: 0.1,
+                });
+                
+                const scoreText = result.choices[0]?.message?.content?.trim() || "50";
+                score = Math.min(100, Math.max(0, parseInt(scoreText) || 50));
+                totalScore += score;
+                scoredCount++;
+              } catch (e) {
+                console.error("AI MC grading error:", e);
+                score = 50;
+                totalScore += score;
+                scoredCount++;
+              }
+            } else {
+              score = response.answer ? 50 : 0;
+              totalScore += score;
+              scoredCount++;
+            }
+          } else if (question.type === "open_text") {
+            try {
+              const gradingPrompt = `You are grading a skills test response. 
+
+Question: ${question.text}
+Skill being assessed: ${question.skill || "general knowledge"}
+
+Candidate's Answer: "${response.answer}"
+
+Grade this response on a scale of 0-100 based on:
+- Relevance to the question
+- Depth and specificity of the answer
+- Demonstration of the assessed skill
+- Professional quality of the response
+
+Very short answers like "yes", "no", or single words should receive low scores (0-20).
+Generic or vague answers should receive moderate scores (30-50).
+Detailed, specific, and well-reasoned answers should receive high scores (70-100).
+
+Respond with ONLY a number between 0 and 100.`;
+
+              const result = await openai.chat.completions.create({
+                model: "gpt-4o",
+                messages: [{ role: "user", content: gradingPrompt }],
+                max_tokens: 10,
+                temperature: 0.1,
+              });
+              
+              const scoreText = result.choices[0]?.message?.content?.trim() || "50";
+              score = Math.min(100, Math.max(0, parseInt(scoreText) || 50));
+              totalScore += score;
+              scoredCount++;
+            } catch (e) {
+              console.error("AI grading error:", e);
+              score = 50;
+              totalScore += score;
+              scoredCount++;
+            }
+          }
+        }
+
+        if (score !== null) {
+          await storage.updateSkillsTestResponse(response.id, { score });
+        }
+      }
+
+      const finalScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : undefined;
+      await storage.updateSkillsTestInvitation(invitation.id, { score: finalScore });
+
+      res.json({ success: true, score: finalScore });
+    } catch (error) {
+      console.error("Rescore error:", error);
+      res.status(500).json({ error: "Failed to rescore test" });
     }
   });
 
