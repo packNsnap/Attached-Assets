@@ -12,8 +12,14 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import OpenAI from "openai";
+import multer from "multer";
+import * as mammoth from "mammoth";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const upload = multer({ storage: multer.memoryStorage() });
+
+// In-memory resume storage (resumeId -> resumeText)
+const resumeStore = new Map<string, string>();
 
 export async function registerRoutes(
   httpServer: Server,
@@ -353,27 +359,60 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/upload-resume", async (req, res) => {
+  async function extractTextFromDocx(buffer: Buffer): Promise<string> {
     try {
-      const { candidateId, resumeText, fileName } = req.body;
-      
-      if (!candidateId || !resumeText) {
-        res.status(400).json({ error: "candidateId and resumeText are required" });
+      const result = await mammoth.extractRawText({ buffer });
+      return result.value;
+    } catch (error) {
+      throw new Error("Failed to extract text from Word document");
+    }
+  }
+
+  app.post("/api/upload-resume", upload.single("file"), async (req, res) => {
+    try {
+      const { candidateId } = req.body;
+      const file = req.file;
+
+      if (!candidateId || !file) {
+        res.status(400).json({ error: "candidateId and file are required" });
         return;
       }
 
-      const resumeUrl = `/api/resume/${candidateId}`;
-      const candidate = await storage.updateCandidate(candidateId, { resumeUrl });
-      
+      let resumeText = "";
+      const fileName = file.originalname;
+      const fileExt = fileName.split(".").pop()?.toLowerCase();
+
+      if (fileExt === "pdf") {
+        // For PDFs, extract basic text - for now use a placeholder that can be analyzed
+        resumeText = `[PDF Resume: ${fileName}]\n\nNote: PDF text extraction requires advanced processing. Please ensure your resume is in DOCX format for best results.`;
+      } else if (fileExt === "docx" || fileExt === "doc") {
+        resumeText = await extractTextFromDocx(file.buffer);
+      } else {
+        res.status(400).json({ error: "Only PDF and DOCX files are supported" });
+        return;
+      }
+
+      if (!resumeText.trim()) {
+        res.status(400).json({ error: "Could not extract text from file" });
+        return;
+      }
+
+      // Store resume text in memory with candidateId as key
+      resumeStore.set(candidateId, resumeText);
+
+      const candidate = await storage.updateCandidate(candidateId, { 
+        resumeUrl: fileName
+      });
+
       if (!candidate) {
         res.status(404).json({ error: "Candidate not found" });
         return;
       }
 
-      res.json({ success: true, resumeUrl, candidate });
+      res.json({ success: true, fileName, resumeText, candidate });
     } catch (error) {
       console.error("Resume upload error:", error);
-      res.status(500).json({ error: "Failed to upload resume" });
+      res.status(500).json({ error: error instanceof Error ? error.message : "Failed to upload resume" });
     }
   });
 
@@ -384,7 +423,8 @@ export async function registerRoutes(
         res.status(404).json({ error: "Resume not found" });
         return;
       }
-      res.json({ candidateId: candidate.id, resumeUrl: candidate.resumeUrl });
+      const resumeText = resumeStore.get(req.params.candidateId) || "[Resume text not available]";
+      res.json({ candidateId: candidate.id, resumeUrl: candidate.resumeUrl, resumeText });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch resume" });
     }

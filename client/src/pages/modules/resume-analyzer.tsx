@@ -130,12 +130,22 @@ export default function ResumeAnalyzerModule() {
     }
   };
 
-  const handleCandidateSelect = (candidateId: string) => {
+  const handleCandidateSelect = async (candidateId: string) => {
     setSelectedCandidateId(candidateId);
     const candidate = candidates.find(c => c.id === candidateId);
     if (candidate && candidate.resumeUrl) {
-      setFileName(`${candidate.name}'s Resume`);
-      setResumeText(`[Resume from candidate ${candidate.name} - use this for analysis]`);
+      setFileName(candidate.resumeUrl);
+      try {
+        const response = await fetch(`/api/resume/${candidateId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.resumeText) {
+            setResumeText(data.resumeText);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching candidate resume", error);
+      }
     }
   };
 

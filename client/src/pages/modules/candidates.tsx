@@ -87,7 +87,7 @@ export default function CandidatesModule() {
 
   const [newNote, setNewNote] = useState({ content: "", authorName: "", noteType: "general" });
   const [newDocument, setNewDocument] = useState({ fileName: "", fileUrl: "", fileType: "", documentType: "resume" });
-  const [resumeText, setResumeText] = useState("");
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
 
   const { data: jobs = [] } = useQuery({
@@ -290,24 +290,30 @@ export default function CandidatesModule() {
   });
 
   const uploadResumeMutation = useMutation({
-    mutationFn: async (data: { candidateId: string; resumeText: string; fileName: string }) => {
+    mutationFn: async ({ file, candidateId }: { file: File; candidateId: string }) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("candidateId", candidateId);
+      
       const res = await fetch("/api/upload-resume", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: formData
       });
-      if (!res.ok) throw new Error("Failed to upload resume");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to upload resume");
+      }
       return res.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["candidates"] });
       if (selectedCandidate) setSelectedCandidate(data.candidate);
-      setResumeText("");
+      setResumeFile(null);
       setIsUploadingResume(false);
       toast({ title: "Resume Uploaded", description: "Resume is now available for analysis." });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to upload resume", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to upload resume", variant: "destructive" });
       setIsUploadingResume(false);
     }
   });
@@ -872,28 +878,41 @@ export default function CandidatesModule() {
 
                 <TabsContent value="documents" className="px-6 pb-6 space-y-4 mt-4">
                   <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
-                    <h4 className="text-sm font-medium">Upload Resume</h4>
+                    <h4 className="text-sm font-medium">Upload Resume (PDF or Word Doc)</h4>
                     <div className="space-y-2">
-                      <Textarea 
-                        placeholder="Paste resume content here... (for Resume Logic Analysis)"
-                        value={resumeText}
-                        onChange={e => setResumeText(e.target.value)}
-                        rows={4}
-                        data-testid="input-resume-content"
-                      />
+                      <div className="border-2 border-dashed rounded-lg p-4 text-center hover:bg-muted/30 transition-colors cursor-pointer relative">
+                        <input 
+                          type="file" 
+                          className="absolute inset-0 opacity-0 cursor-pointer" 
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                              setResumeFile(e.target.files[0]);
+                            }
+                          }}
+                          accept=".pdf,.doc,.docx"
+                          data-testid="input-resume-file"
+                        />
+                        <div className="flex flex-col items-center gap-2">
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          {resumeFile ? (
+                            <div className="text-sm font-medium text-foreground">{resumeFile.name}</div>
+                          ) : (
+                            <>
+                              <div className="text-sm font-medium">Click to upload or drag and drop</div>
+                              <div className="text-xs text-muted-foreground">PDF or DOCX (up to 10MB)</div>
+                            </>
+                          )}
+                        </div>
+                      </div>
                       <Button 
                         size="sm" 
                         onClick={() => {
-                          if (resumeText.trim()) {
+                          if (resumeFile) {
                             setIsUploadingResume(true);
-                            uploadResumeMutation.mutate({
-                              candidateId: selectedCandidate.id,
-                              resumeText: resumeText,
-                              fileName: `${selectedCandidate.name}-resume`
-                            });
+                            uploadResumeMutation.mutate({ file: resumeFile, candidateId: selectedCandidate.id });
                           }
                         }}
-                        disabled={!resumeText.trim() || uploadResumeMutation.isPending}
+                        disabled={!resumeFile || uploadResumeMutation.isPending}
                         data-testid="button-upload-resume"
                       >
                         <Plus className="h-4 w-4 mr-1" /> {uploadResumeMutation.isPending ? "Uploading..." : "Upload Resume"}
