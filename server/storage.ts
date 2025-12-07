@@ -73,7 +73,7 @@ export interface IStorage {
   
   createSkillsTestRecommendation(rec: InsertSkillsTestRecommendation): Promise<SkillsTestRecommendation>;
   getSkillsTestRecommendations(): Promise<SkillsTestRecommendation[]>;
-  updateSkillsTestRecommendationStatus(id: string, status: string): Promise<SkillsTestRecommendation | undefined>;
+  updateSkillsTestRecommendationStatus(id: string, status: string, testId?: string): Promise<SkillsTestRecommendation | undefined>;
   
   createInterviewRecommendation(rec: InsertInterviewRecommendation): Promise<InterviewRecommendation>;
   getInterviewRecommendations(): Promise<InterviewRecommendation[]>;
@@ -222,10 +222,14 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(skillsTestRecommendations);
   }
 
-  async updateSkillsTestRecommendationStatus(id: string, status: string): Promise<SkillsTestRecommendation | undefined> {
+  async updateSkillsTestRecommendationStatus(id: string, status: string, testId?: string): Promise<SkillsTestRecommendation | undefined> {
+    const updateData: { status: string; testId?: string } = { status };
+    if (testId) {
+      updateData.testId = testId;
+    }
     const result = await db
       .update(skillsTestRecommendations)
-      .set({ status })
+      .set(updateData)
       .where(eq(skillsTestRecommendations.id, id))
       .returning();
     return result[0];

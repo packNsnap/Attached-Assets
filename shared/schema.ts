@@ -126,6 +126,7 @@ export const skillsTestRecommendations = pgTable("skills_test_recommendations", 
   skillsNeeded: text("skills_needed").array().notNull(),
   fitScore: integer("fit_score").notNull(),
   status: text("status").notNull().default("pending"),
+  testId: varchar("test_id"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 

@@ -189,11 +189,11 @@ export default function SkillsTestModule() {
   });
 
   const updateRecommendationStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status, testId }: { id: string; status: string; testId?: string }) => {
       const res = await fetch(`/api/skills-test-recommendations/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, testId }),
       });
       if (!res.ok) throw new Error("Failed to update status");
       return res.json();
@@ -296,7 +296,7 @@ export default function SkillsTestModule() {
       setActiveTab("preview");
       
       if (pendingRecommendationId) {
-        updateRecommendationStatus.mutate({ id: pendingRecommendationId, status: "test_created" });
+        updateRecommendationStatus.mutate({ id: pendingRecommendationId, status: "test_created", testId: newTest.id });
         setPendingRecommendationId(null);
         setPendingJobDescription("");
       }
@@ -826,19 +826,16 @@ export default function SkillsTestModule() {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (selectedRecommendation && candidateEmail) {
-                      const latestTest = savedTests[savedTests.length - 1];
-                      if (latestTest) {
-                        createInvitation.mutate({
-                          testId: latestTest.id,
-                          candidateName: selectedRecommendation.candidateName,
-                          candidateEmail,
-                          jobTitle: selectedRecommendation.jobTitle,
-                        });
-                      }
+                    if (selectedRecommendation && candidateEmail && selectedRecommendation.testId) {
+                      createInvitation.mutate({
+                        testId: selectedRecommendation.testId,
+                        candidateName: selectedRecommendation.candidateName,
+                        candidateEmail,
+                        jobTitle: selectedRecommendation.jobTitle,
+                      });
                     }
                   }}
-                  disabled={!candidateEmail || createInvitation.isPending}
+                  disabled={!candidateEmail || !selectedRecommendation?.testId || createInvitation.isPending}
                   data-testid="button-generate-link"
                 >
                   {createInvitation.isPending ? (

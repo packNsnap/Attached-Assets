@@ -279,12 +279,12 @@ export async function registerRoutes(
 
   app.patch("/api/skills-test-recommendations/:id/status", async (req, res) => {
     try {
-      const { status } = req.body;
+      const { status, testId } = req.body;
       if (!status || typeof status !== "string") {
         res.status(400).json({ error: "Status is required and must be a string" });
         return;
       }
-      const recommendation = await storage.updateSkillsTestRecommendationStatus(req.params.id, status);
+      const recommendation = await storage.updateSkillsTestRecommendationStatus(req.params.id, status, testId);
       if (!recommendation) {
         res.status(404).json({ error: "Recommendation not found" });
         return;
