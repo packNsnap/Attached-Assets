@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, Plus, Trash2, Eye, Link as LinkIcon, CheckCircle2, ListChecks, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, MessageSquare, Copy, Mail, Clock, X } from "lucide-react";
+import { Loader2, Trash2, CheckCircle2, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, Copy, Mail, Clock, Eye, FileText, ExternalLink, ChevronRight, RotateCcw } from "lucide-react";
 import type { SkillsTestRecommendation, SkillsTest, SkillsTestInvitation } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -43,10 +43,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
@@ -61,81 +62,41 @@ type Question = {
   type: "multiple_choice" | "open_text";
   text: string;
   options?: string[];
+  skill?: string;
 };
 
-type Test = {
+type GeneratedTest = {
   id: string;
   roleName: string;
   skills: string[];
   questions: Question[];
-  status: "active" | "draft";
-  candidatesCompleted: number;
-  avgScore: number;
+  status: string;
 };
-
-type TestResult = {
-  id: string;
-  candidateName: string;
-  roleName: string;
-  skills: string[];
-  score: number;
-  skillScores: Record<string, number>;
-  completedAt: string;
-  sentToInterview: boolean;
-};
-
-const mockTestResults: TestResult[] = [
-  {
-    id: "result-1",
-    candidateName: "Sarah Chen",
-    roleName: "Backend Developer",
-    skills: ["Python", "SQL", "System Design"],
-    score: 85,
-    skillScores: { "Python": 90, "SQL": 80, "System Design": 85 },
-    completedAt: "2024-01-15",
-    sentToInterview: false,
-  },
-  {
-    id: "result-2",
-    candidateName: "Marcus Johnson",
-    roleName: "Frontend Developer",
-    skills: ["React", "TypeScript", "CSS"],
-    score: 72,
-    skillScores: { "React": 80, "TypeScript": 65, "CSS": 70 },
-    completedAt: "2024-01-14",
-    sentToInterview: false,
-  },
-  {
-    id: "result-3",
-    candidateName: "Emily Rodriguez",
-    roleName: "Full Stack Developer",
-    skills: ["Node.js", "React", "PostgreSQL"],
-    score: 58,
-    skillScores: { "Node.js": 55, "React": 60, "PostgreSQL": 60 },
-    completedAt: "2024-01-13",
-    sentToInterview: false,
-  },
-];
 
 export default function SkillsTestModule() {
-  const [activeTab, setActiveTab] = useState("builder");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedTest, setGeneratedTest] = useState<Test | null>(null);
-  const [pendingRecommendationId, setPendingRecommendationId] = useState<string | null>(null);
-  const [testResults, setTestResults] = useState<TestResult[]>(mockTestResults);
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
-  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  // Dialog states
+  const [workflowOpen, setWorkflowOpen] = useState(false);
+  const [workflowStep, setWorkflowStep] = useState<"configure" | "preview" | "send">("configure");
   const [selectedRecommendation, setSelectedRecommendation] = useState<SkillsTestRecommendation | null>(null);
+  const [generatedTest, setGeneratedTest] = useState<GeneratedTest | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [candidateEmail, setCandidateEmail] = useState("");
   const [generatedInvitation, setGeneratedInvitation] = useState<{ token: string; testLink: string } | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [previewTestId, setPreviewTestId] = useState<string | null>(null);
   const [pendingJobDescription, setPendingJobDescription] = useState<string>("");
 
+  // Data queries
   const { data: recommendations = [] } = useQuery<SkillsTestRecommendation[]>({
     queryKey: ["/api/skills-test-recommendations"],
+  });
+
+  const { data: invitations = [] } = useQuery<SkillsTestInvitation[]>({
+    queryKey: ["/api/skills-test-invitations"],
   });
 
   const { data: savedTests = [] } = useQuery<SkillsTest[]>({
@@ -146,21 +107,32 @@ export default function SkillsTestModule() {
     queryKey: ["/api/jobs"],
   });
 
+  // Mutations
   const deleteRecommendation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/skills-test-recommendations/${id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed to delete recommendation");
+      const res = await fetch(`/api/skills-test-recommendations/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/skills-test-recommendations"] });
-      toast({
-        title: "Recommendation Deleted",
-        description: "The recommendation has been removed.",
-      });
+      toast({ title: "Deleted", description: "Recommendation removed." });
       setDeleteConfirmId(null);
+    },
+  });
+
+  const updateRecommendationStatus = useMutation({
+    mutationFn: async ({ id, status, testId }: { id: string; status: string; testId?: string }) => {
+      const res = await fetch(`/api/skills-test-recommendations/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status, testId }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/skills-test-recommendations"] });
     },
   });
 
@@ -181,83 +153,7 @@ export default function SkillsTestModule() {
         updateRecommendationStatus.mutate({ id: selectedRecommendation.id, status: "sent" });
       }
       queryClient.invalidateQueries({ queryKey: ["/api/skills-test-invitations"] });
-      toast({
-        title: "Invitation Created",
-        description: "Test link generated. Copy and send to candidate.",
-      });
-    },
-  });
-
-  const updateRecommendationStatus = useMutation({
-    mutationFn: async ({ id, status, testId }: { id: string; status: string; testId?: string }) => {
-      const res = await fetch(`/api/skills-test-recommendations/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status, testId }),
-      });
-      if (!res.ok) throw new Error("Failed to update status");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/skills-test-recommendations"] });
-    },
-  });
-
-  const sendToInterview = useMutation({
-    mutationFn: async (result: TestResult) => {
-      const strengths = Object.entries(result.skillScores)
-        .filter(([_, score]) => score >= 75)
-        .map(([skill]) => skill);
-      
-      const weaknesses = Object.entries(result.skillScores)
-        .filter(([_, score]) => score < 75)
-        .map(([skill]) => skill);
-      
-      const recommendedQuestions = weaknesses.map(skill => 
-        `Describe a challenging project where you used ${skill}. What obstacles did you face?`
-      );
-      if (recommendedQuestions.length === 0) {
-        recommendedQuestions.push("Tell me about a time you had to learn a new technology quickly.");
-      }
-
-      const res = await fetch("/api/interview-recommendations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          candidateName: result.candidateName,
-          jobTitle: result.roleName,
-          testScore: result.score,
-          strengths,
-          weaknesses,
-          recommendedQuestions,
-          status: "pending",
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to send to interview");
-      return res.json();
-    },
-    onSuccess: (_, result) => {
-      setTestResults(prev => 
-        prev.map(r => r.id === result.id ? { ...r, sentToInterview: true } : r)
-      );
-      queryClient.invalidateQueries({ queryKey: ["/api/interview-recommendations"] });
-      toast({
-        title: "Sent to Interview",
-        description: (
-          <div className="flex flex-col gap-2">
-            <span>{result.candidateName} has been sent to the Interview module.</span>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="w-fit"
-              onClick={() => setLocation("/modules/interview-assistant")}
-            >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              View in Interview Assistant
-            </Button>
-          </div>
-        ),
-      });
+      toast({ title: "Test Link Ready", description: "Copy the link and send it to the candidate." });
     },
   });
 
@@ -271,9 +167,43 @@ export default function SkillsTestModule() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
-    setIsGenerating(true);
+  // Open workflow for a recommendation
+  const startWorkflow = (rec: SkillsTestRecommendation) => {
+    setSelectedRecommendation(rec);
+    setGeneratedTest(null);
+    setGeneratedInvitation(null);
+    setCandidateEmail("");
     
+    if (rec.status === "pending") {
+      form.setValue("roleName", rec.jobTitle);
+      form.setValue("skills", rec.skillsNeeded.join(", "));
+      const job = jobs.find(j => j.id === rec.jobId);
+      if (job?.description) {
+        setPendingJobDescription(job.description);
+      }
+      setWorkflowStep("configure");
+    } else if (rec.status === "test_created" && rec.testId) {
+      const test = savedTests.find(t => t.id === rec.testId);
+      if (test) {
+        setGeneratedTest({
+          id: test.id,
+          roleName: test.roleName,
+          skills: test.skills,
+          questions: JSON.parse(test.questions),
+          status: test.status,
+        });
+      }
+      setWorkflowStep("send");
+    } else if (rec.status === "sent") {
+      setWorkflowStep("send");
+    }
+    
+    setWorkflowOpen(true);
+  };
+
+  // Generate test
+  async function generateTest(values: z.infer<typeof formSchema>) {
+    setIsGenerating(true);
     try {
       const response = await fetch("/api/generate-skills-test", {
         method: "POST",
@@ -287,495 +217,588 @@ export default function SkillsTestModule() {
         }),
       });
       
-      if (!response.ok) {
-        throw new Error("Failed to generate test");
-      }
+      if (!response.ok) throw new Error("Failed to generate test");
       
       const newTest = await response.json();
       setGeneratedTest(newTest);
-      setActiveTab("preview");
       
-      if (pendingRecommendationId) {
-        updateRecommendationStatus.mutate({ id: pendingRecommendationId, status: "test_created", testId: newTest.id });
-        setPendingRecommendationId(null);
-        setPendingJobDescription("");
+      if (selectedRecommendation) {
+        await updateRecommendationStatus.mutateAsync({ 
+          id: selectedRecommendation.id, 
+          status: "test_created", 
+          testId: newTest.id 
+        });
+        setSelectedRecommendation({ ...selectedRecommendation, testId: newTest.id, status: "test_created" });
       }
       
-      toast({
-        title: "Test Generated",
-        description: `Created ${newTest.questions.length} real-world scenario questions for ${values.roleName}.`,
-      });
+      setWorkflowStep("preview");
+      toast({ title: "Test Generated", description: `Created ${newTest.questions.length} questions.` });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to generate test. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to generate test.", variant: "destructive" });
     } finally {
       setIsGenerating(false);
     }
   }
 
+  // Get status counts
+  const pendingCount = recommendations.filter(r => r.status === "pending").length;
+  const readyCount = recommendations.filter(r => r.status === "test_created").length;
+  const sentCount = recommendations.filter(r => r.status === "sent").length;
+  const completedInvitations = invitations.filter(inv => inv.status === "completed");
+
+  // Get test preview
+  const getTestForPreview = (testId: string) => {
+    const test = savedTests.find(t => t.id === testId);
+    if (test) {
+      return {
+        ...test,
+        questions: JSON.parse(test.questions) as Question[],
+      };
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Skills Test Builder</h1>
-          <p className="text-muted-foreground mt-2">
-            Create role-specific assessments to verify candidate skills before the interview.
-          </p>
-        </div>
-        <Button onClick={() => setActiveTab("builder")} variant={activeTab === "builder" ? "default" : "outline"}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Test
-        </Button>
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight" data-testid="page-title">Skills Assessment</h1>
+        <p className="text-muted-foreground mt-1">
+          Create and send skill assessments to candidates. Tests are AI-generated based on the job requirements.
+        </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
-          <TabsTrigger value="recommendations" data-testid="tab-recommendations">
-            Recommendations
-            {recommendations.filter(r => r.status === "pending").length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                {recommendations.filter(r => r.status === "pending").length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="builder" data-testid="tab-builder">Builder</TabsTrigger>
-          <TabsTrigger value="preview" disabled={!generatedTest} data-testid="tab-preview">Preview</TabsTrigger>
-          <TabsTrigger value="results" data-testid="tab-results">Results</TabsTrigger>
-        </TabsList>
+      {/* Status Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold" data-testid="count-pending">{pendingCount}</p>
+                <p className="text-sm text-muted-foreground">Need Tests</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold" data-testid="count-ready">{readyCount}</p>
+                <p className="text-sm text-muted-foreground">Ready to Send</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold" data-testid="count-sent">{sentCount}</p>
+                <p className="text-sm text-muted-foreground">Awaiting</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold" data-testid="count-completed">{completedInvitations.length}</p>
+                <p className="text-sm text-muted-foreground">Completed</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        <TabsContent value="recommendations" className="mt-6">
-          <div className="space-y-4">
-            {recommendations.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Inbox className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium text-muted-foreground">No Recommendations</h3>
-                  <p className="text-sm text-muted-foreground/70 max-w-sm text-center mt-2">
-                    When candidates are analyzed in Resume Logic and have a good fit score, they'll appear here for skills testing.
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              recommendations.map((rec) => (
-                <Card key={rec.id} data-testid={`recommendation-${rec.id}`}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium" data-testid={`text-candidate-name-${rec.id}`}>{rec.candidateName}</span>
-                          <Badge variant={rec.status === "pending" ? "default" : "secondary"}>
-                            {rec.status === "pending" ? "Needs Test" : rec.status === "test_created" ? "Test Created" : rec.status}
-                          </Badge>
+      {/* Main Content */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Candidate Queue */}
+        <div className="lg:col-span-2 space-y-4">
+          <h2 className="text-lg font-semibold">Candidate Queue</h2>
+          
+          {recommendations.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Inbox className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium text-muted-foreground">No Candidates Pending</h3>
+                <p className="text-sm text-muted-foreground/70 max-w-sm text-center mt-2">
+                  When candidates are analyzed in Resume Logic, they'll appear here for skills testing.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {recommendations.map((rec) => (
+                <Card 
+                  key={rec.id} 
+                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  data-testid={`candidate-card-${rec.id}`}
+                  onClick={() => startWorkflow(rec)}
+                >
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <User className="h-5 w-5 text-primary" />
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Briefcase className="h-4 w-4" />
-                          <span>{rec.jobTitle}</span>
-                          <span className="text-primary font-medium">• {rec.fitScore}% fit</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {rec.skillsNeeded.map((skill) => (
-                            <Badge key={skill} variant="outline" className="text-xs">
-                              {skill}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium" data-testid={`candidate-name-${rec.id}`}>{rec.candidateName}</span>
+                            <Badge 
+                              variant={rec.status === "pending" ? "default" : rec.status === "test_created" ? "secondary" : "outline"}
+                              className={rec.status === "sent" ? "text-purple-600 border-purple-600" : rec.status === "completed" ? "text-green-600 border-green-600" : ""}
+                            >
+                              {rec.status === "pending" ? "Create Test" : 
+                               rec.status === "test_created" ? "Ready to Send" : 
+                               rec.status === "sent" ? "Awaiting" : "Completed"}
                             </Badge>
-                          ))}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                            <Briefcase className="h-3 w-3" />
+                            <span>{rec.jobTitle}</span>
+                            <span className="text-primary font-medium">• {rec.fitScore}% fit</span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        {rec.status === "pending" && (
-                          <Button
-                            size="sm"
-                            data-testid={`button-create-test-${rec.id}`}
-                            onClick={() => {
-                              form.setValue("roleName", rec.jobTitle);
-                              form.setValue("skills", rec.skillsNeeded.join(", "));
-                              setPendingRecommendationId(rec.id);
-                              const job = jobs.find(j => j.id === rec.jobId);
-                              if (job?.description) {
-                                setPendingJobDescription(job.description);
-                              }
-                              setActiveTab("builder");
-                              toast({
-                                title: "Form Pre-filled",
-                                description: "Skills test form populated with job context. Generate to create real-world scenario questions.",
-                              });
-                            }}
-                          >
-                            <ArrowRight className="mr-2 h-4 w-4" />
-                            Create Test
-                          </Button>
-                        )}
-                        {rec.status === "test_created" && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            data-testid={`button-send-test-${rec.id}`}
-                            onClick={() => {
-                              setSelectedRecommendation(rec);
-                              setCandidateEmail("");
-                              setGeneratedInvitation(null);
-                              setSendDialogOpen(true);
-                            }}
-                          >
-                            <Send className="mr-2 h-4 w-4" />
-                            Send to Candidate
-                          </Button>
-                        )}
-                        {rec.status === "sent" && (
-                          <Badge variant="outline" className="text-blue-600 border-blue-600">
-                            <Clock className="mr-1 h-3 w-3" />
-                            Awaiting Response
-                          </Badge>
-                        )}
-                        {rec.status === "completed" && (
-                          <Badge variant="outline" className="text-green-600 border-green-600">
-                            <CheckCircle2 className="mr-1 h-3 w-3" />
-                            Completed
-                          </Badge>
-                        )}
+                      <div className="flex items-center gap-2">
                         <Button
                           size="sm"
                           variant="ghost"
                           className="text-destructive hover:text-destructive"
-                          data-testid={`button-delete-rec-${rec.id}`}
-                          onClick={() => setDeleteConfirmId(rec.id)}
+                          data-testid={`delete-btn-${rec.id}`}
+                          onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(rec.id); }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </div>
-        </TabsContent>
+              ))}
+            </div>
+          )}
+        </div>
 
-        <TabsContent value="builder" className="mt-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Test Configuration</CardTitle>
-                <CardDescription>
-                  Define the parameters for the AI to generate relevant questions.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="roleName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Target Role</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g. Backend Developer" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="difficulty"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Difficulty</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Junior">Junior</SelectItem>
-                                <SelectItem value="Intermediate">Intermediate</SelectItem>
-                                <SelectItem value="Senior">Senior</SelectItem>
-                                <SelectItem value="Expert">Expert</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="questionCount"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Questions</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="3">3 Questions</SelectItem>
-                                <SelectItem value="5">5 Questions</SelectItem>
-                                <SelectItem value="10">10 Questions</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="skills"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Skills to Test</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g. SQL, Python, System Design" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            Comma-separated list of technical skills.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button type="submit" className="w-full" disabled={isGenerating}>
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating Questions...
-                        </>
-                      ) : (
-                        <>
-                          <BrainCircuit className="mr-2 h-4 w-4" />
-                          Generate Assessment
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                </Form>
+        {/* Completed Tests */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Completed Tests</h2>
+          
+          {completedInvitations.length === 0 ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-8">
+                <p className="text-sm text-muted-foreground text-center">
+                  No completed tests yet. Results will appear here once candidates submit their assessments.
+                </p>
               </CardContent>
             </Card>
-
-            <div className="space-y-6">
-              <Card className="bg-muted/30 border-dashed">
-                <CardHeader>
-                  <CardTitle className="text-muted-foreground text-lg">AI Capability</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-3 items-start">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium text-sm">Scenario-based Questions</p>
-                      <p className="text-xs text-muted-foreground">Generates real-world coding or logic problems, not just trivia.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3 items-start">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium text-sm">Automated Scoring</p>
-                      <p className="text-xs text-muted-foreground">Multiple choice is auto-graded. Open text is AI-evaluated.</p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3 items-start">
-                    <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium text-sm">Anti-Cheating Logic</p>
-                      <p className="text-xs text-muted-foreground">Questions are randomized and timed to prevent simple Googling.</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="preview" className="mt-6">
-          {generatedTest ? (
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2 space-y-6">
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
+          ) : (
+            <div className="space-y-3">
+              {completedInvitations.map((inv) => (
+                <Card key={inv.id} data-testid={`result-card-${inv.id}`}>
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-xl">{generatedTest.roleName} Assessment</CardTitle>
-                        <CardDescription className="mt-1">
-                          {generatedTest.skills.join(" • ")}
-                        </CardDescription>
+                        <p className="font-medium">{inv.candidateName}</p>
+                        <p className="text-sm text-muted-foreground">{inv.jobTitle}</p>
                       </div>
-                      <Badge>{generatedTest.status}</Badge>
+                      <div className="text-right">
+                        {inv.score !== null && inv.score !== undefined ? (
+                          <>
+                            <p className="text-2xl font-bold text-green-600">{inv.score}%</p>
+                            <p className="text-xs text-muted-foreground">Score</p>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-6 w-6 text-green-600" />
+                            <p className="text-xs text-muted-foreground">Submitted</p>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {generatedTest.questions.map((q, i) => (
-                      <div key={q.id} className="p-4 border rounded-lg bg-card">
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Recent Tests */}
+          {savedTests.length > 0 && (
+            <>
+              <h2 className="text-lg font-semibold mt-6">Recent Tests</h2>
+              <div className="space-y-3">
+                {savedTests.slice(0, 5).map((test) => (
+                  <Card key={test.id} className="cursor-pointer hover:border-primary/50" onClick={() => setPreviewTestId(test.id)}>
+                    <CardContent className="py-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">{test.roleName}</p>
+                          <p className="text-xs text-muted-foreground">{test.skills.join(", ")}</p>
+                        </div>
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Workflow Dialog */}
+      <Dialog open={workflowOpen} onOpenChange={setWorkflowOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {workflowStep === "configure" && "Configure Skills Test"}
+              {workflowStep === "preview" && "Preview Test Questions"}
+              {workflowStep === "send" && "Send Test to Candidate"}
+            </DialogTitle>
+            {selectedRecommendation && (
+              <DialogDescription>
+                {selectedRecommendation.candidateName} • {selectedRecommendation.jobTitle}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+
+          {/* Progress Indicator */}
+          <div className="flex items-center gap-2 py-2">
+            <div className={`h-2 flex-1 rounded-full ${workflowStep === "configure" ? "bg-primary" : "bg-primary"}`} />
+            <div className={`h-2 flex-1 rounded-full ${workflowStep === "preview" || workflowStep === "send" ? "bg-primary" : "bg-muted"}`} />
+            <div className={`h-2 flex-1 rounded-full ${workflowStep === "send" ? "bg-primary" : "bg-muted"}`} />
+          </div>
+
+          <ScrollArea className="flex-1 pr-4">
+            {/* Step 1: Configure */}
+            {workflowStep === "configure" && (
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(generateTest)} className="space-y-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="roleName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Target Role</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. Backend Developer" {...field} data-testid="input-role" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="difficulty"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Difficulty</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-difficulty">
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Junior">Junior</SelectItem>
+                              <SelectItem value="Intermediate">Intermediate</SelectItem>
+                              <SelectItem value="Senior">Senior</SelectItem>
+                              <SelectItem value="Expert">Expert</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="questionCount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Questions</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-count">
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="3">3 Questions</SelectItem>
+                              <SelectItem value="5">5 Questions</SelectItem>
+                              <SelectItem value="10">10 Questions</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={form.control}
+                    name="skills"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Skills to Test</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. SQL, Python, System Design" {...field} data-testid="input-skills" />
+                        </FormControl>
+                        <FormDescription>Comma-separated list of skills.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <Button type="submit" className="w-full" disabled={isGenerating} data-testid="btn-generate">
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating Questions...
+                      </>
+                    ) : (
+                      <>
+                        <BrainCircuit className="mr-2 h-4 w-4" />
+                        Generate Assessment
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </Form>
+            )}
+
+            {/* Step 2: Preview */}
+            {workflowStep === "preview" && generatedTest && (
+              <div className="space-y-4 py-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">{generatedTest.roleName}</h3>
+                    <p className="text-sm text-muted-foreground">{generatedTest.questions.length} questions</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setWorkflowStep("configure")}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Regenerate
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  {generatedTest.questions.map((q, idx) => (
+                    <Card key={q.id}>
+                      <CardContent className="py-4">
                         <div className="flex items-start gap-3">
-                          <span className="flex items-center justify-center h-6 w-6 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
-                            {i + 1}
-                          </span>
-                          <div className="space-y-3 w-full">
-                            <p className="font-medium text-sm">{q.text}</p>
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-medium text-primary">{idx + 1}</span>
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <p className="text-sm">{q.text}</p>
+                            {q.skill && (
+                              <Badge variant="outline" className="text-xs">{q.skill}</Badge>
+                            )}
                             {q.type === "multiple_choice" && q.options && (
-                              <div className="space-y-2">
-                                {q.options.map((opt, idx) => (
-                                  <div key={idx} className="flex items-center gap-2 p-2 rounded border hover:bg-muted/50 cursor-pointer text-sm">
-                                    <div className="h-4 w-4 rounded-full border border-muted-foreground/30" />
+                              <div className="space-y-1 mt-2">
+                                {q.options.map((opt, i) => (
+                                  <p key={i} className="text-xs text-muted-foreground pl-2 border-l-2 border-muted">
                                     {opt}
-                                  </div>
+                                  </p>
                                 ))}
                               </div>
                             )}
                             {q.type === "open_text" && (
-                              <div className="h-20 w-full rounded border border-muted bg-muted/20 p-2 text-xs text-muted-foreground italic">
-                                Candidate writes answer here...
-                              </div>
+                              <p className="text-xs text-muted-foreground italic">Open-ended response</p>
                             )}
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                  <CardFooter className="flex justify-between border-t p-6">
-                    <Button variant="outline" onClick={() => setActiveTab("builder")}>Back to Edit</Button>
-                    <div className="flex gap-2">
-                      <Button variant="outline">
-                        <Eye className="mr-2 h-4 w-4" />
-                        Preview as Candidate
-                      </Button>
-                      <Button>
-                        <LinkIcon className="mr-2 h-4 w-4" />
-                        Copy Test Link
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              </div>
-
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm font-medium">Test Stats</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <div className="text-2xl font-bold">0</div>
-                      <p className="text-xs text-muted-foreground">Candidates Completed</p>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-bold">--%</div>
-                      <p className="text-xs text-muted-foreground">Average Score</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-[400px] items-center justify-center rounded-lg border border-dashed">
-              <p className="text-muted-foreground">No test generated yet. Go to Builder tab.</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="results" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Assessment Results</CardTitle>
-              <CardDescription>
-                Recent candidate performance. Candidates with 70%+ can be sent to interview.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="rounded-md border">
-                <div className="grid grid-cols-5 gap-4 p-4 font-medium text-sm bg-muted/50">
-                  <div>Candidate</div>
-                  <div>Role</div>
-                  <div>Score</div>
-                  <div>Date</div>
-                  <div className="text-right">Action</div>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </div>
-                {testResults.length === 0 ? (
-                  <div className="p-8 text-center text-sm text-muted-foreground">
-                    No results yet. Send the test link to candidates to start collecting data.
-                  </div>
-                ) : (
-                  testResults.map((result) => (
-                    <div 
-                      key={result.id} 
-                      className="grid grid-cols-5 gap-4 p-4 items-center border-t text-sm"
-                      data-testid={`result-row-${result.id}`}
-                    >
-                      <div className="font-medium" data-testid={`text-result-name-${result.id}`}>
-                        {result.candidateName}
-                      </div>
-                      <div className="text-muted-foreground">{result.roleName}</div>
-                      <div>
-                        <Badge 
-                          variant={result.score >= 70 ? "default" : "secondary"}
-                          className={result.score >= 70 ? "bg-green-600" : ""}
-                        >
-                          {result.score}%
-                        </Badge>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {Object.entries(result.skillScores).map(([skill, score]) => (
-                            <span key={skill} className="mr-2">
-                              {skill}: {score}%
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="text-muted-foreground">{result.completedAt}</div>
-                      <div className="text-right">
-                        {result.score >= 70 ? (
-                          result.sentToInterview ? (
-                            <Badge variant="outline" className="text-green-600 border-green-600">
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                              Sent
-                            </Badge>
-                          ) : (
-                            <Button
-                              size="sm"
-                              onClick={() => sendToInterview.mutate(result)}
-                              disabled={sendToInterview.isPending}
-                              data-testid={`button-send-interview-${result.id}`}
-                            >
-                              {sendToInterview.isPending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              ) : (
-                                <Send className="mr-2 h-4 w-4" />
-                              )}
-                              Send to Interview
-                            </Button>
-                          )
-                        ) : (
-                          <span className="text-xs text-muted-foreground italic">
-                            Below threshold
-                          </span>
-                        )}
-                      </div>
+              </div>
+            )}
+
+            {/* Step 3: Send */}
+            {workflowStep === "send" && (
+              <div className="space-y-4 py-4">
+                {!generatedInvitation ? (
+                  <>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Candidate Email</label>
+                      <Input
+                        type="email"
+                        placeholder="candidate@email.com"
+                        value={candidateEmail}
+                        onChange={(e) => setCandidateEmail(e.target.value)}
+                        data-testid="input-email"
+                      />
                     </div>
-                  ))
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        const testId = generatedTest?.id || selectedRecommendation?.testId;
+                        if (selectedRecommendation && candidateEmail && testId) {
+                          createInvitation.mutate({
+                            testId,
+                            candidateName: selectedRecommendation.candidateName,
+                            candidateEmail,
+                            jobTitle: selectedRecommendation.jobTitle,
+                          });
+                        }
+                      }}
+                      disabled={!candidateEmail || createInvitation.isPending}
+                      data-testid="btn-generate-link"
+                    >
+                      {createInvitation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Generate Test Link
+                        </>
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Card className="bg-green-50 border-green-200">
+                      <CardContent className="py-4">
+                        <div className="flex items-center gap-2 text-green-700 mb-2">
+                          <CheckCircle2 className="h-5 w-5" />
+                          <span className="font-medium">Test Link Ready!</span>
+                        </div>
+                        <code className="block text-xs break-all bg-white p-2 rounded border mt-2">
+                          {generatedInvitation.testLink}
+                        </code>
+                      </CardContent>
+                    </Card>
+
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedInvitation.testLink);
+                          toast({ title: "Copied!", description: "Link copied to clipboard." });
+                        }}
+                        data-testid="btn-copy-link"
+                      >
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copy Link
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          if (selectedRecommendation) {
+                            const subject = encodeURIComponent(`Skills Assessment for ${selectedRecommendation.jobTitle} Position`);
+                            const body = encodeURIComponent(
+`Dear ${selectedRecommendation.candidateName},
+
+We're excited to move forward with your application for the ${selectedRecommendation.jobTitle} position!
+
+Please complete the skills assessment using the link below:
+
+${generatedInvitation.testLink}
+
+The assessment typically takes 15-30 minutes. Please find a quiet environment where you can focus.
+
+Best regards,
+HR Team`
+                            );
+                            window.open(`mailto:${candidateEmail}?subject=${subject}&body=${body}`, '_blank');
+                          }
+                        }}
+                        data-testid="btn-open-email"
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        Open Email
+                      </Button>
+                    </div>
+                  </>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            )}
+          </ScrollArea>
 
-      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            {workflowStep === "preview" && generatedTest && (
+              <Button onClick={() => setWorkflowStep("send")} data-testid="btn-continue-send">
+                Continue to Send
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {workflowStep === "send" && generatedInvitation && (
+              <Button onClick={() => setWorkflowOpen(false)} data-testid="btn-done">
+                Done
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Preview Dialog */}
+      <Dialog open={!!previewTestId} onOpenChange={() => setPreviewTestId(null)}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Test Preview</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh] pr-4">
+            {previewTestId && (() => {
+              const test = getTestForPreview(previewTestId);
+              if (!test) return <p>Test not found</p>;
+              return (
+                <div className="space-y-3 py-4">
+                  <div className="mb-4">
+                    <h3 className="font-medium">{test.roleName}</h3>
+                    <p className="text-sm text-muted-foreground">{test.skills.join(", ")}</p>
+                  </div>
+                  {test.questions.map((q: Question, idx: number) => (
+                    <Card key={q.id}>
+                      <CardContent className="py-3">
+                        <p className="text-sm"><strong>Q{idx + 1}:</strong> {q.text}</p>
+                        {q.options && (
+                          <ul className="mt-2 space-y-1">
+                            {q.options.map((opt, i) => (
+                              <li key={i} className="text-xs text-muted-foreground">• {opt}</li>
+                            ))}
+                          </ul>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              );
+            })()}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={() => setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Recommendation</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this recommendation? This action cannot be undone.
+              Are you sure you want to remove this candidate from the skills test queue?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -784,196 +807,11 @@ export default function SkillsTestModule() {
               onClick={() => deleteConfirmId && deleteRecommendation.mutate(deleteConfirmId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleteRecommendation.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
-              )}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Send Skills Test to Candidate</DialogTitle>
-            <DialogDescription>
-              {selectedRecommendation && (
-                <>
-                  Send a {selectedRecommendation.jobTitle} skills test to {selectedRecommendation.candidateName}.
-                </>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {!generatedInvitation ? (
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Candidate Email</label>
-                <Input
-                  type="email"
-                  placeholder="candidate@email.com"
-                  value={candidateEmail}
-                  onChange={(e) => setCandidateEmail(e.target.value)}
-                  data-testid="input-candidate-email"
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setSendDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => {
-                    if (selectedRecommendation && candidateEmail && selectedRecommendation.testId) {
-                      createInvitation.mutate({
-                        testId: selectedRecommendation.testId,
-                        candidateName: selectedRecommendation.candidateName,
-                        candidateEmail,
-                        jobTitle: selectedRecommendation.jobTitle,
-                      });
-                    }
-                  }}
-                  disabled={!candidateEmail || !selectedRecommendation?.testId || createInvitation.isPending}
-                  data-testid="button-generate-link"
-                >
-                  {createInvitation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <LinkIcon className="mr-2 h-4 w-4" />
-                      Generate Test Link
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : (
-            <div className="space-y-4 py-4">
-              <div className="p-4 bg-muted rounded-lg space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Test Link</span>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      navigator.clipboard.writeText(generatedInvitation.testLink);
-                      toast({
-                        title: "Link Copied",
-                        description: "Test link copied to clipboard.",
-                      });
-                    }}
-                    data-testid="button-copy-link"
-                  >
-                    <Copy className="mr-2 h-4 w-4" />
-                    Copy Link
-                  </Button>
-                </div>
-                <code className="block text-xs break-all bg-background p-2 rounded border">
-                  {generatedInvitation.testLink}
-                </code>
-              </div>
-
-              <div className="border-t pt-4">
-                <p className="text-sm text-muted-foreground mb-3">
-                  Send this link to the candidate via email:
-                </p>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    if (selectedRecommendation) {
-                      const subject = encodeURIComponent(`Skills Assessment for ${selectedRecommendation.jobTitle} Position`);
-                      const body = encodeURIComponent(
-`Dear ${selectedRecommendation.candidateName},
-
-We're excited to move forward with your application for the ${selectedRecommendation.jobTitle} position! 
-
-As part of our hiring process, we'd like you to complete a skills assessment. This test will help us better understand your technical abilities.
-
-Please complete the assessment at your earliest convenience using the link below:
-
-${generatedInvitation.testLink}
-
-The assessment typically takes 15-30 minutes to complete. Please find a quiet environment where you can focus without interruptions.
-
-If you have any questions or technical difficulties, please reply to this email.
-
-Best regards,
-HR Team`
-                      );
-                      window.open(`mailto:${candidateEmail}?subject=${subject}&body=${body}`, '_blank');
-                    }
-                  }}
-                  data-testid="button-send-email"
-                >
-                  <Mail className="mr-2 h-4 w-4" />
-                  Open Email Client
-                </Button>
-              </div>
-
-              <DialogFooter>
-                <Button onClick={() => {
-                  setSendDialogOpen(false);
-                  setGeneratedInvitation(null);
-                  setSelectedRecommendation(null);
-                  setCandidateEmail("");
-                }}>
-                  Done
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
-}
-
-// Mock Generator
-function generateMockTest(values: any): Test {
-  const { roleName, skills, questionCount } = values;
-  const count = parseInt(questionCount);
-  const skillList = skills.split(",").map((s: string) => s.trim());
-
-  const questions: Question[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const isMulti = Math.random() > 0.3;
-    const skill = skillList[i % skillList.length] || "General";
-    
-    if (isMulti) {
-      questions.push({
-        id: i,
-        type: "multiple_choice",
-        text: `Which of the following is a best practice when using ${skill} for high-scale applications?`,
-        options: [
-          "Always use global state",
-          "Implement aggressive caching",
-          "Disable all logging",
-          "Run everything on the main thread"
-        ]
-      });
-    } else {
-      questions.push({
-        id: i,
-        type: "open_text",
-        text: `Explain how you would handle a race condition in a ${skill}-based system. Describe your approach.`,
-      });
-    }
-  }
-
-  return {
-    id: "test-" + Math.random().toString(36).substr(2, 9),
-    roleName,
-    skills: skillList,
-    questions,
-    status: "active",
-    candidatesCompleted: 0,
-    avgScore: 0
-  };
 }

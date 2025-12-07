@@ -111,6 +111,7 @@ export interface IStorage {
   createSkillsTestInvitation(invitation: InsertSkillsTestInvitation): Promise<SkillsTestInvitation>;
   getSkillsTestInvitation(id: string): Promise<SkillsTestInvitation | undefined>;
   getSkillsTestInvitationByToken(token: string): Promise<SkillsTestInvitation | undefined>;
+  getSkillsTestInvitations(): Promise<SkillsTestInvitation[]>;
   getSkillsTestInvitationsByCandidateId(candidateId: string): Promise<SkillsTestInvitation[]>;
   updateSkillsTestInvitation(id: string, data: Partial<InsertSkillsTestInvitation & { score: number; completedAt: Date }>): Promise<SkillsTestInvitation | undefined>;
   
@@ -368,6 +369,10 @@ export class DatabaseStorage implements IStorage {
   async getSkillsTestInvitationByToken(token: string): Promise<SkillsTestInvitation | undefined> {
     const result = await db.select().from(skillsTestInvitations).where(eq(skillsTestInvitations.token, token)).limit(1);
     return result[0];
+  }
+
+  async getSkillsTestInvitations(): Promise<SkillsTestInvitation[]> {
+    return await db.select().from(skillsTestInvitations).orderBy(desc(skillsTestInvitations.createdAt));
   }
 
   async getSkillsTestInvitationsByCandidateId(candidateId: string): Promise<SkillsTestInvitation[]> {

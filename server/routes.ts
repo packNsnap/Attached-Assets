@@ -796,12 +796,21 @@ Respond with JSON in this exact format:
       const result = JSON.parse(content);
       const skillsArray = skills.split(",").map((s: string) => s.trim());
       
-      res.json({
-        id: `test-${Date.now()}`,
+      // Save test to database
+      const savedTest = await storage.createSkillsTest({
         roleName,
+        difficulty,
         skills: skillsArray,
+        questions: JSON.stringify(result.questions),
+        status: "active",
+      });
+      
+      res.json({
+        id: savedTest.id,
+        roleName: savedTest.roleName,
+        skills: savedTest.skills,
         questions: result.questions,
-        status: "draft",
+        status: savedTest.status,
         candidatesCompleted: 0,
         avgScore: 0,
       });
@@ -1028,6 +1037,15 @@ Make the description professional but engaging. Use bullet points for responsibi
       } else {
         res.status(500).json({ error: "Failed to create invitation" });
       }
+    }
+  });
+
+  app.get("/api/skills-test-invitations", async (req, res) => {
+    try {
+      const invitations = await storage.getSkillsTestInvitations();
+      res.json(invitations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch invitations" });
     }
   });
 
