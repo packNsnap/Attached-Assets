@@ -23,7 +23,7 @@ export const MODULES = [
     description: "Overview of your HR activities"
   },
   {
-    title: "Job Descriptions",
+    title: "Job Descriptions / Positions",
     path: "/jobs",
     icon: Briefcase,
     description: "Generate JDs and salary ranges"
