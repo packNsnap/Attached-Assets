@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
 import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns } from "lucide-react";
 import { useLocation } from "wouter";
@@ -86,6 +86,7 @@ export default function ResumeAnalyzerModule() {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
   const { toast } = useToast();
   const [, navigate] = useLocation();
+  const queryClient = useQueryClient();
 
   const { data: candidates = [] } = useQuery<{ id: string; name: string; resumeUrl?: string }[]>({
     queryKey: ["candidates-with-resumes"],
@@ -107,6 +108,7 @@ export default function ResumeAnalyzerModule() {
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/skills-test-recommendations"] });
       toast({
         title: "Recommendation Sent",
         description: "Skills test recommendation created.",
