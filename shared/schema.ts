@@ -149,6 +149,9 @@ export const interviewRecommendations = pgTable("interview_recommendations", {
   weaknesses: text("weaknesses").array().notNull(),
   recommendedQuestions: text("recommended_questions").array().notNull(),
   status: text("status").notNull().default("pending"),
+  interviewScore: integer("interview_score"),
+  interviewSummary: text("interview_summary"),
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 

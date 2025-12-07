@@ -336,6 +336,67 @@ export async function registerRoutes(
     }
   });
 
+  // Complete an interview - saves scores, notes, and updates candidate stage
+  app.post("/api/complete-interview", async (req, res) => {
+    try {
+      const { recommendationId, candidateId, candidateName, averageScore, interviewSummary } = req.body;
+      
+      if (!recommendationId) {
+        res.status(400).json({ error: "recommendationId is required" });
+        return;
+      }
+
+      // Prepare interview summary string
+      let summaryText = "";
+      if (interviewSummary && interviewSummary.length > 0) {
+        summaryText = JSON.stringify(interviewSummary);
+      }
+
+      // Update recommendation with score, summary, and completed status
+      const recommendation = await storage.updateInterviewRecommendation(recommendationId, {
+        status: "completed",
+        interviewScore: averageScore || null,
+        interviewSummary: summaryText || null,
+        completedAt: new Date()
+      });
+
+      if (!recommendation) {
+        res.status(404).json({ error: "Interview recommendation not found" });
+        return;
+      }
+
+      // Update candidate stage to "interviewed" if candidateId is provided
+      if (candidateId) {
+        await storage.updateCandidateStage(candidateId, "interviewed");
+        
+        // Save interview notes as a candidate note
+        if (interviewSummary && interviewSummary.length > 0) {
+          const noteSummary = interviewSummary
+            .filter((q: any) => q.notes || q.score > 0)
+            .map((q: any) => `[${q.category}] Score: ${q.score}/5\n${q.notes || "No notes"}`)
+            .join("\n\n");
+          
+          if (noteSummary) {
+            await storage.createCandidateNote({
+              candidateId,
+              content: `Interview Summary (Score: ${averageScore}%)\n\n${noteSummary}`,
+              author: "Interview Assistant"
+            });
+          }
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        recommendation,
+        message: `Interview for ${candidateName} completed successfully`
+      });
+    } catch (error) {
+      console.error("Complete interview error:", error);
+      res.status(500).json({ error: "Failed to complete interview" });
+    }
+  });
+
   app.patch("/api/candidates/:id", async (req, res) => {
     try {
       const updateData = insertCandidateSchema.partial().parse(req.body);

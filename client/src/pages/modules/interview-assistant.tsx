@@ -54,6 +54,8 @@ type InterviewSession = {
     hasTestResults: boolean;
     aiDetectionLevel: number | null;
   };
+  recommendationId?: string;
+  candidateId?: string;
 };
 
 function formatCategoryName(category: QuestionCategory): string {
@@ -95,6 +97,7 @@ export default function InterviewAssistantModule() {
   const [activeTab, setActiveTab] = useState("recommendations");
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
@@ -158,11 +161,65 @@ export default function InterviewAssistantModule() {
     if (!session) return;
     if (currentQuestionIndex < session.questions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
-    } else {
+    }
+  };
+
+  const completeInterview = async () => {
+    if (!session) return;
+    setIsCompleting(true);
+    
+    try {
+      // Calculate average score
+      const scoredQuestions = Object.values(scores).filter(s => s > 0);
+      const averageScore = scoredQuestions.length > 0 
+        ? Math.round((scoredQuestions.reduce((a, b) => a + b, 0) / scoredQuestions.length) * 20) 
+        : null;
+      
+      // Prepare interview notes summary
+      const interviewSummary = session.questions.map((q, idx) => ({
+        question: q.text,
+        category: q.category,
+        score: scores[idx] || 0,
+        notes: notes[idx] || "",
+      }));
+
+      // Complete the interview via API
+      const response = await fetch("/api/complete-interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recommendationId: session.recommendationId,
+          candidateId: session.candidateId,
+          candidateName: session.candidateName,
+          averageScore,
+          interviewSummary,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to complete interview");
+      }
+
+      // Refresh recommendations
+      queryClient.invalidateQueries({ queryKey: ["/api/interview-recommendations"] });
+      
+      // Clear session and go to completed tab
+      setSession(null);
+      setActiveTab("completed");
+      
       toast({
         title: "Interview Completed",
-        description: "All questions covered. Summary saved.",
+        description: `Interview for ${session.candidateName} has been saved. Average score: ${averageScore ? averageScore + "%" : "Not scored"}`,
       });
+    } catch (error) {
+      console.error("Failed to complete interview:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save interview. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCompleting(false);
     }
   };
 
@@ -205,6 +262,8 @@ export default function InterviewAssistantModule() {
         questions,
         overallGuidance: result.overallGuidance,
         candidateContext: result.candidateContext,
+        recommendationId: rec.id,
+        candidateId: rec.candidateId || undefined,
       };
 
       setSession(newSession);
@@ -233,6 +292,8 @@ export default function InterviewAssistantModule() {
   };
 
   const pendingRecommendations = recommendations.filter(r => r.status === "pending");
+  const inProgressRecommendations = recommendations.filter(r => r.status === "interview_started");
+  const completedRecommendations = recommendations.filter(r => r.status === "completed");
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -251,19 +312,27 @@ export default function InterviewAssistantModule() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[450px]">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
           <TabsTrigger value="recommendations" data-testid="tab-recommendations">
-            Recommendations
-            {pendingRecommendations.length > 0 && (
+            Queue
+            {(pendingRecommendations.length + inProgressRecommendations.length) > 0 && (
               <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                {pendingRecommendations.length}
+                {pendingRecommendations.length + inProgressRecommendations.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="manual" data-testid="tab-manual">Manual Setup</TabsTrigger>
           <TabsTrigger value="interview" disabled={!session} data-testid="tab-interview">
-            {session ? "Active Interview" : "Interview"}
+            {session ? "Active" : "Interview"}
           </TabsTrigger>
+          <TabsTrigger value="completed" data-testid="tab-completed">
+            Completed
+            {completedRecommendations.length > 0 && (
+              <Badge variant="outline" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                {completedRecommendations.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="manual" data-testid="tab-manual">Manual</TabsTrigger>
         </TabsList>
 
         <TabsContent value="recommendations" className="mt-6">
@@ -442,6 +511,107 @@ export default function InterviewAssistantModule() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="completed" className="mt-6">
+          <div className="space-y-4">
+            {completedRecommendations.length === 0 ? (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <Check className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium text-muted-foreground">No Completed Interviews</h3>
+                  <p className="text-sm text-muted-foreground/70 max-w-sm text-center mt-2">
+                    Completed interviews will appear here with scores and notes summary.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+              {completedRecommendations.map((rec) => {
+                const interviewSummary = rec.interviewSummary ? JSON.parse(rec.interviewSummary) : [];
+                return (
+                <Card key={rec.id} data-testid={`completed-interview-${rec.id}`} className="border-green-200 bg-green-50/30 dark:border-green-800 dark:bg-green-900/10">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-3 flex-1">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{rec.candidateName}</span>
+                          <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">
+                            <Check className="h-3 w-3 mr-1" /> Completed
+                          </Badge>
+                          {rec.interviewScore !== null && rec.interviewScore !== undefined && (
+                            <Badge variant={rec.interviewScore >= 70 ? "default" : rec.interviewScore >= 50 ? "secondary" : "destructive"}>
+                              <Star className="h-3 w-3 mr-1" /> Interview: {rec.interviewScore}%
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Briefcase className="h-4 w-4" />
+                          <span>{rec.jobTitle}</span>
+                          <span className="font-medium">
+                            • <Trophy className="h-3 w-3 inline" /> Test Score: {rec.testScore}%
+                          </span>
+                          {rec.completedAt && (
+                            <span className="text-xs">• Completed: {new Date(rec.completedAt).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                        
+                        {interviewSummary.length > 0 && (
+                          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                            <h4 className="text-xs font-medium mb-2 flex items-center gap-1">
+                              <MessageSquare className="h-3 w-3" /> Interview Summary
+                            </h4>
+                            <div className="space-y-2 text-xs">
+                              {interviewSummary.slice(0, 3).map((item: any, idx: number) => (
+                                <div key={idx} className="flex items-start gap-2">
+                                  <Badge variant="outline" className="text-xs shrink-0">
+                                    {formatCategoryName(item.category)} {item.score}/5
+                                  </Badge>
+                                  {item.notes && (
+                                    <span className="text-muted-foreground line-clamp-1">{item.notes}</span>
+                                  )}
+                                </div>
+                              ))}
+                              {interviewSummary.length > 3 && (
+                                <span className="text-primary text-xs">+ {interviewSummary.length - 3} more questions</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="grid grid-cols-2 gap-4 mt-4">
+                          <div>
+                            <h4 className="text-xs font-medium text-green-600 mb-1 flex items-center gap-1">
+                              <Check className="h-3 w-3" /> Strengths
+                            </h4>
+                            <div className="flex flex-wrap gap-1">
+                              {rec.strengths.map((skill) => (
+                                <Badge key={skill} variant="outline" className="text-xs border-green-200 text-green-700 bg-green-50">
+                                  {skill}
+                                </Badge>
+                              ))}
+                              {rec.strengths.length === 0 && (
+                                <span className="text-xs text-muted-foreground italic">None identified</span>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-medium text-muted-foreground mb-1">Questions Asked</h4>
+                            <span className="text-xs text-muted-foreground">{rec.recommendedQuestions.length} questions</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                );
+              })}
+              </>
+            )}
+          </div>
+        </TabsContent>
+
         <TabsContent value="interview" className="mt-6">
           {session ? (
         <div className="grid gap-6 lg:grid-cols-3 h-[600px]">
@@ -587,10 +757,26 @@ export default function InterviewAssistantModule() {
               >
                 Previous
               </Button>
-              <Button onClick={nextQuestion}>
-                {currentQuestionIndex === session.questions.length - 1 ? "Finish Interview" : "Next Question"}
-                <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
+              {currentQuestionIndex === session.questions.length - 1 ? (
+                <Button onClick={completeInterview} disabled={isCompleting} className="bg-green-600 hover:bg-green-700">
+                  {isCompleting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="mr-2 h-4 w-4" />
+                      Complete Interview
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button onClick={nextQuestion}>
+                  Next Question
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              )}
             </CardFooter>
           </Card>
         </div>
