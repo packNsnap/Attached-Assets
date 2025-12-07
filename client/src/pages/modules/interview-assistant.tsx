@@ -98,6 +98,7 @@ export default function InterviewAssistantModule() {
   const [session, setSession] = useState<InterviewSession | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [loadingRecommendationId, setLoadingRecommendationId] = useState<string | null>(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
@@ -225,6 +226,7 @@ export default function InterviewAssistantModule() {
 
   const startFromRecommendation = async (rec: InterviewRecommendation) => {
     setIsGenerating(true);
+    setLoadingRecommendationId(rec.id);
     
     try {
       const response = await fetch("/api/generate-interview-questions", {
@@ -288,9 +290,11 @@ export default function InterviewAssistantModule() {
       });
     } finally {
       setIsGenerating(false);
+      setLoadingRecommendationId(null);
     }
   };
 
+  const queueRecommendations = recommendations.filter(r => r.status === "pending" || r.status === "interview_started");
   const pendingRecommendations = recommendations.filter(r => r.status === "pending");
   const inProgressRecommendations = recommendations.filter(r => r.status === "interview_started");
   const completedRecommendations = recommendations.filter(r => r.status === "completed");
@@ -315,9 +319,9 @@ export default function InterviewAssistantModule() {
         <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
           <TabsTrigger value="recommendations" data-testid="tab-recommendations">
             Queue
-            {(pendingRecommendations.length + inProgressRecommendations.length) > 0 && (
+            {queueRecommendations.length > 0 && (
               <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                {pendingRecommendations.length + inProgressRecommendations.length}
+                {queueRecommendations.length}
               </Badge>
             )}
           </TabsTrigger>
@@ -337,29 +341,57 @@ export default function InterviewAssistantModule() {
 
         <TabsContent value="recommendations" className="mt-6">
           <div className="space-y-4">
-            {recommendations.length === 0 ? (
+            {queueRecommendations.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="flex flex-col items-center justify-center py-12">
                   <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
                     <Inbox className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-medium text-muted-foreground">No Recommendations</h3>
+                  <h3 className="text-lg font-medium text-muted-foreground">No Candidates in Queue</h3>
                   <p className="text-sm text-muted-foreground/70 max-w-sm text-center mt-2">
                     When candidates pass skills tests with a score of 70% or higher, they'll appear here with AI-tailored interview questions.
                   </p>
                 </CardContent>
               </Card>
             ) : (
-              recommendations.map((rec) => (
-                <Card key={rec.id} data-testid={`interview-rec-${rec.id}`}>
+              queueRecommendations.map((rec) => {
+                const isLoading = loadingRecommendationId === rec.id;
+                return (
+                <Card 
+                  key={rec.id} 
+                  data-testid={`interview-rec-${rec.id}`}
+                  className={cn(
+                    "transition-all duration-300",
+                    isLoading && "border-primary/50 bg-primary/5"
+                  )}
+                >
                   <CardContent className="pt-6">
+                    {isLoading ? (
+                      <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                        <div className="relative">
+                          <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                          <Brain className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                        </div>
+                        <div className="text-center space-y-2">
+                          <h3 className="font-medium">Preparing Interview for {rec.candidateName}</h3>
+                          <p className="text-sm text-muted-foreground">AI is analyzing resume, test results, and generating personalized questions...</p>
+                        </div>
+                        <div className="flex gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><FileSearch className="h-3 w-3" /> Analyzing resume</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1"><Target className="h-3 w-3" /> Identifying skill gaps</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> Creating AI detection probes</span>
+                        </div>
+                      </div>
+                    ) : (
                     <div className="flex items-start justify-between">
                       <div className="space-y-3 flex-1">
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-muted-foreground" />
                           <span className="font-medium" data-testid={`text-rec-name-${rec.id}`}>{rec.candidateName}</span>
                           <Badge variant={rec.status === "pending" ? "default" : "secondary"}>
-                            {rec.status === "pending" ? "Ready for Interview" : rec.status === "interview_started" ? "In Progress" : rec.status}
+                            {rec.status === "pending" ? "Ready for Interview" : "In Progress"}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -424,9 +456,19 @@ export default function InterviewAssistantModule() {
                             size="sm"
                             data-testid={`button-start-interview-${rec.id}`}
                             onClick={() => startFromRecommendation(rec)}
+                            disabled={isGenerating}
                           >
-                            <ArrowRight className="mr-2 h-4 w-4" />
-                            Start Interview
+                            {isGenerating && loadingRecommendationId === rec.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Preparing...
+                              </>
+                            ) : (
+                              <>
+                                <ArrowRight className="mr-2 h-4 w-4" />
+                                Start Interview
+                              </>
+                            )}
                           </Button>
                         )}
                         {rec.status === "interview_started" && (
@@ -435,15 +477,24 @@ export default function InterviewAssistantModule() {
                             variant="outline"
                             data-testid={`button-continue-interview-${rec.id}`}
                             onClick={() => startFromRecommendation(rec)}
+                            disabled={isGenerating}
                           >
-                            Continue
+                            {isGenerating && loadingRecommendationId === rec.id ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Loading...
+                              </>
+                            ) : (
+                              "Continue"
+                            )}
                           </Button>
                         )}
                       </div>
                     </div>
+                    )}
                   </CardContent>
                 </Card>
-              ))
+              );})
             )}
           </div>
         </TabsContent>
