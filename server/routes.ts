@@ -670,6 +670,33 @@ Generate approximately 60% multiple choice and 40% open text questions. Make sur
     }
   });
 
+  // Helper function to calculate realistic salary ranges based on level and location
+  function calculateRealisticSalary(level: string, location: string): { min: number; max: number } {
+    // Base ranges by level (conservative market rates for 2024)
+    const baseSalaries: Record<string, { min: number; max: number }> = {
+      "Junior": { min: 50000, max: 75000 },
+      "Mid": { min: 75000, max: 110000 },
+      "Senior": { min: 100000, max: 150000 },
+      "Lead": { min: 130000, max: 180000 },
+    };
+
+    // Location multipliers
+    const locationMultipliers: Record<string, number> = {
+      "Remote": 1.0,
+      "Hybrid": 1.05,
+      "Onsite": 1.1,
+      "On-site": 1.1,
+    };
+
+    const baseRange = baseSalaries[level] || baseSalaries["Mid"];
+    const multiplier = locationMultipliers[location] || 1.0;
+
+    return {
+      min: Math.round(baseRange.min * multiplier),
+      max: Math.round(baseRange.max * multiplier),
+    };
+  }
+
   app.post("/api/generate-job-description", async (req, res) => {
     try {
       const { title, level, location, skills, notes } = req.body;
@@ -687,18 +714,14 @@ Location: ${location}
 Required Skills: ${skills}
 ${notes ? `Additional Notes: ${notes}` : ''}
 
-Please provide:
-1. A compelling job description with sections for: About the Role, Key Responsibilities, Requirements, and Why Join Us
-2. An estimated annual salary range in USD based on current market rates for this role, level, and location type
+Please provide a compelling job description with sections for: About the Role, Key Responsibilities, Requirements, and Why Join Us.
 
 Format your response as JSON with exactly this structure:
 {
-  "description": "The full job description text with markdown formatting",
-  "salaryMin": 80000,
-  "salaryMax": 120000
+  "description": "The full job description text with markdown formatting"
 }
 
-Make the description professional but engaging. Use bullet points for responsibilities and requirements. The salary should reflect realistic 2024 market rates for the specified level and location type.`;
+Make the description professional but engaging. Use bullet points for responsibilities and requirements.`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -713,12 +736,11 @@ Make the description professional but engaging. Use bullet points for responsibi
       }
 
       const result = JSON.parse(content);
+      const salaryRange = calculateRealisticSalary(level, location);
+      
       res.json({
         description: result.description,
-        salaryRange: {
-          min: result.salaryMin,
-          max: result.salaryMax,
-        },
+        salaryRange,
       });
     } catch (error) {
       console.error("AI generation error:", error);
