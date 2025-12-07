@@ -973,35 +973,81 @@ HR Team`
               </div>
             ) : (
               <div className="space-y-4 py-4">
-                {testResponses.map((response, idx) => (
-                  <Card key={response.id} data-testid={`response-${response.id}`}>
-                    <CardContent className="py-4 space-y-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 flex-1">
-                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-medium text-primary">{idx + 1}</span>
+                {testResponses.map((response, idx) => {
+                  const test = viewResultsInvitation ? savedTests.find(t => t.id === viewResultsInvitation.testId) : null;
+                  const questions = test ? filterValidQuestions(JSON.parse(test.questions)) : [];
+                  const question = questions[response.questionIndex];
+                  
+                  return (
+                    <Card key={response.id} data-testid={`response-${response.id}`}>
+                      <CardContent className="py-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 flex-1">
+                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-medium text-primary">{idx + 1}</span>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{response.questionText}</p>
+                              {question?.skill && (
+                                <Badge variant="outline" className="mt-1 text-xs">
+                                  {question.skill}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{response.questionText}</p>
-                          </div>
+                          {response.score !== null && (
+                            <Badge 
+                              variant={response.score >= 70 ? "default" : "secondary"}
+                              className={response.score >= 70 ? "bg-green-600" : response.score >= 50 ? "bg-yellow-600" : "bg-red-600"}
+                            >
+                              {response.score}%
+                            </Badge>
+                          )}
                         </div>
-                        {response.score !== null && (
-                          <Badge 
-                            variant={response.score >= 70 ? "default" : "secondary"}
-                            className={response.score >= 70 ? "bg-green-600" : response.score >= 50 ? "bg-yellow-600" : "bg-red-600"}
-                          >
-                            {response.score}%
-                          </Badge>
+                        
+                        {question?.options && question.options.length > 0 && (
+                          <div className="ml-9 space-y-1">
+                            <p className="text-xs text-muted-foreground mb-2">Answer Options:</p>
+                            {question.options.map((opt, optIdx) => {
+                              const isSelected = response.answer === opt;
+                              return (
+                                <div 
+                                  key={optIdx}
+                                  className={`flex items-center gap-2 p-2 rounded text-sm ${
+                                    isSelected 
+                                      ? response.score !== null && response.score >= 70
+                                        ? "bg-green-100 border border-green-300 text-green-800"
+                                        : "bg-orange-100 border border-orange-300 text-orange-800"
+                                      : "bg-muted/30"
+                                  }`}
+                                >
+                                  <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${
+                                    isSelected ? "border-current bg-current" : "border-muted-foreground/30"
+                                  }`}>
+                                    {isSelected && <CheckCircle2 className="h-3 w-3 text-white" />}
+                                  </div>
+                                  <span>{opt}</span>
+                                  {isSelected && (
+                                    <span className="ml-auto text-xs font-medium">
+                                      {response.score !== null && response.score >= 70 ? "Selected ✓" : "Selected"}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         )}
-                      </div>
-                      
-                      <div className="ml-9 p-3 bg-muted/50 rounded-lg">
-                        <p className="text-xs text-muted-foreground mb-1">Candidate's Answer:</p>
-                        <p className="text-sm">{response.answer}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        
+                        {(!question?.options || question.options.length === 0) && (
+                          <div className="ml-9 p-3 bg-muted/50 rounded-lg">
+                            <p className="text-xs text-muted-foreground mb-1">Candidate's Answer:</p>
+                            <p className="text-sm">{response.answer}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </ScrollArea>
