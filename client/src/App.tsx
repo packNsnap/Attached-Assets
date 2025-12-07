@@ -6,14 +6,17 @@ import { ThemeProvider } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/home-page";
-import ModulePlaceholder from "@/pages/module-placeholder";
 import { Layout } from "@/components/layout/Layout";
-import { MODULES } from "@/lib/constants";
 import JobDescriptionModule from "@/pages/modules/job-description";
 import ResumeAnalyzerModule from "@/pages/modules/resume-analyzer";
 import SkillsTestModule from "@/pages/modules/skills-test";
 import InterviewAssistantModule from "@/pages/modules/interview-assistant";
 import HiringPipelineModule from "@/pages/modules/hiring-pipeline";
+import ReferenceCheckModule from "@/pages/modules/reference-check";
+import PoliciesDocsModule from "@/pages/modules/policies-docs";
+import OnboardingModule from "@/pages/modules/onboarding";
+import PerformanceModule from "@/pages/modules/performance";
+import AnalyticsModule from "@/pages/modules/analytics";
 
 function Router() {
   return (
@@ -30,12 +33,11 @@ function Router() {
             <Route path="/skills-test" component={SkillsTestModule} />
             <Route path="/interviews" component={InterviewAssistantModule} />
             <Route path="/hiring" component={HiringPipelineModule} />
-            
-            {/* Dynamically generate routes for all modules */}
-            {MODULES.filter(m => m.path !== "/" && m.path !== "/jobs" && m.path !== "/resume-analyzer" && m.path !== "/skills-test" && m.path !== "/interviews" && m.path !== "/hiring").map(module => (
-              <Route key={module.path} path={module.path} component={ModulePlaceholder} />
-            ))}
-            
+            <Route path="/references" component={ReferenceCheckModule} />
+            <Route path="/policies" component={PoliciesDocsModule} />
+            <Route path="/onboarding" component={OnboardingModule} />
+            <Route path="/performance" component={PerformanceModule} />
+            <Route path="/analytics" component={AnalyticsModule} />
             <Route component={NotFound} />
           </Switch>
         </Layout>
