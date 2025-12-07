@@ -1,0 +1,88 @@
+Short answer: yes, people will still buy this without payroll, and that’s actually an advantage for you right now.
+
+* Tons of SaaS tools in HR don’t touch payroll: ATS (Greenhouse, Lever), assessment tools (Codility, HackerRank), onboarding tools, policy tools, etc. They all live **next to** payroll/HRIS and still print money.
+* Payroll is a whole different beast: taxes, filings, benefits, jurisdiction rules. If you try to bolt that on now, you’re signing up for another massive regulatory headache.
+
+**How to position it:**
+You’re not “the system of record” (like ADP, Rippling). You’re the **hiring + decision support layer** that plugs into whatever payroll/HRIS they already use.
+
+**Integration with payroll later:**
+Pretty straightforward conceptually once you care about it:
+
+* At MVP stage: export CSV/Excel of hired candidates with fields like name, email, title, salary, start date → they import into ADP/Gusto/Rippling/Paylocity.
+* Later: add real integrations via APIs (most modern payroll/HRIS tools have REST APIs and/or webhooks).
+
+  * Main work = auth (OAuth/API keys), field mapping, handling sync errors, and making sure your IDs line up (e.g., your “candidate_id” vs their “employee_id”).
+* You don’t need any of that for v1. You just need clean exports and maybe a generic “webhook” integration.
+
+So yes, absolutely viable without payroll. Don’t touch payroll until you have paying users begging for it.
+
+---
+
+Now for what you asked: **a single, clean prompt** you can drop into Replit’s vibecoder to describe the whole app with 10 modules, not overly detailed.
+
+Here you go:
+
+```text
+I want to build a modular HR web app (not a CRA, no background checks, no payroll) that helps employers run hiring and HR workflows with AI assistance.
+
+The app should be a standard web app with user accounts, login, and a simple admin area. Design it so new features can be added as “modules” accessible from a left-hand sidebar. Keep the tech stack simple and common (for example: a Python backend with a REST API and a basic HTML/CSS/JavaScript frontend, or whatever stack you think is reasonable on Replit).
+
+The product should focus on 10 main modules:
+
+1. Job Description & Salary Module  
+   - Employers enter a job title, level, location, and a few notes.  
+   - The system generates a clear job description, required and nice-to-have skills, and a suggested salary range.  
+   - No payroll or tax logic, just content and ranges.
+
+2. Resume Logic Analyzer Module  
+   - Employers upload resumes and paste the job description.  
+   - The system parses the resume and checks only internal logic: overlapping dates, weird promotion jumps, vague language, skills that don’t match the listed experience.  
+   - It returns a “fit score” and a “logic risk score” with short explanations.  
+   - No external verification and no background checks.
+
+3. Skills Test Builder & Scoring Module  
+   - Employers choose a role and skills.  
+   - The system generates a short skills test or scenario-based questions.  
+   - Candidates can take the test via a simple link, and the system stores their answers and a score.  
+   - This measures current ability only, not past history.
+
+4. Interview Assistant Module  
+   - Given a job description, the system generates structured interview questions (behavioral and technical) and a simple scoring rubric.  
+   - Interviewers can record notes and scores for each candidate.
+
+5. Hiring Workflow & Pipeline Module  
+   - For each job, employers can track candidates through stages (Applied, Screened, Interview, Offer, Hired, Rejected).  
+   - They can add notes, tags, and simple status updates.  
+   - Include basic email templates for updates and rejections.
+
+6. Reference Workflow Module (Safe Version)  
+   - The system generates reference request email templates for the employer to send from their own email system.  
+   - The app never receives reference responses.  
+   - Employers can manually mark “reference requested” and “reference received” and optionally type their own notes.
+
+7. HR Policy & Template Generator Module  
+   - Employers can generate HR policies, handbook sections, disciplinary letters, and basic SOPs based on a few inputs.  
+   - Everything is stored as text that they can edit, download, or copy.
+
+8. Onboarding & Training Planner Module  
+   - When a candidate is marked as Hired, the employer can create an onboarding checklist (tasks, deadlines, responsible person).  
+   - The system provides suggested tasks for common roles, and lets users check items off.
+
+9. Performance & Goals Module  
+   - For existing employees (created when candidates are marked as Hired), managers can set simple goals, log check-ins, and track completion over time.  
+   - No deep analytics needed at first, just forms and lists.
+
+10. Analytics & Admin Module  
+   - Simple dashboard showing counts like open roles, candidates per stage, average time-to-hire, and number of tests completed.  
+   - Admin can manage users, organizations, and basic settings.
+
+Important constraints:
+- The app must NOT perform any background checks, criminal checks, education/employment verification, or reference collection where the data flows through our servers. It should stay out of FCRA/CRA territory.
+- The app must NOT do payroll. At most, it should allow exporting hired candidate data (name, email, role, salary, start date) as CSV for import into payroll/HRIS tools later.
+- Focus on clean, simple UI, REST-style endpoints, and a structure that makes it easy to expand each module later.
+
+Start by scaffolding the project structure, basic auth, and a simple UI shell with a sidebar listing the 10 modules. Then we can build out each module one by one.
+```
+
+If you want next, I can break that into the **first chunk** for Replit (e.g., “just scaffold the project + auth + sidebar, nothing else”).
