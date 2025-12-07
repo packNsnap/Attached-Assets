@@ -19,7 +19,7 @@ import {
   interviewRecommendations
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -42,7 +42,11 @@ export interface IStorage {
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
   getCandidates(): Promise<Candidate[]>;
   getCandidate(id: string): Promise<Candidate | undefined>;
+  getCandidatesByJobId(jobId: string): Promise<Candidate[]>;
   updateCandidateStage(id: string, stage: string): Promise<Candidate | undefined>;
+  updateCandidateJobId(id: string, jobId: string | null): Promise<Candidate | undefined>;
+  
+  getJobsWithCandidateCounts(): Promise<(Job & { candidateCount: number })[]>;
   
   createInterviewNote(note: InsertInterviewNote): Promise<InterviewNote>;
   getInterviewNotesByCandidateId(candidateId: string): Promise<InterviewNote[]>;
@@ -107,6 +111,29 @@ export class DatabaseStorage implements IStorage {
       .where(eq(candidates.id, id))
       .returning();
     return result[0];
+  }
+
+  async getCandidatesByJobId(jobId: string): Promise<Candidate[]> {
+    return await db.select().from(candidates).where(eq(candidates.jobId, jobId));
+  }
+
+  async updateCandidateJobId(id: string, jobId: string | null): Promise<Candidate | undefined> {
+    const result = await db
+      .update(candidates)
+      .set({ jobId })
+      .where(eq(candidates.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getJobsWithCandidateCounts(): Promise<(Job & { candidateCount: number })[]> {
+    const allJobs = await db.select().from(jobs).orderBy(desc(jobs.createdAt));
+    const allCandidates = await db.select().from(candidates);
+    
+    return allJobs.map(job => ({
+      ...job,
+      candidateCount: allCandidates.filter(c => c.jobId === job.id).length
+    }));
   }
 
   async createInterviewNote(note: InsertInterviewNote): Promise<InterviewNote> {

@@ -2,8 +2,8 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation } from "@tanstack/react-query";
-import { Loader2, Wand2, Copy } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader2, Wand2, Copy, Users, MapPin, DollarSign, Briefcase } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +27,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import type { InsertJob } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { InsertJob, Job } from "@shared/schema";
+
+type JobWithCandidates = Job & { candidateCount: number };
 
 const formSchema = z.object({
   title: z.string().min(2, "Job title is required"),
@@ -50,6 +54,28 @@ type GeneratedContent = {
 export default function JobDescriptionModule() {
   const [result, setResult] = useState<GeneratedContent>(null);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: savedJobs = [] } = useQuery({
+    queryKey: ["jobs-with-candidates"],
+    queryFn: async () => {
+      const res = await fetch("/api/jobs-with-candidates");
+      if (!res.ok) throw new Error("Failed to fetch jobs");
+      return res.json() as Promise<JobWithCandidates[]>;
+    }
+  });
+
+  const { data: allCandidates = [] } = useQuery({
+    queryKey: ["candidates"],
+    queryFn: async () => {
+      const res = await fetch("/api/candidates");
+      if (!res.ok) throw new Error("Failed to fetch candidates");
+      return res.json();
+    }
+  });
+
+  const unassignedCandidateCount = allCandidates.filter((c: any) => !c.jobId).length;
+  const totalCandidateCount = allCandidates.length;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -73,6 +99,7 @@ export default function JobDescriptionModule() {
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
       toast({
         title: "Job Created",
         description: "Job description saved successfully to database.",
@@ -138,7 +165,7 @@ export default function JobDescriptionModule() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Job Description Generator</h1>
         <p className="text-muted-foreground mt-2">
@@ -146,7 +173,7 @@ export default function JobDescriptionModule() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         {/* Form */}
         <Card>
           <CardHeader>
@@ -326,6 +353,73 @@ export default function JobDescriptionModule() {
             </Card>
           )}
         </div>
+
+        {/* Saved Positions */}
+        <Card className="lg:col-span-1">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Briefcase className="h-5 w-5" />
+                Saved Positions
+              </CardTitle>
+              <Badge variant="secondary" data-testid="badge-job-count">{savedJobs.length}</Badge>
+            </div>
+            <CardDescription>All open positions you're hiring for</CardDescription>
+            {totalCandidateCount > 0 && (
+              <div className="flex gap-2 mt-2 text-xs">
+                <span className="text-muted-foreground">{totalCandidateCount} total candidates</span>
+                {unassignedCandidateCount > 0 && (
+                  <Badge variant="outline" className="text-xs" data-testid="badge-unassigned-count">
+                    {unassignedCandidateCount} unassigned
+                  </Badge>
+                )}
+              </div>
+            )}
+          </CardHeader>
+          <CardContent className="p-0">
+            <ScrollArea className="h-[500px]">
+              {savedJobs.length === 0 ? (
+                <div className="p-6 text-center text-muted-foreground">
+                  <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                  <p className="text-sm">No positions created yet</p>
+                  <p className="text-xs mt-1">Generate your first job description</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {savedJobs.map((job) => (
+                    <div key={job.id} className="p-4 hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`job-item-${job.id}`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <h4 className="font-medium text-sm truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h4>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0">{job.level}</Badge>
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {job.location}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <DollarSign className="h-3 w-3" />
+                            {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant={job.status === "active" ? "default" : "secondary"} className="text-xs">
+                            {job.status}
+                          </Badge>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`text-candidate-count-${job.id}`}>
+                            <Users className="h-3 w-3" />
+                            {job.candidateCount} candidates
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

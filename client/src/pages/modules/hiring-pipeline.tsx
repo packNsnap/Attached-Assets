@@ -9,7 +9,9 @@ import {
   Calendar, 
   CheckCircle2, 
   XCircle, 
-  GripVertical 
+  GripVertical,
+  Briefcase,
+  Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +45,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import type { Candidate } from "@shared/schema";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Candidate, Job } from "@shared/schema";
+
+type JobWithCandidates = Job & { candidateCount: number };
 
 type Stage = "Applied" | "Screened" | "Interview" | "Offer" | "Hired" | "Rejected";
 
@@ -52,8 +63,18 @@ const STAGES: Stage[] = ["Applied", "Screened", "Interview", "Offer", "Hired", "
 export default function HiringPipelineModule() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const { data: jobs = [] } = useQuery({
+    queryKey: ["jobs-with-candidates"],
+    queryFn: async () => {
+      const res = await fetch("/api/jobs-with-candidates");
+      if (!res.ok) throw new Error("Failed to fetch jobs");
+      return res.json() as Promise<JobWithCandidates[]>;
+    }
+  });
 
   const { data: candidates = [], isLoading } = useQuery({
     queryKey: ["candidates"],
@@ -63,6 +84,14 @@ export default function HiringPipelineModule() {
       return res.json() as Promise<Candidate[]>;
     }
   });
+
+  const filteredCandidates = selectedJobId === "all" 
+    ? candidates 
+    : selectedJobId === "unassigned"
+    ? candidates.filter(c => !c.jobId)
+    : candidates.filter(c => c.jobId === selectedJobId);
+  
+  const unassignedCount = candidates.filter(c => !c.jobId).length;
 
   const updateStageMutation = useMutation({
     mutationFn: async ({ id, stage }: { id: string; stage: string }) => {
@@ -137,7 +166,24 @@ export default function HiringPipelineModule() {
             Manage candidates through the hiring process.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+              <SelectTrigger className="w-[200px]" data-testid="select-job-filter">
+                <SelectValue placeholder="Filter by position" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Positions ({candidates.length})</SelectItem>
+                <SelectItem value="unassigned" data-testid="option-job-unassigned">Unassigned ({unassignedCount})</SelectItem>
+                {jobs.map(job => (
+                  <SelectItem key={job.id} value={job.id} data-testid={`option-job-${job.id}`}>
+                    {job.title} ({job.candidateCount})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Button variant="outline" data-testid="button-search">
             <Search className="mr-2 h-4 w-4" />
             Search
@@ -156,7 +202,7 @@ export default function HiringPipelineModule() {
               <div className="p-3 border-b bg-muted/40 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary" className={cn("rounded-full px-2 font-semibold", getStageColor(stage))} data-testid={`badge-count-${stage.toLowerCase()}`}>
-                    {candidates.filter(c => c.stage === stage).length}
+                    {filteredCandidates.filter(c => c.stage === stage).length}
                   </Badge>
                   <span className="font-medium text-sm">{stage}</span>
                 </div>
@@ -165,7 +211,9 @@ export default function HiringPipelineModule() {
               
               <ScrollArea className="flex-1 p-3">
                 <div className="space-y-3">
-                  {candidates.filter(c => c.stage === stage).map((candidate) => (
+                  {filteredCandidates.filter(c => c.stage === stage).map((candidate) => {
+                    const job = jobs.find(j => j.id === candidate.jobId);
+                    return (
                     <Card key={candidate.id} className="cursor-pointer hover:shadow-md transition-shadow group relative bg-card" data-testid={`card-candidate-${candidate.id}`}>
                       <CardContent className="p-4 space-y-3">
                         <div className="flex justify-between items-start">
@@ -207,6 +255,13 @@ export default function HiringPipelineModule() {
                           ))}
                         </div>
                         
+                        {job && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                            <Briefcase className="h-3 w-3" />
+                            {job.title}
+                          </div>
+                        )}
+                        
                         <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
@@ -215,7 +270,8 @@ export default function HiringPipelineModule() {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
+                  );
+                  })}
                 </div>
               </ScrollArea>
             </div>

@@ -107,6 +107,49 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/candidates/:id/job", async (req, res) => {
+    try {
+      const { jobId } = req.body;
+      if (jobId !== null && (typeof jobId !== "string" || jobId === "")) {
+        res.status(400).json({ error: "jobId must be a string or null" });
+        return;
+      }
+      if (jobId !== null) {
+        const job = await storage.getJob(jobId);
+        if (!job) {
+          res.status(404).json({ error: "Job not found" });
+          return;
+        }
+      }
+      const candidate = await storage.updateCandidateJobId(req.params.id, jobId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+      res.json(candidate);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update candidate job" });
+    }
+  });
+
+  app.get("/api/jobs/:id/candidates", async (req, res) => {
+    try {
+      const candidates = await storage.getCandidatesByJobId(req.params.id);
+      res.json(candidates);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch candidates for job" });
+    }
+  });
+
+  app.get("/api/jobs-with-candidates", async (req, res) => {
+    try {
+      const jobsWithCounts = await storage.getJobsWithCandidateCounts();
+      res.json(jobsWithCounts);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch jobs with candidate counts" });
+    }
+  });
+
   app.post("/api/interview-notes", async (req, res) => {
     try {
       const noteData = insertInterviewNoteSchema.parse(req.body);
