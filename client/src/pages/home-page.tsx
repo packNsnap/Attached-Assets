@@ -39,23 +39,21 @@ export default function Dashboard() {
           {MODULES.filter(m => m.path !== "/" && m.path !== "/admin").slice(0, 6).map((module) => {
             const Icon = module.icon;
             return (
-              <Link key={module.path} href={module.path}>
-                <a className="block group">
-                  <Card className="h-full transition-all hover:shadow-md hover:border-primary/50">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100" />
+              <Link key={module.path} href={module.path} className="block group">
+                <Card className="h-full transition-all hover:shadow-md hover:border-primary/50">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="p-2 rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                        <Icon className="h-5 w-5" />
                       </div>
-                      <CardTitle className="mt-4 text-lg">{module.title}</CardTitle>
-                      <CardDescription className="line-clamp-2">
-                        {module.description}
-                      </CardDescription>
-                    </CardHeader>
-                  </Card>
-                </a>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100" />
+                    </div>
+                    <CardTitle className="mt-4 text-lg">{module.title}</CardTitle>
+                    <CardDescription className="line-clamp-2">
+                      {module.description}
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
               </Link>
             );
           })}
