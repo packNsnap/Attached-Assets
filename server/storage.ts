@@ -119,6 +119,9 @@ export interface IStorage {
   createSkillsTestResponse(response: InsertSkillsTestResponse): Promise<SkillsTestResponse>;
   getSkillsTestResponsesByInvitationId(invitationId: string): Promise<SkillsTestResponse[]>;
   updateSkillsTestResponse(id: string, data: Partial<InsertSkillsTestResponse>): Promise<SkillsTestResponse | undefined>;
+  
+  updateCandidateTestScore(candidateId: string, score: number): Promise<Candidate | undefined>;
+  getRecentCompletedInvitations(limit: number): Promise<SkillsTestInvitation[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -407,6 +410,15 @@ export class DatabaseStorage implements IStorage {
   async updateSkillsTestResponse(id: string, data: Partial<InsertSkillsTestResponse>): Promise<SkillsTestResponse | undefined> {
     const result = await db.update(skillsTestResponses).set(data).where(eq(skillsTestResponses.id, id)).returning();
     return result[0];
+  }
+
+  async updateCandidateTestScore(candidateId: string, score: number): Promise<Candidate | undefined> {
+    const result = await db.update(candidates).set({ lastTestScore: score }).where(eq(candidates.id, candidateId)).returning();
+    return result[0];
+  }
+
+  async getRecentCompletedInvitations(limit: number): Promise<SkillsTestInvitation[]> {
+    return await db.select().from(skillsTestInvitations).where(eq(skillsTestInvitations.status, "completed")).orderBy(desc(skillsTestInvitations.completedAt)).limit(limit);
   }
 }
 

@@ -53,6 +53,7 @@ export const candidates = pgTable("candidates", {
   linkedinUrl: text("linkedin_url"),
   portfolioUrl: text("portfolio_url"),
   source: text("source"),
+  lastTestScore: integer("last_test_score"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 

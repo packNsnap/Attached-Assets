@@ -1351,6 +1351,10 @@ Respond with ONLY a number between 0 and 100.`;
           const finalScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : null;
           if (finalScore !== null) {
             await storage.updateSkillsTestInvitation(invitation.id, { score: finalScore });
+            // Update candidate's test score in their profile
+            if (invitation.candidateId) {
+              await storage.updateCandidateTestScore(invitation.candidateId, finalScore);
+            }
           }
         } catch (e) {
           console.error("Background scoring error:", e);
@@ -1523,11 +1527,27 @@ Respond with ONLY a number between 0 and 100.`;
 
       const finalScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : undefined;
       await storage.updateSkillsTestInvitation(invitation.id, { score: finalScore });
+      
+      // Update candidate's test score in their profile
+      if (finalScore !== undefined && invitation.candidateId) {
+        await storage.updateCandidateTestScore(invitation.candidateId, finalScore);
+      }
 
       res.json({ success: true, score: finalScore });
     } catch (error) {
       console.error("Rescore error:", error);
       res.status(500).json({ error: "Failed to rescore test" });
+    }
+  });
+
+  // Get recent completed invitations (limited)
+  app.get("/api/skills-test-invitations/recent-completed", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 5;
+      const invitations = await storage.getRecentCompletedInvitations(limit);
+      res.json(invitations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch recent completed invitations" });
     }
   });
 

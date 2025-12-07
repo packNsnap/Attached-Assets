@@ -118,6 +118,15 @@ export default function SkillsTestModule() {
     queryKey: ["/api/skills-test-invitations"],
   });
 
+  const { data: recentCompletedInvitations = [] } = useQuery<SkillsTestInvitation[]>({
+    queryKey: ["/api/skills-test-invitations/recent-completed"],
+    queryFn: async () => {
+      const res = await fetch("/api/skills-test-invitations/recent-completed?limit=5");
+      if (!res.ok) throw new Error("Failed to fetch recent completed");
+      return res.json();
+    },
+  });
+
   const { data: savedTests = [] } = useQuery<SkillsTest[]>({
     queryKey: ["/api/skills-tests"],
   });
@@ -200,6 +209,7 @@ export default function SkillsTestModule() {
       const data = await res.json();
       toast({ title: "Rescored", description: `Test scored: ${data.score}%` });
       queryClient.invalidateQueries({ queryKey: ["/api/skills-test-invitations"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/skills-test-invitations/recent-completed"] });
       queryClient.invalidateQueries({ queryKey: ["/api/skills-test-invitations", invitationId, "responses"] });
       queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "skills-test-invitations" });
       if (viewResultsInvitation && viewResultsInvitation.id === invitationId) {
@@ -464,7 +474,7 @@ export default function SkillsTestModule() {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Completed Tests</h2>
           
-          {completedInvitations.length === 0 ? (
+          {recentCompletedInvitations.length === 0 ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-8">
                 <p className="text-sm text-muted-foreground text-center">
@@ -474,7 +484,7 @@ export default function SkillsTestModule() {
             </Card>
           ) : (
             <div className="space-y-3">
-              {completedInvitations.map((inv) => (
+              {recentCompletedInvitations.map((inv) => (
                 <Card 
                   key={inv.id} 
                   className="cursor-pointer hover:border-primary/50 transition-colors"
@@ -912,8 +922,8 @@ HR Team`
 
       {/* View Test Results Dialog */}
       <Dialog open={!!viewResultsInvitation} onOpenChange={() => setViewResultsInvitation(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Test Results</DialogTitle>
             {viewResultsInvitation && (
               <DialogDescription>
@@ -923,7 +933,7 @@ HR Team`
           </DialogHeader>
 
           {viewResultsInvitation && (
-            <div className="flex items-center justify-between py-3 px-4 bg-muted rounded-lg">
+            <div className="flex items-center justify-between py-3 px-4 bg-muted rounded-lg flex-shrink-0">
               <div>
                 <p className="text-sm text-muted-foreground">Overall Score</p>
                 <p className="text-3xl font-bold">
@@ -962,7 +972,7 @@ HR Team`
             </div>
           )}
 
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="flex-1 min-h-0 pr-4">
             {isLoadingResponses ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
