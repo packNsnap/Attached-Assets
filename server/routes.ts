@@ -762,6 +762,8 @@ Skills to assess: ${skills}${jobContext}
 
 Generate exactly ${numQuestions} questions with approximately 50% multiple choice and 50% open text.
 
+IMPORTANT: For multiple choice questions, you MUST include the correct answer index (0-3) in the "correctAnswer" field.
+
 Respond with JSON in this exact format:
 {
   "questions": [
@@ -770,6 +772,7 @@ Respond with JSON in this exact format:
       "type": "multiple_choice",
       "text": "Scenario-based question here...",
       "options": ["Option A with realistic action", "Option B with realistic action", "Option C with realistic action", "Option D with realistic action"],
+      "correctAnswer": 0,
       "skill": "primary skill being tested"
     },
     {
