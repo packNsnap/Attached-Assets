@@ -295,8 +295,9 @@ export default function JobDescriptionModule() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Form */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Left Column: Form + Output */}
+        <div className="space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Role Details</CardTitle>
@@ -511,9 +512,10 @@ export default function JobDescriptionModule() {
             </Card>
           )}
         </div>
+        </div>
 
-        {/* Saved Positions */}
-        <Card className="lg:col-span-1">
+        {/* Right Column: Saved Positions */}
+        <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
