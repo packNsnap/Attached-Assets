@@ -132,6 +132,7 @@ export default function SkillsTestModule() {
   const [selectedRecommendation, setSelectedRecommendation] = useState<SkillsTestRecommendation | null>(null);
   const [candidateEmail, setCandidateEmail] = useState("");
   const [generatedInvitation, setGeneratedInvitation] = useState<{ token: string; testLink: string } | null>(null);
+  const [pendingJobDescription, setPendingJobDescription] = useState<string>("");
 
   const { data: recommendations = [] } = useQuery<SkillsTestRecommendation[]>({
     queryKey: ["/api/skills-test-recommendations"],
@@ -139,6 +140,10 @@ export default function SkillsTestModule() {
 
   const { data: savedTests = [] } = useQuery<SkillsTest[]>({
     queryKey: ["/api/skills-tests"],
+  });
+
+  const { data: jobs = [] } = useQuery<{ id: string; title: string; description: string }[]>({
+    queryKey: ["/api/jobs"],
   });
 
   const deleteRecommendation = useMutation({
@@ -278,6 +283,7 @@ export default function SkillsTestModule() {
           difficulty: values.difficulty,
           skills: values.skills,
           questionCount: values.questionCount,
+          jobDescription: pendingJobDescription || undefined,
         }),
       });
       
@@ -292,11 +298,12 @@ export default function SkillsTestModule() {
       if (pendingRecommendationId) {
         updateRecommendationStatus.mutate({ id: pendingRecommendationId, status: "test_created" });
         setPendingRecommendationId(null);
+        setPendingJobDescription("");
       }
       
       toast({
         title: "Test Generated",
-        description: `Created ${newTest.questions.length} questions for ${values.roleName}.`,
+        description: `Created ${newTest.questions.length} real-world scenario questions for ${values.roleName}.`,
       });
     } catch (error) {
       toast({
@@ -388,10 +395,14 @@ export default function SkillsTestModule() {
                               form.setValue("roleName", rec.jobTitle);
                               form.setValue("skills", rec.skillsNeeded.join(", "));
                               setPendingRecommendationId(rec.id);
+                              const job = jobs.find(j => j.id === rec.jobId);
+                              if (job?.description) {
+                                setPendingJobDescription(job.description);
+                              }
                               setActiveTab("builder");
                               toast({
                                 title: "Form Pre-filled",
-                                description: "Skills test form has been populated. Generate the test to complete.",
+                                description: "Skills test form populated with job context. Generate to create real-world scenario questions.",
                               });
                             }}
                           >

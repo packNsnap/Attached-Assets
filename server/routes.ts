@@ -720,7 +720,7 @@ Respond in this exact JSON format:
 
   app.post("/api/generate-skills-test", async (req, res) => {
     try {
-      const { roleName, difficulty, skills, questionCount } = req.body;
+      const { roleName, difficulty, skills, questionCount, jobDescription } = req.body;
       
       if (!roleName || !difficulty || !skills) {
         res.status(400).json({ error: "Missing required fields: roleName, difficulty, skills" });
@@ -729,39 +729,63 @@ Respond in this exact JSON format:
 
       const numQuestions = parseInt(questionCount) || 5;
 
-      const prompt = `You are an expert technical recruiter creating a skills assessment test. Generate exactly ${numQuestions} questions to test a candidate for a ${roleName} position at the ${difficulty} level.
+      const jobContext = jobDescription 
+        ? `\n\nJob Description for context:\n${jobDescription}\n\nUse the specific responsibilities and requirements from this job description to make questions highly relevant.`
+        : '';
 
-Skills to test: ${skills}
+      const prompt = `You are a senior hiring manager and industry expert creating a practical skills assessment for a ${roleName} position at the ${difficulty} level.
 
-Create a mix of multiple choice and open-ended questions. Each question should:
-- Be practical and scenario-based, not just trivia
-- Test real-world application of the skill
-- Be appropriate for the ${difficulty} difficulty level
+Your goal is to create REAL-WORLD SCENARIO questions that test how candidates would actually perform on the job - not textbook trivia.
 
-Respond with a JSON object in exactly this format:
+Skills to assess: ${skills}${jobContext}
+
+## Question Types to Generate:
+
+1. **Situational Judgment Questions** (multiple choice): Present a realistic workplace scenario the candidate might face. Ask "What would you do if..." or "How would you handle..."
+   - Example: "A client calls upset because their order is 3 days late and threatening to cancel. The delay was caused by a shipping partner. How do you respond?"
+
+2. **Problem-Solving Scenarios** (open text): Describe a specific challenge common in this role. Ask the candidate to walk through their approach.
+   - Example: "You discover a critical bug in production that's affecting 10% of users. Walk me through your first 30 minutes of response."
+
+3. **Experience-Based Questions** (open text): Use the STAR format prompt to extract specific past experiences.
+   - Example: "Describe a time when you had to learn a new ${skills.split(',')[0] || 'skill'} under time pressure. What was the situation, and what did you do?"
+
+4. **Practical Application** (multiple choice): Test decision-making in role-specific contexts.
+   - Example: "When prioritizing ${skills.split(',')[0] || 'tasks'} work, which factor should typically take highest priority?"
+
+## Requirements:
+- Make questions specific to the ${roleName} role, not generic
+- Include realistic details: company names, metrics, team dynamics, deadlines
+- Multiple choice options should all be plausible (no obviously wrong answers)
+- Open text questions should probe for depth and specific examples
+- Difficulty should match ${difficulty} level expectations
+
+Generate exactly ${numQuestions} questions with approximately 50% multiple choice and 50% open text.
+
+Respond with JSON in this exact format:
 {
   "questions": [
     {
       "id": 1,
       "type": "multiple_choice",
-      "text": "Question text here",
-      "options": ["Option A", "Option B", "Option C", "Option D"]
+      "text": "Scenario-based question here...",
+      "options": ["Option A with realistic action", "Option B with realistic action", "Option C with realistic action", "Option D with realistic action"],
+      "skill": "primary skill being tested"
     },
     {
       "id": 2,
       "type": "open_text",
-      "text": "Open-ended question text here"
+      "text": "Situational or experience-based question here...",
+      "skill": "primary skill being tested"
     }
   ]
-}
-
-Generate approximately 60% multiple choice and 40% open text questions. Make sure all questions are relevant to the specified skills and difficulty level.`;
+}`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
-        temperature: 0.7,
+        temperature: 0.8,
       });
 
       const content = completion.choices[0]?.message?.content;
