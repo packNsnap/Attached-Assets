@@ -47,6 +47,8 @@ export interface IStorage {
   createJob(job: InsertJob): Promise<Job>;
   getJobs(): Promise<Job[]>;
   getJob(id: string): Promise<Job | undefined>;
+  updateJob(id: string, data: Partial<InsertJob>): Promise<Job | undefined>;
+  deleteJob(id: string): Promise<boolean>;
   
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
   getCandidates(): Promise<Candidate[]>;
@@ -119,6 +121,16 @@ export class DatabaseStorage implements IStorage {
   async getJob(id: string): Promise<Job | undefined> {
     const result = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
     return result[0];
+  }
+
+  async updateJob(id: string, data: Partial<InsertJob>): Promise<Job | undefined> {
+    const result = await db.update(jobs).set(data).where(eq(jobs.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteJob(id: string): Promise<boolean> {
+    const result = await db.delete(jobs).where(eq(jobs.id, id)).returning();
+    return result.length > 0;
   }
 
   async createCandidate(candidate: InsertCandidate): Promise<Candidate> {

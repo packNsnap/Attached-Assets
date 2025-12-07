@@ -63,6 +63,33 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/jobs/:id", async (req, res) => {
+    try {
+      const jobData = req.body;
+      const job = await storage.updateJob(req.params.id, jobData);
+      if (!job) {
+        res.status(404).json({ error: "Job not found" });
+        return;
+      }
+      res.json(job);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update job" });
+    }
+  });
+
+  app.delete("/api/jobs/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteJob(req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: "Job not found" });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete job" });
+    }
+  });
+
   app.post("/api/candidates", async (req, res) => {
     try {
       const candidateData = insertCandidateSchema.parse(req.body);
