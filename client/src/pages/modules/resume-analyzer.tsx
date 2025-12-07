@@ -13,6 +13,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,7 +107,7 @@ export default function ResumeAnalyzerModule() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 
                 <div className="space-y-2">
-                  <FormLabel>Candidate Resume (PDF/Docx)</FormLabel>
+                  <Label>Candidate Resume (PDF/Docx)</Label>
                   <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer relative">
                     <Input 
                       type="file" 
