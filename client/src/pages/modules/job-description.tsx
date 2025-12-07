@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Wand2, Copy, Users, MapPin, DollarSign, Briefcase } from "lucide-react";
+import { Loader2, Wand2, Copy, Users, MapPin, DollarSign, Briefcase, Pencil, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -29,6 +29,13 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import type { InsertJob, Job } from "@shared/schema";
 
 type JobWithCandidates = Job & { candidateCount: number };
@@ -53,6 +60,16 @@ type GeneratedContent = {
 
 export default function JobDescriptionModule() {
   const [result, setResult] = useState<GeneratedContent>(null);
+  const [editingJob, setEditingJob] = useState<JobWithCandidates | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    level: "",
+    location: "",
+    skills: "",
+    salaryMin: 0,
+    salaryMax: 0,
+    status: "active"
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -150,6 +167,86 @@ export default function JobDescriptionModule() {
       });
     }
   });
+
+  const updateJobMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<InsertJob> }) => {
+      const res = await fetch(`/api/jobs/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (!res.ok) throw new Error("Failed to update job");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
+      setEditingJob(null);
+      toast({
+        title: "Job Updated",
+        description: "Job has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update job",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/jobs/${id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) throw new Error("Failed to delete job");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
+      toast({
+        title: "Job Deleted",
+        description: "Job has been removed.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete job",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const openEditDialog = (job: JobWithCandidates) => {
+    setEditForm({
+      title: job.title,
+      level: job.level,
+      location: job.location,
+      skills: job.skills.join(", "),
+      salaryMin: job.salaryMin,
+      salaryMax: job.salaryMax,
+      status: job.status
+    });
+    setEditingJob(job);
+  };
+
+  const handleUpdateJob = () => {
+    if (!editingJob) return;
+    updateJobMutation.mutate({
+      id: editingJob.id,
+      data: {
+        title: editForm.title,
+        level: editForm.level,
+        location: editForm.location,
+        skills: editForm.skills.split(",").map(s => s.trim()).filter(Boolean),
+        salaryMin: editForm.salaryMin,
+        salaryMax: editForm.salaryMax,
+        status: editForm.status
+      }
+    });
+  };
 
   function onSubmit(values: FormValues) {
     generateMutation.mutate(values);
@@ -387,7 +484,7 @@ export default function JobDescriptionModule() {
               ) : (
                 <div className="divide-y">
                   {savedJobs.map((job) => (
-                    <div key={job.id} className="p-4 hover:bg-muted/50 transition-colors cursor-pointer" data-testid={`job-item-${job.id}`}>
+                    <div key={job.id} className="p-4 hover:bg-muted/50 transition-colors" data-testid={`job-item-${job.id}`}>
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1 min-w-0 flex-1">
                           <h4 className="font-medium text-sm truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h4>
@@ -404,6 +501,30 @@ export default function JobDescriptionModule() {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
+                          <div className="flex items-center gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7"
+                              onClick={() => openEditDialog(job)}
+                              data-testid={`button-edit-job-${job.id}`}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (window.confirm("Are you sure you want to delete this job?")) {
+                                  deleteJobMutation.mutate(job.id);
+                                }
+                              }}
+                              data-testid={`button-delete-job-${job.id}`}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                           <Badge variant={job.status === "active" ? "default" : "secondary"} className="text-xs">
                             {job.status}
                           </Badge>
@@ -421,6 +542,132 @@ export default function JobDescriptionModule() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Job Dialog */}
+      <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Job Position</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title">Job Title</Label>
+              <Input
+                id="edit-title"
+                value={editForm.title}
+                onChange={(e) => setEditForm(p => ({ ...p, title: e.target.value }))}
+                data-testid="input-edit-job-title"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-level">Level</Label>
+                <Select
+                  value={editForm.level}
+                  onValueChange={(v) => setEditForm(p => ({ ...p, level: v }))}
+                >
+                  <SelectTrigger data-testid="select-edit-job-level">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Junior">Junior</SelectItem>
+                    <SelectItem value="Mid">Mid-Level</SelectItem>
+                    <SelectItem value="Senior">Senior</SelectItem>
+                    <SelectItem value="Lead">Lead</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-location">Location</Label>
+                <Select
+                  value={editForm.location}
+                  onValueChange={(v) => setEditForm(p => ({ ...p, location: v }))}
+                >
+                  <SelectTrigger data-testid="select-edit-job-location">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Remote">Remote</SelectItem>
+                    <SelectItem value="Hybrid">Hybrid</SelectItem>
+                    <SelectItem value="Onsite">On-site</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-skills">Required Skills (comma-separated)</Label>
+              <Input
+                id="edit-skills"
+                value={editForm.skills}
+                onChange={(e) => setEditForm(p => ({ ...p, skills: e.target.value }))}
+                data-testid="input-edit-job-skills"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-salary-min">Minimum Salary</Label>
+                <Input
+                  id="edit-salary-min"
+                  type="number"
+                  value={editForm.salaryMin}
+                  onChange={(e) => setEditForm(p => ({ ...p, salaryMin: Number(e.target.value) }))}
+                  data-testid="input-edit-job-salary-min"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-salary-max">Maximum Salary</Label>
+                <Input
+                  id="edit-salary-max"
+                  type="number"
+                  value={editForm.salaryMax}
+                  onChange={(e) => setEditForm(p => ({ ...p, salaryMax: Number(e.target.value) }))}
+                  data-testid="input-edit-job-salary-max"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">Status</Label>
+              <Select
+                value={editForm.status}
+                onValueChange={(v) => setEditForm(p => ({ ...p, status: v }))}
+              >
+                <SelectTrigger data-testid="select-edit-job-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="paused">Paused</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setEditingJob(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleUpdateJob}
+                disabled={updateJobMutation.isPending}
+                data-testid="button-save-job-edit"
+              >
+                {updateJobMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
