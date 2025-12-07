@@ -9,8 +9,12 @@ import {
   insertInterviewRecommendationSchema,
   insertCandidateNoteSchema,
   insertCandidateDocumentSchema,
-  insertResumeAnalysisSchema
+  insertResumeAnalysisSchema,
+  insertSkillsTestSchema,
+  insertSkillsTestInvitationSchema,
+  insertSkillsTestResponseSchema
 } from "@shared/schema";
+import { randomBytes } from "crypto";
 import { z } from "zod";
 import OpenAI from "openai";
 import multer from "multer";
@@ -913,6 +917,255 @@ Make the description professional but engaging. Use bullet points for responsibi
     } catch (error) {
       console.error("AI generation error:", error);
       res.status(500).json({ error: "Failed to generate job description" });
+    }
+  });
+
+  // Delete skills test recommendation
+  app.delete("/api/skills-test-recommendations/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteSkillsTestRecommendation(req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: "Recommendation not found" });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete recommendation" });
+    }
+  });
+
+  // Skills Tests CRUD
+  app.post("/api/skills-tests", async (req, res) => {
+    try {
+      const testData = insertSkillsTestSchema.parse(req.body);
+      const test = await storage.createSkillsTest(testData);
+      res.json(test);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create skills test" });
+      }
+    }
+  });
+
+  app.get("/api/skills-tests", async (req, res) => {
+    try {
+      const tests = await storage.getSkillsTests();
+      res.json(tests);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch skills tests" });
+    }
+  });
+
+  app.get("/api/skills-tests/:id", async (req, res) => {
+    try {
+      const test = await storage.getSkillsTest(req.params.id);
+      if (!test) {
+        res.status(404).json({ error: "Skills test not found" });
+        return;
+      }
+      res.json(test);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch skills test" });
+    }
+  });
+
+  // Skills Test Invitations
+  app.post("/api/skills-test-invitations", async (req, res) => {
+    try {
+      const { testId, candidateId, candidateName, candidateEmail, jobTitle } = req.body;
+      
+      // Generate unique token for public access
+      const token = randomBytes(32).toString("hex");
+      
+      // Set expiration to 7 days from now
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      const invitationData = {
+        testId,
+        candidateId: candidateId || null,
+        candidateName,
+        candidateEmail,
+        jobTitle,
+        token,
+        status: "pending",
+        sentAt: new Date(),
+        expiresAt,
+      };
+      
+      const invitation = await storage.createSkillsTestInvitation(invitationData);
+      res.json(invitation);
+    } catch (error) {
+      console.error("Create invitation error:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to create invitation" });
+      }
+    }
+  });
+
+  app.get("/api/skills-test-invitations/:id", async (req, res) => {
+    try {
+      const invitation = await storage.getSkillsTestInvitation(req.params.id);
+      if (!invitation) {
+        res.status(404).json({ error: "Invitation not found" });
+        return;
+      }
+      res.json(invitation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch invitation" });
+    }
+  });
+
+  app.get("/api/candidates/:id/skills-test-invitations", async (req, res) => {
+    try {
+      const invitations = await storage.getSkillsTestInvitationsByCandidateId(req.params.id);
+      res.json(invitations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch candidate invitations" });
+    }
+  });
+
+  // Public endpoint - Get test by token (no auth required)
+  app.get("/api/public/skills-test/:token", async (req, res) => {
+    try {
+      const invitation = await storage.getSkillsTestInvitationByToken(req.params.token);
+      if (!invitation) {
+        res.status(404).json({ error: "Test not found or link expired" });
+        return;
+      }
+      
+      // Check if expired
+      if (new Date() > new Date(invitation.expiresAt)) {
+        res.status(410).json({ error: "This test link has expired" });
+        return;
+      }
+      
+      // Check if already completed
+      if (invitation.status === "completed") {
+        res.status(410).json({ error: "This test has already been completed" });
+        return;
+      }
+      
+      // Get the actual test questions
+      const test = await storage.getSkillsTest(invitation.testId);
+      if (!test) {
+        res.status(404).json({ error: "Test not found" });
+        return;
+      }
+      
+      // Return invitation info plus test questions
+      res.json({
+        invitation: {
+          id: invitation.id,
+          candidateName: invitation.candidateName,
+          jobTitle: invitation.jobTitle,
+          status: invitation.status,
+        },
+        test: {
+          roleName: test.roleName,
+          difficulty: test.difficulty,
+          skills: test.skills,
+          questions: JSON.parse(test.questions),
+        },
+      });
+    } catch (error) {
+      console.error("Public test fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch test" });
+    }
+  });
+
+  // Public endpoint - Submit test answers (no auth required)
+  app.post("/api/public/skills-test/:token/submit", async (req, res) => {
+    try {
+      const { answers } = req.body;
+      
+      if (!answers || !Array.isArray(answers)) {
+        res.status(400).json({ error: "Answers array is required" });
+        return;
+      }
+      
+      const invitation = await storage.getSkillsTestInvitationByToken(req.params.token);
+      if (!invitation) {
+        res.status(404).json({ error: "Test not found or link expired" });
+        return;
+      }
+      
+      // Check if expired
+      if (new Date() > new Date(invitation.expiresAt)) {
+        res.status(410).json({ error: "This test link has expired" });
+        return;
+      }
+      
+      // Check if already completed
+      if (invitation.status === "completed") {
+        res.status(410).json({ error: "This test has already been completed" });
+        return;
+      }
+      
+      // Get test for scoring
+      const test = await storage.getSkillsTest(invitation.testId);
+      if (!test) {
+        res.status(404).json({ error: "Test not found" });
+        return;
+      }
+      
+      const questions = JSON.parse(test.questions);
+      let totalScore = 0;
+      let scoredCount = 0;
+      
+      // Save each response and calculate score for multiple choice
+      for (const answer of answers) {
+        const question = questions[answer.questionIndex];
+        let score: number | null = null;
+        
+        if (question && question.type === "multiple_choice" && question.correctAnswer !== undefined) {
+          // Auto-score multiple choice
+          score = answer.answer === question.correctAnswer ? 100 : 0;
+          totalScore += score;
+          scoredCount++;
+        }
+        
+        await storage.createSkillsTestResponse({
+          invitationId: invitation.id,
+          questionIndex: answer.questionIndex,
+          questionText: question?.text || "",
+          answer: answer.answer,
+          score,
+        });
+      }
+      
+      // Calculate final score (average of scored questions)
+      const finalScore = scoredCount > 0 ? Math.round(totalScore / scoredCount) : undefined;
+      
+      // Update invitation status
+      await storage.updateSkillsTestInvitation(invitation.id, {
+        status: "completed",
+        score: finalScore,
+        completedAt: new Date(),
+      });
+      
+      res.json({ 
+        success: true, 
+        message: "Test submitted successfully",
+        score: finalScore,
+      });
+    } catch (error) {
+      console.error("Test submission error:", error);
+      res.status(500).json({ error: "Failed to submit test" });
+    }
+  });
+
+  // Get test responses by invitation
+  app.get("/api/skills-test-invitations/:id/responses", async (req, res) => {
+    try {
+      const responses = await storage.getSkillsTestResponsesByInvitationId(req.params.id);
+      res.json(responses);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch test responses" });
     }
   });
 
