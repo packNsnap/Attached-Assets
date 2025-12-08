@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/home-page";
 import LandingPage from "@/pages/landing-page";
+import PricingPage from "@/pages/pricing-page";
 import { Layout } from "@/components/layout/Layout";
 import JobDescriptionModule from "@/pages/modules/job-description";
 import ResumeAnalyzerModule from "@/pages/modules/resume-analyzer";
@@ -25,6 +26,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
+      <Route path="/pricing" component={PricingPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/test/:token" component={SkillsTestPublic} />
       
