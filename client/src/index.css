@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant vibrant (&:is(.vibrant *));
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -146,6 +147,53 @@
   --sidebar-accent-foreground: 210 40% 98%;
   --sidebar-border: 217 32.6% 17.5%;
   --sidebar-ring: 224.3 76.3% 48%;
+}
+
+.vibrant {
+  /* Vibrant Mode - Neon & Bold */
+  --background: 270 50% 5%; /* Deep purple-black */
+  --foreground: 280 100% 95%;
+
+  --card: 270 45% 8%;
+  --card-foreground: 280 100% 95%;
+
+  --popover: 270 45% 8%;
+  --popover-foreground: 280 100% 95%;
+
+  --primary: 280 100% 65%; /* Electric purple */
+  --primary-foreground: 270 50% 5%;
+
+  --secondary: 190 100% 50%; /* Cyan neon */
+  --secondary-foreground: 270 50% 5%;
+
+  --muted: 270 30% 15%;
+  --muted-foreground: 280 40% 70%;
+
+  --accent: 320 100% 60%; /* Hot pink */
+  --accent-foreground: 270 50% 5%;
+
+  --destructive: 0 100% 60%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 280 50% 20%;
+  --input: 270 30% 15%;
+  --ring: 280 100% 65%;
+
+  /* Sidebar - Vibrant Mode */
+  --sidebar: 270 50% 7%;
+  --sidebar-foreground: 280 100% 95%;
+  --sidebar-primary: 280 100% 65%;
+  --sidebar-primary-foreground: 270 50% 5%;
+  --sidebar-accent: 270 30% 15%;
+  --sidebar-accent-foreground: 280 100% 95%;
+  --sidebar-border: 280 50% 20%;
+  --sidebar-ring: 280 100% 65%;
+
+  --chart-1: 280 100% 65%;
+  --chart-2: 190 100% 50%;
+  --chart-3: 320 100% 60%;
+  --chart-4: 45 100% 55%;
+  --chart-5: 140 100% 50%;
 }
 
 @layer base {
