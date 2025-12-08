@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
 import { TrendingUp, TrendingDown, Users, Briefcase, Clock, Target, Calendar, DollarSign } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -87,15 +89,16 @@ function StatCard({ title, value, change, icon, description }: StatCardProps) {
 export default function AnalyticsModule() {
   const [timeRange, setTimeRange] = useState("6m");
 
+  const module = getModuleByPath("/analytics");
+
   return (
     <div className="space-y-6 max-w-7xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">HR Analytics</h1>
-          <p className="text-muted-foreground mt-2">
-            Track key metrics and performance indicators across your HR operations.
-          </p>
-        </div>
+      <PageHeader
+        title="HR Analytics"
+        description="Track key metrics and performance indicators across your HR operations."
+        icon={module.icon}
+        gradient={module.color}
+      >
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[180px]" data-testid="select-time-range">
             <SelectValue placeholder="Select time range" />
@@ -107,7 +110,7 @@ export default function AnalyticsModule() {
             <SelectItem value="1y">Last year</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </PageHeader>
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

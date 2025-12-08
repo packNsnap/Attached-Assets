@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
 import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 import { useLocation } from "wouter";
 
 import { Button } from "@/components/ui/button";
@@ -233,14 +235,17 @@ export default function ResumeAnalyzerModule() {
     }
   }
 
+  const module = getModuleByPath("/resume-analyzer");
+
   return (
     <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Resume Logic Analyzer</h1>
-        <p className="text-muted-foreground mt-2">
-          Detect inconsistencies, gaps, and logic risks in resumes. Compare against job requirements.
-        </p>
-      </div>
+      <PageHeader
+        title="Resume Logic Analyzer"
+        description="Detect inconsistencies, gaps, and logic risks in resumes. Compare against job requirements."
+        icon={module.icon}
+        gradient={module.color}
+        badge={module.featured ? "AI" : undefined}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="h-fit">

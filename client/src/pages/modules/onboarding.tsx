@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, GraduationCap, Copy, Download, CheckCircle2, Circle } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -119,14 +121,16 @@ export default function OnboardingModule() {
 
   const categories = result ? Array.from(new Set(result.items.map(i => i.category))) : [];
 
+  const module = getModuleByPath("/onboarding");
+
   return (
     <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Onboarding</h1>
-        <p className="text-muted-foreground mt-2">
-          Create personalized onboarding checklists and plans for new hires.
-        </p>
-      </div>
+      <PageHeader
+        title="Onboarding"
+        description="Create personalized onboarding checklists and plans for new hires."
+        icon={module.icon}
+        gradient={module.color}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

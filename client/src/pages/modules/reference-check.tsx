@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, UserCheck, Copy, Mail, Send } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -88,14 +90,16 @@ export default function ReferenceCheckModule() {
     window.open(mailtoLink, "_blank");
   };
 
+  const module = getModuleByPath("/references");
+
   return (
     <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Reference Check</h1>
-        <p className="text-muted-foreground mt-2">
-          Generate professional reference request emails for your candidates.
-        </p>
-      </div>
+      <PageHeader
+        title="Reference Check"
+        description="Generate professional reference request emails for your candidates."
+        icon={module.icon}
+        gradient={module.color}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

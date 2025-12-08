@@ -18,6 +18,8 @@ import {
   ClipboardCheck,
   Users
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -195,42 +197,45 @@ export default function HiringPipelineModule() {
     );
   }
 
+  const module = getModuleByPath("/hiring");
+
   return (
     <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col">
       <div className="flex items-center justify-between shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Hiring Pipeline</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage candidates through the hiring process.
-          </p>
-        </div>
-        <div className="flex gap-2 items-center">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={selectedJobId} onValueChange={setSelectedJobId}>
-              <SelectTrigger className="w-[200px]" data-testid="select-job-filter">
-                <SelectValue placeholder="Filter by position" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Positions ({candidates.length})</SelectItem>
-                <SelectItem value="unassigned" data-testid="option-job-unassigned">Unassigned ({unassignedCount})</SelectItem>
-                {jobs.map(job => (
-                  <SelectItem key={job.id} value={job.id} data-testid={`option-job-${job.id}`}>
-                    {job.title} ({job.candidateCount})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <PageHeader
+          title="Hiring Pipeline"
+          description="Manage candidates through the hiring process."
+          icon={module.icon}
+          gradient={module.color}
+        >
+          <div className="flex gap-2 items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Select value={selectedJobId} onValueChange={setSelectedJobId}>
+                <SelectTrigger className="w-[200px]" data-testid="select-job-filter">
+                  <SelectValue placeholder="Filter by position" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Positions ({candidates.length})</SelectItem>
+                  <SelectItem value="unassigned" data-testid="option-job-unassigned">Unassigned ({unassignedCount})</SelectItem>
+                  {jobs.map(job => (
+                    <SelectItem key={job.id} value={job.id} data-testid={`option-job-${job.id}`}>
+                      {job.title} ({job.candidateCount})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" data-testid="button-search">
+              <Search className="mr-2 h-4 w-4" />
+              Search
+            </Button>
+            <Button data-testid="button-add-candidate">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Candidate
+            </Button>
           </div>
-          <Button variant="outline" data-testid="button-search">
-            <Search className="mr-2 h-4 w-4" />
-            Search
-          </Button>
-          <Button data-testid="button-add-candidate">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Candidate
-          </Button>
-        </div>
+        </PageHeader>
       </div>
 
       <div className="flex-1 overflow-x-auto pb-4">
@@ -315,11 +320,11 @@ export default function HiringPipelineModule() {
                                       data-testid={`link-resume-score-${candidate.id}`}
                                     >
                                       <FileText className="h-3 w-3" />
-                                      {assessmentsMap[candidate.id].resumeAnalysis[0].overallScore}%
+                                      {assessmentsMap[candidate.id].resumeAnalysis[0].fitScore}%
                                     </button>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Resume Score: {assessmentsMap[candidate.id].resumeAnalysis[0].overallScore}%</p>
+                                    <p>Resume Score: {assessmentsMap[candidate.id].resumeAnalysis[0].fitScore}%</p>
                                   </TooltipContent>
                                 </Tooltip>
                               )}

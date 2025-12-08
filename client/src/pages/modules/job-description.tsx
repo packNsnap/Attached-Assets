@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Wand2, Copy, Users, MapPin, DollarSign, Briefcase, Pencil, Trash2, X, Eye, ChevronDown, ChevronUp, Search, Lightbulb } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -338,14 +340,16 @@ export default function JobDescriptionModule() {
     });
   };
 
+  const module = getModuleByPath("/jobs");
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Job Description Generator</h1>
-        <p className="text-muted-foreground mt-2">
-          Enter role details and AI will generate a professional job description with market salary.
-        </p>
-      </div>
+      <PageHeader
+        title="Job Description Generator"
+        description="Enter role details and AI will generate a professional job description with market salary."
+        icon={module.icon}
+        gradient={module.color}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Left Column: Form + Output */}

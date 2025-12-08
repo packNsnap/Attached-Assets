@@ -29,6 +29,8 @@ import {
   Star,
   MessageSquare
 } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -535,22 +537,24 @@ export default function CandidatesModule() {
     );
   }
 
+  const module = getModuleByPath("/candidates");
+
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col">
       <div className="shrink-0 mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight" data-testid="text-page-title">Candidates</h1>
-          <p className="text-muted-foreground mt-2">
-            View and manage all candidates in your hiring process.
-          </p>
-        </div>
-        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-candidate">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Candidate
-            </Button>
-          </DialogTrigger>
+        <PageHeader
+          title="Candidates"
+          description="View and manage all candidates in your hiring process."
+          icon={module.icon}
+          gradient={module.color}
+        >
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-add-candidate">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Candidate
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Candidate</DialogTitle>
@@ -676,6 +680,7 @@ export default function CandidatesModule() {
             </div>
           </DialogContent>
         </Dialog>
+        </PageHeader>
       </div>
 
       <div className="flex gap-6 flex-1 min-h-0">

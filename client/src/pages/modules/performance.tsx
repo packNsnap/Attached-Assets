@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Target, Plus, Trash2, TrendingUp, Award, AlertCircle } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -134,20 +136,21 @@ export default function PerformanceModule() {
     }
   };
 
+  const module = getModuleByPath("/performance");
+
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Performance & Goals</h1>
-          <p className="text-muted-foreground mt-2">
-            Set, track, and manage employee performance goals.
-          </p>
-        </div>
+      <PageHeader
+        title="Performance & Goals"
+        description="Set, track, and manage employee performance goals."
+        icon={module.icon}
+        gradient={module.color}
+      >
         <Button onClick={() => setIsAdding(true)} data-testid="button-add-goal">
           <Plus className="h-4 w-4 mr-2" />
           Add Goal
         </Button>
-      </div>
+      </PageHeader>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">

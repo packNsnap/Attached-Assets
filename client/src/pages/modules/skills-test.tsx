@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
 import { Loader2, Trash2, CheckCircle2, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, Copy, Mail, Clock, Eye, FileText, ExternalLink, ChevronRight, RotateCcw, ClipboardList, RefreshCw, AlertCircle } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 import type { SkillsTestRecommendation, SkillsTest, SkillsTestInvitation, SkillsTestResponse } from "@shared/schema";
 import { useLocation } from "wouter";
 
@@ -370,15 +372,16 @@ export default function SkillsTestModule() {
     return null;
   };
 
+  const module = getModuleByPath("/skills-test");
+
   return (
     <div className="space-y-6 max-w-6xl">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="page-title">Skills Assessment</h1>
-        <p className="text-muted-foreground mt-1">
-          Create and send skill assessments to candidates. Tests are AI-generated based on the job requirements.
-        </p>
-      </div>
+      <PageHeader
+        title="Skills Assessment"
+        description="Create and send skill assessments to candidates. Tests are AI-generated based on the job requirements."
+        icon={module.icon}
+        gradient={module.color}
+      />
 
       {/* Status Cards */}
       <div className="grid gap-4 md:grid-cols-4">

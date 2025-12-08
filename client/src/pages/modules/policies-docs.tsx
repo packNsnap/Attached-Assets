@@ -3,6 +3,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, BookOpen, Copy, Download, FileText } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -91,14 +93,16 @@ export default function PoliciesDocsModule() {
     URL.revokeObjectURL(url);
   };
 
+  const module = getModuleByPath("/policies");
+
   return (
     <div className="space-y-6 max-w-6xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Policies & Documents</h1>
-        <p className="text-muted-foreground mt-2">
-          Generate professional HR policies and document templates for your organization.
-        </p>
-      </div>
+      <PageHeader
+        title="Policies & Documents"
+        description="Generate professional HR policies and document templates for your organization."
+        icon={module.icon}
+        gradient={module.color}
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
 import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, ChevronDown, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch, Eye, StickyNote } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { getModuleByPath } from "@/lib/constants";
 import type { InterviewRecommendation } from "@shared/schema";
 
 import { Button } from "@/components/ui/button";
@@ -301,21 +303,22 @@ export default function InterviewAssistantModule() {
   const inProgressRecommendations = recommendations.filter(r => r.status === "interview_started");
   const completedRecommendations = recommendations.filter(r => r.status === "completed");
 
+  const module = getModuleByPath("/interviews");
+
   return (
     <div className="space-y-6 max-w-6xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Interview Assistant</h1>
-          <p className="text-muted-foreground mt-2">
-            AI-generated structured interview questions with real-time scoring rubrics.
-          </p>
-        </div>
+      <PageHeader
+        title="Interview Assistant"
+        description="AI-generated structured interview questions with real-time scoring rubrics."
+        icon={module.icon}
+        gradient={module.color}
+      >
         {session && (
           <Button variant="outline" onClick={() => { setSession(null); setActiveTab("recommendations"); }}>
             End Session
           </Button>
         )}
-      </div>
+      </PageHeader>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
