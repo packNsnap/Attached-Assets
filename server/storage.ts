@@ -176,6 +176,11 @@ export interface IStorage {
   getScheduledInterviewsByCandidateId(candidateId: string, userId: string): Promise<ScheduledInterview[]>;
   updateScheduledInterview(id: string, userId: string, data: Partial<InsertScheduledInterview>): Promise<ScheduledInterview | undefined>;
   deleteScheduledInterview(id: string, userId: string): Promise<boolean>;
+  
+  // Notes tracking
+  markCandidateNotesAsViewed(candidateId: string, userId: string): Promise<Candidate | undefined>;
+  getUnreadNotesCount(candidateId: string): Promise<number>;
+  getCandidatesWithUnreadNotes(userId: string): Promise<{ candidateId: string; unreadCount: number }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -744,6 +749,47 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(scheduledInterviews.id, id), eq(scheduledInterviews.userId, userId)))
       .returning();
     return result.length > 0;
+  }
+
+  async markCandidateNotesAsViewed(candidateId: string, userId: string): Promise<Candidate | undefined> {
+    const result = await db.update(candidates)
+      .set({ notesLastViewedAt: new Date() })
+      .where(and(eq(candidates.id, candidateId), eq(candidates.userId, userId)))
+      .returning();
+    return result[0];
+  }
+
+  async getUnreadNotesCount(candidateId: string): Promise<number> {
+    const candidate = await db.select().from(candidates).where(eq(candidates.id, candidateId)).limit(1);
+    if (!candidate[0]) return 0;
+    
+    const lastViewed = candidate[0].notesLastViewedAt;
+    
+    if (!lastViewed) {
+      const notes = await db.select().from(candidateNotes).where(eq(candidateNotes.candidateId, candidateId));
+      return notes.length;
+    }
+    
+    const notes = await db.select().from(candidateNotes)
+      .where(and(
+        eq(candidateNotes.candidateId, candidateId),
+        sql`${candidateNotes.createdAt} > ${lastViewed}`
+      ));
+    return notes.length;
+  }
+
+  async getCandidatesWithUnreadNotes(userId: string): Promise<{ candidateId: string; unreadCount: number }[]> {
+    const userCandidates = await this.getCandidates(userId);
+    const results: { candidateId: string; unreadCount: number }[] = [];
+    
+    for (const candidate of userCandidates) {
+      const unreadCount = await this.getUnreadNotesCount(candidate.id);
+      if (unreadCount > 0) {
+        results.push({ candidateId: candidate.id, unreadCount });
+      }
+    }
+    
+    return results;
   }
 }
 

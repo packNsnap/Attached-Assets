@@ -75,6 +75,7 @@ export const candidates = pgTable("candidates", {
   portfolioUrl: text("portfolio_url"),
   source: text("source"),
   lastTestScore: integer("last_test_score"),
+  notesLastViewedAt: timestamp("notes_last_viewed_at"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
@@ -367,3 +368,4 @@ export const insertScheduledInterviewSchema = createInsertSchema(scheduledInterv
 
 export type InsertScheduledInterview = z.infer<typeof insertScheduledInterviewSchema>;
 export type ScheduledInterview = typeof scheduledInterviews.$inferSelect;
+
