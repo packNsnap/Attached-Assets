@@ -7,6 +7,7 @@ import { LogOut, User, Sparkles, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Badge } from "@/components/ui/badge";
+import { UsageDisplay } from "@/components/UsageDisplay";
 
 export function Sidebar() {
   const [location] = useLocation();
@@ -82,9 +83,13 @@ export function Sidebar() {
         </nav>
       </ScrollArea>
 
-      {/* User section with enhanced styling */}
-      <div className="border-t p-4 bg-muted/30">
-        <div className="flex items-center gap-3 mb-4 p-2 rounded-xl bg-background/50 border">
+      {/* Usage & User section */}
+      <div className="border-t p-4 bg-muted/30 space-y-4">
+        <div className="p-3 rounded-xl bg-background/50 border">
+          <UsageDisplay />
+        </div>
+        
+        <div className="flex items-center gap-3 p-2 rounded-xl bg-background/50 border">
           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
             <User className="h-5 w-5 text-white" />
           </div>

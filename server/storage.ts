@@ -24,6 +24,14 @@ import {
   type InsertSkillsTestInvitation,
   type SkillsTestResponse,
   type InsertSkillsTestResponse,
+  type Subscription,
+  type InsertSubscription,
+  type UsageTracking,
+  type InsertUsageTracking,
+  type AiActionUsage,
+  type InsertAiActionUsage,
+  type PlanType,
+  PLAN_LIMITS,
   users,
   jobs,
   candidates,
@@ -35,10 +43,13 @@ import {
   resumeAnalysis,
   skillsTests,
   skillsTestInvitations,
-  skillsTestResponses
+  skillsTestResponses,
+  subscriptions,
+  usageTracking,
+  aiActionUsage
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, sql, desc } from "drizzle-orm";
+import { eq, sql, desc, and, gte, lte } from "drizzle-orm";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -124,6 +135,32 @@ export interface IStorage {
   
   updateCandidateTestScore(candidateId: string, score: number): Promise<Candidate | undefined>;
   getRecentCompletedInvitations(limit: number): Promise<SkillsTestInvitation[]>;
+  
+  // Subscription methods
+  getSubscription(userId: string): Promise<Subscription | undefined>;
+  createSubscription(sub: InsertSubscription): Promise<Subscription>;
+  updateSubscription(userId: string, data: Partial<InsertSubscription>): Promise<Subscription | undefined>;
+  
+  // Usage tracking methods
+  getUsageTracking(userId: string, periodStart: Date, periodEnd: Date): Promise<UsageTracking | undefined>;
+  createUsageTracking(usage: InsertUsageTracking): Promise<UsageTracking>;
+  incrementJobsCreated(userId: string): Promise<void>;
+  incrementCandidatesAdded(userId: string): Promise<void>;
+  
+  // AI action usage methods
+  getAiActionUsage(userId: string, candidateId: string, serviceType: string): Promise<AiActionUsage | undefined>;
+  incrementAiActionUsage(userId: string, candidateId: string, serviceType: string): Promise<AiActionUsage>;
+  
+  // Limit checking
+  checkCanCreateJob(userId: string): Promise<{ allowed: boolean; current: number; limit: number }>;
+  checkCanAddCandidate(userId: string): Promise<{ allowed: boolean; current: number; limit: number }>;
+  checkCanUseAiAction(userId: string, candidateId: string, serviceType: string): Promise<{ allowed: boolean; current: number; limit: number }>;
+  getUserUsageSummary(userId: string): Promise<{
+    plan: PlanType;
+    jobs: { current: number; limit: number };
+    candidates: { current: number; limit: number };
+    periodEnd: Date;
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -440,6 +477,191 @@ export class DatabaseStorage implements IStorage {
 
   async getRecentCompletedInvitations(limit: number): Promise<SkillsTestInvitation[]> {
     return await db.select().from(skillsTestInvitations).where(eq(skillsTestInvitations.status, "completed")).orderBy(desc(skillsTestInvitations.completedAt)).limit(limit);
+  }
+
+  // Subscription methods
+  async getSubscription(userId: string): Promise<Subscription | undefined> {
+    const result = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).limit(1);
+    return result[0];
+  }
+
+  async createSubscription(sub: InsertSubscription): Promise<Subscription> {
+    const result = await db.insert(subscriptions).values(sub).returning();
+    return result[0];
+  }
+
+  async updateSubscription(userId: string, data: Partial<InsertSubscription>): Promise<Subscription | undefined> {
+    const result = await db.update(subscriptions).set(data).where(eq(subscriptions.userId, userId)).returning();
+    return result[0];
+  }
+
+  // Helper to get current period dates
+  private getCurrentPeriod(): { start: Date; end: Date } {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    return { start, end };
+  }
+
+  // Usage tracking methods
+  async getUsageTracking(userId: string, periodStart: Date, periodEnd: Date): Promise<UsageTracking | undefined> {
+    const result = await db.select().from(usageTracking)
+      .where(and(
+        eq(usageTracking.userId, userId),
+        gte(usageTracking.periodStart, periodStart),
+        lte(usageTracking.periodEnd, periodEnd)
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async createUsageTracking(usage: InsertUsageTracking): Promise<UsageTracking> {
+    const result = await db.insert(usageTracking).values(usage).returning();
+    return result[0];
+  }
+
+  private async getOrCreateCurrentUsageTracking(userId: string): Promise<UsageTracking> {
+    const { start, end } = this.getCurrentPeriod();
+    let usage = await this.getUsageTracking(userId, start, end);
+    if (!usage) {
+      usage = await this.createUsageTracking({
+        userId,
+        periodStart: start,
+        periodEnd: end,
+        jobsCreated: 0,
+        candidatesAdded: 0,
+      });
+    }
+    return usage;
+  }
+
+  async incrementJobsCreated(userId: string): Promise<void> {
+    const usage = await this.getOrCreateCurrentUsageTracking(userId);
+    await db.update(usageTracking)
+      .set({ jobsCreated: (usage.jobsCreated || 0) + 1 })
+      .where(eq(usageTracking.id, usage.id));
+  }
+
+  async incrementCandidatesAdded(userId: string): Promise<void> {
+    const usage = await this.getOrCreateCurrentUsageTracking(userId);
+    await db.update(usageTracking)
+      .set({ candidatesAdded: (usage.candidatesAdded || 0) + 1 })
+      .where(eq(usageTracking.id, usage.id));
+  }
+
+  // AI action usage methods
+  async getAiActionUsage(userId: string, candidateId: string, serviceType: string): Promise<AiActionUsage | undefined> {
+    const result = await db.select().from(aiActionUsage)
+      .where(and(
+        eq(aiActionUsage.userId, userId),
+        eq(aiActionUsage.candidateId, candidateId),
+        eq(aiActionUsage.serviceType, serviceType)
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async incrementAiActionUsage(userId: string, candidateId: string, serviceType: string): Promise<AiActionUsage> {
+    const existing = await this.getAiActionUsage(userId, candidateId, serviceType);
+    if (existing) {
+      const result = await db.update(aiActionUsage)
+        .set({ actionCount: (existing.actionCount || 0) + 1 })
+        .where(eq(aiActionUsage.id, existing.id))
+        .returning();
+      return result[0];
+    }
+    const result = await db.insert(aiActionUsage).values({
+      userId,
+      candidateId,
+      serviceType,
+      actionCount: 1,
+    }).returning();
+    return result[0];
+  }
+
+  // Limit checking methods
+  private async getOrCreateSubscription(userId: string): Promise<Subscription> {
+    let sub = await this.getSubscription(userId);
+    if (!sub) {
+      const { start, end } = this.getCurrentPeriod();
+      sub = await this.createSubscription({
+        userId,
+        plan: "starter",
+        status: "active",
+        currentPeriodStart: start,
+        currentPeriodEnd: end,
+      });
+    }
+    return sub;
+  }
+
+  async checkCanCreateJob(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
+    const sub = await this.getOrCreateSubscription(userId);
+    const plan = (sub.plan as PlanType) || "starter";
+    const limits = PLAN_LIMITS[plan];
+    
+    // Get active jobs count
+    const allJobs = await this.getJobs();
+    const activeJobs = allJobs.filter(j => j.status === "active").length;
+    
+    if (limits.jobs === -1) {
+      return { allowed: true, current: activeJobs, limit: -1 };
+    }
+    
+    return { allowed: activeJobs < limits.jobs, current: activeJobs, limit: limits.jobs };
+  }
+
+  async checkCanAddCandidate(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
+    const sub = await this.getOrCreateSubscription(userId);
+    const plan = (sub.plan as PlanType) || "starter";
+    const limits = PLAN_LIMITS[plan];
+    
+    const usage = await this.getOrCreateCurrentUsageTracking(userId);
+    const current = usage.candidatesAdded || 0;
+    
+    if (limits.candidates === -1) {
+      return { allowed: true, current, limit: -1 };
+    }
+    
+    return { allowed: current < limits.candidates, current, limit: limits.candidates };
+  }
+
+  async checkCanUseAiAction(userId: string, candidateId: string, serviceType: string): Promise<{ allowed: boolean; current: number; limit: number }> {
+    const sub = await this.getOrCreateSubscription(userId);
+    const plan = (sub.plan as PlanType) || "starter";
+    const limits = PLAN_LIMITS[plan];
+    
+    const usage = await this.getAiActionUsage(userId, candidateId, serviceType);
+    const current = usage?.actionCount || 0;
+    
+    if (limits.aiActionsPerService === -1) {
+      return { allowed: true, current, limit: -1 };
+    }
+    
+    return { allowed: current < limits.aiActionsPerService, current, limit: limits.aiActionsPerService };
+  }
+
+  async getUserUsageSummary(userId: string): Promise<{
+    plan: PlanType;
+    jobs: { current: number; limit: number };
+    candidates: { current: number; limit: number };
+    periodEnd: Date;
+  }> {
+    const sub = await this.getOrCreateSubscription(userId);
+    const plan = (sub.plan as PlanType) || "starter";
+    const limits = PLAN_LIMITS[plan];
+    
+    const usage = await this.getOrCreateCurrentUsageTracking(userId);
+    
+    const allJobs = await this.getJobs();
+    const activeJobs = allJobs.filter(j => j.status === "active").length;
+    
+    return {
+      plan,
+      jobs: { current: activeJobs, limit: limits.jobs },
+      candidates: { current: usage.candidatesAdded || 0, limit: limits.candidates },
+      periodEnd: usage.periodEnd,
+    };
   }
 }
 

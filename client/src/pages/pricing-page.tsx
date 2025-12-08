@@ -30,9 +30,9 @@ const pricingTiers = [
     borderColor: "border-slate-200 dark:border-slate-700",
     bgColor: "bg-slate-50 dark:bg-slate-800/50",
     limits: [
-      "1 active job position",
-      "10 candidates per month",
-      "2 AI actions per candidate",
+      "2 active job positions",
+      "4 candidates per month",
+      "2 AI actions per candidate per service",
     ],
     cta: "Get Started Free",
     ctaVariant: "outline" as const,
@@ -48,9 +48,9 @@ const pricingTiers = [
     borderColor: "border-green-200 dark:border-green-800",
     bgColor: "bg-green-50 dark:bg-green-900/20",
     limits: [
-      "3 active job positions",
-      "50 candidates per month",
-      "2 AI actions per candidate",
+      "10 active job positions",
+      "25 candidates per month",
+      "3 AI actions per candidate per service",
     ],
     cta: "Start with Eco",
     ctaVariant: "outline" as const,
@@ -66,9 +66,9 @@ const pricingTiers = [
     borderColor: "border-purple-300 dark:border-purple-700",
     bgColor: "bg-gradient-to-b from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20",
     limits: [
-      "10 active job positions",
-      "250 candidates per month",
-      "2 AI actions per candidate",
+      "25 active job positions",
+      "100 candidates per month",
+      "4 AI actions per candidate per service",
     ],
     cta: "Start with Pro",
     ctaVariant: "default" as const,
@@ -77,7 +77,7 @@ const pricingTiers = [
   {
     name: "Enterprise",
     subtitle: "Custom Solutions",
-    price: "$100+",
+    price: "$150+",
     period: "/ month",
     description: "Unlimited scale with custom integrations and dedicated support.",
     color: "from-orange-500 to-red-600",
@@ -86,7 +86,7 @@ const pricingTiers = [
     limits: [
       "Unlimited job positions",
       "Unlimited candidates",
-      "Custom AI usage limits",
+      "Unlimited AI actions",
       "SSO & Custom Integrations",
       "Priority Support & Onboarding",
     ],
@@ -103,15 +103,13 @@ export default function PricingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/">
-              <a className="flex items-center gap-2">
-                <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  Resume Logik
-                </span>
-              </a>
+            <Link href="/" className="flex items-center gap-2">
+              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Resume Logik
+              </span>
             </Link>
             <div className="flex items-center gap-4">
               <Button variant="ghost" asChild data-testid="link-login">

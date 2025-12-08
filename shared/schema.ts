@@ -264,3 +264,68 @@ export const insertSkillsTestResponseSchema = createInsertSchema(skillsTestRespo
 
 export type InsertSkillsTestResponse = z.infer<typeof insertSkillsTestResponseSchema>;
 export type SkillsTestResponse = typeof skillsTestResponses.$inferSelect;
+
+// Subscription plan types
+export const PLAN_LIMITS = {
+  starter: { jobs: 2, candidates: 4, aiActionsPerService: 2 },
+  eco: { jobs: 10, candidates: 25, aiActionsPerService: 3 },
+  pro: { jobs: 25, candidates: 100, aiActionsPerService: 4 },
+  enterprise: { jobs: -1, candidates: -1, aiActionsPerService: -1 }, // -1 = unlimited
+} as const;
+
+export type PlanType = keyof typeof PLAN_LIMITS;
+
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique(),
+  plan: text("plan").notNull().default("starter"),
+  status: text("status").notNull().default("active"),
+  currentPeriodStart: timestamp("current_period_start").notNull().default(sql`now()`),
+  currentPeriodEnd: timestamp("current_period_end").notNull().default(sql`now() + interval '1 month'`),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+
+// Usage tracking per user per month
+export const usageTracking = pgTable("usage_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  jobsCreated: integer("jobs_created").notNull().default(0),
+  candidatesAdded: integer("candidates_added").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertUsageTrackingSchema = createInsertSchema(usageTracking).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
+export type UsageTracking = typeof usageTracking.$inferSelect;
+
+// AI action usage tracking per candidate per service
+export const aiActionUsage = pgTable("ai_action_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  candidateId: varchar("candidate_id").notNull(),
+  serviceType: text("service_type").notNull(), // 'resume_analysis', 'skills_test', 'interview', 'job_description'
+  actionCount: integer("action_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertAiActionUsageSchema = createInsertSchema(aiActionUsage).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiActionUsage = z.infer<typeof insertAiActionUsageSchema>;
+export type AiActionUsage = typeof aiActionUsage.$inferSelect;

@@ -44,10 +44,92 @@ export async function registerRoutes(
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
-  app.post("/api/jobs", async (req, res) => {
+
+  // Usage and subscription routes
+  app.get('/api/usage', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const summary = await storage.getUserUsageSummary(userId);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching usage:", error);
+      res.status(500).json({ message: "Failed to fetch usage data" });
+    }
+  });
+
+  app.get('/api/usage/check-job', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const result = await storage.checkCanCreateJob(userId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error checking job limit:", error);
+      res.status(500).json({ message: "Failed to check job limit" });
+    }
+  });
+
+  app.get('/api/usage/check-candidate', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const result = await storage.checkCanAddCandidate(userId);
+      res.json(result);
+    } catch (error) {
+      console.error("Error checking candidate limit:", error);
+      res.status(500).json({ message: "Failed to check candidate limit" });
+    }
+  });
+
+  app.get('/api/usage/check-ai-action', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { candidateId, serviceType } = req.query;
+      if (!candidateId || !serviceType) {
+        res.status(400).json({ message: "candidateId and serviceType are required" });
+        return;
+      }
+      const result = await storage.checkCanUseAiAction(userId, candidateId as string, serviceType as string);
+      res.json(result);
+    } catch (error) {
+      console.error("Error checking AI action limit:", error);
+      res.status(500).json({ message: "Failed to check AI action limit" });
+    }
+  });
+
+  app.post('/api/usage/increment-ai-action', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { candidateId, serviceType } = req.body;
+      if (!candidateId || !serviceType) {
+        res.status(400).json({ message: "candidateId and serviceType are required" });
+        return;
+      }
+      const result = await storage.incrementAiActionUsage(userId, candidateId, serviceType);
+      res.json(result);
+    } catch (error) {
+      console.error("Error incrementing AI action:", error);
+      res.status(500).json({ message: "Failed to increment AI action" });
+    }
+  });
+
+  app.post("/api/jobs", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Check job limit
+      const canCreate = await storage.checkCanCreateJob(userId);
+      if (!canCreate.allowed) {
+        res.status(403).json({ 
+          error: "Job limit reached",
+          message: `You've reached your limit of ${canCreate.limit} active jobs. Please upgrade your plan or close existing jobs.`,
+          current: canCreate.current,
+          limit: canCreate.limit
+        });
+        return;
+      }
+      
       const jobData = insertJobSchema.parse(req.body);
       const job = await storage.createJob(jobData);
+      await storage.incrementJobsCreated(userId);
       res.json(job);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -137,10 +219,25 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/candidates", async (req, res) => {
+  app.post("/api/candidates", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      
+      // Check candidate limit
+      const canAdd = await storage.checkCanAddCandidate(userId);
+      if (!canAdd.allowed) {
+        res.status(403).json({ 
+          error: "Candidate limit reached",
+          message: `You've reached your limit of ${canAdd.limit} candidates this month. Please upgrade your plan.`,
+          current: canAdd.current,
+          limit: canAdd.limit
+        });
+        return;
+      }
+      
       const candidateData = insertCandidateSchema.parse(req.body);
       const candidate = await storage.createCandidate(candidateData);
+      await storage.incrementCandidatesAdded(userId);
       res.json(candidate);
     } catch (error) {
       if (error instanceof z.ZodError) {
