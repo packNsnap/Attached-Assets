@@ -952,124 +952,19 @@ export async function registerRoutes(
         return;
       }
 
-      const skillsList = jobSkills?.join(", ") || "";
-      const jobContext = jobDescription || `Job: ${jobTitle || "Unknown"}, Level: ${jobLevel || "Unknown"}, Skills: ${skillsList}`;
+      const skillsList = jobSkills || [];
+      const jobContext = jobDescription || `Job: ${jobTitle || "Unknown"}, Level: ${jobLevel || "Unknown"}, Skills: ${skillsList.join(", ")}`;
 
-      const prompt = `You are an expert HR recruiter and AI-content forensics specialist. Your PRIMARY focus is detecting AI-generated or AI-assisted content. Be SKEPTICAL by default - modern AI generates convincing resumes with metrics and tools.
-
-JOB CONTEXT:
-${jobContext}
-
-REQUIRED SKILLS:
-${skillsList}
-
-RESUME:
-${resumeText}
-
-PART 1 - JOB FIT ANALYSIS:
-1. Fit score (0-100): How well does the candidate match job requirements?
-2. Logic/risk score (0-100): Inconsistencies, gaps, or concerns (higher = more risk)
-3. Skills analysis: matched, missing, and extra skills
-4. Key findings (mark as "risk", "warning", or "good")
-5. Brief summary of suitability
-
-PART 2 - AI DETECTION (BE AGGRESSIVE - Modern AI is sophisticated):
-
-6. Generic Writing Score (0-100) - Score HIGH (60+) if you see:
-   - ANY clichés: "results-driven", "proven track record", "dynamic", "passionate", "detail-oriented", "self-starter", "team player", "go-getter", "leveraged", "spearheaded", "synergy", "cross-functional"
-   - Buzzwords without substance: "innovative", "strategic", "cutting-edge", "state-of-the-art"
-   - Perfect parallel structure in ALL bullets (AI loves consistency)
-   - Every bullet starts with past-tense action verbs in identical patterns
-   - Suspiciously polished language with no casual/natural voice
-
-7. Specificity Score (0-100) - Score LOW (under 50) if:
-   - Metrics use round numbers (20%, 30%, 50% instead of 23%, 37%, 48%)
-   - Company descriptions are vague ("leading company", "innovative firm")
-   - Project descriptions lack unique details that only someone who did it would know
-   - Tools mentioned are just popular keywords without specific use cases
-   - No mention of specific challenges, failures, or lessons learned
-
-8. Fluff Ratio (0-100) - Score HIGH if:
-   - Bullets describe responsibilities rather than achievements
-   - Impact statements are generic ("improved efficiency", "enhanced productivity")
-   - No before/after comparisons with specifics
-   - Metrics seem fabricated (too perfect, too convenient)
-
-9. AI-Style Likelihood Score (0-100) - THIS IS THE KEY SCORE. Score HIGH (60+) if:
-   - Sentence lengths are suspiciously uniform (within 5-10 words of each other)
-   - Perfect grammar with ZERO typos, abbreviations, or informal elements
-   - No personality or unique voice - reads like a template
-   - Every section is perfectly balanced in length
-   - Vocabulary is consistently formal throughout (no natural variation)
-   - Writing feels "optimized" - every word seems deliberately chosen
-   - Too comprehensive - covers everything perfectly with no gaps
-   - Achievements are suspiciously well-distributed across all roles
-   - Numbers follow patterns (all multiples of 5 or 10)
-   - Lacks specific anecdotes or stories that feel personal
-   - Uses trendy keywords that AI tends to insert
-
-10. Additional red flags to look for:
-    - Does the resume feel like it could apply to anyone in this field?
-    - Are there unique human touches (casual phrasing, specific anecdotes)?
-    - Does the writing have natural rhythm variations or is it robotically consistent?
-
-IMPORTANT: Err on the side of HIGHER AI detection scores. A 100% AI-generated resume should score 70-90+ on aiStyleLikelihood. If the resume seems "too perfect", that itself is suspicious. "Perfect" resumes with metrics ARE often AI-generated.
-
-Respond in this exact JSON format:
-{
-  "fitScore": 75,
-  "logicScore": 25,
-  "skillMatch": {
-    "matched": ["skill1", "skill2"],
-    "missing": ["skill3"],
-    "extra": ["skill4", "skill5"]
-  },
-  "findings": [
-    {
-      "type": "good",
-      "message": "Strong relevant experience",
-      "details": "Candidate has 5+ years in similar role"
-    },
-    {
-      "type": "warning",
-      "message": "Employment gap detected",
-      "details": "6-month gap between positions in 2022"
-    }
-  ],
-  "summary": "Overall assessment of the candidate in 2-3 sentences",
-  "authenticitySignals": {
-    "genericWritingScore": 75,
-    "specificityScore": 35,
-    "fluffRatio": 65,
-    "aiStyleLikelihood": 80,
-    "clichePhrases": ["results-driven", "proven track record", "leveraged", "spearheaded"],
-    "metricsFound": ["increased sales by 30%", "managed team of 12"],
-    "toolsMentioned": ["Salesforce", "Excel", "Python"],
-    "structuralPatterns": ["All bullets 15-20 words", "Every bullet starts with past-tense verb", "Round percentages only"],
-    "warnings": [
-      {
-        "type": "risk",
-        "message": "High AI-generation probability",
-        "details": "Resume exhibits multiple AI writing patterns including uniform structure, perfect grammar, and optimized buzzword placement"
-      }
-    ],
-    "recommendation": "This resume shows strong indicators of AI-assisted writing. In interviews, ask for specific stories behind achievements, request examples of challenges faced, and verify metrics with follow-up questions about methodology."
-  }
-}`;
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-      });
-
-      const content = completion.choices[0]?.message?.content;
-      if (!content) {
-        throw new Error("No response from AI");
-      }
-
-      const result = JSON.parse(content);
+      // Import and use the multi-pass analyzer
+      const { analyzeResumeMultiPass } = await import("./resume-analyzer");
+      
+      const result = await analyzeResumeMultiPass(
+        resumeText,
+        jobContext,
+        skillsList,
+        jobTitle || "Unknown",
+        jobLevel || "Unknown"
+      );
       
       if (candidateId) {
         try {

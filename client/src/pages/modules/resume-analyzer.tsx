@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns } from "lucide-react";
+import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns, Calendar, TrendingUp, Building, GraduationCap, ArrowRight, Clock, Flag } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import { useLocation } from "wouter";
@@ -48,7 +48,7 @@ type SkillMatch = {
 };
 
 type AuthenticityWarning = {
-  type: "risk" | "warning";
+  type: "risk" | "warning" | string;
   message: string;
   details: string;
 };
@@ -58,12 +58,109 @@ type AuthenticitySignals = {
   specificityScore: number;
   fluffRatio: number;
   aiStyleLikelihood: number;
-  clichePhrases: string[];
-  metricsFound: string[];
-  toolsMentioned: string[];
+  vaguenessRisk?: number;
+  clichePhrases?: string[];
+  metricsFound?: string[];
+  toolsMentioned?: string[];
   structuralPatterns?: string[];
   warnings: AuthenticityWarning[];
   recommendation: string;
+};
+
+type ExtractedJob = {
+  company: string;
+  title: string;
+  startDate: string | null;
+  endDate: string | null;
+  durationMonths: number | null;
+  responsibilities: string[];
+  achievements: string[];
+};
+
+type ExtractedEducation = {
+  institution: string;
+  degree: string;
+  field: string;
+  graduationYear: string | null;
+};
+
+type Pass1Result = {
+  jobs: ExtractedJob[];
+  education: ExtractedEducation[];
+  skills: {
+    hard: string[];
+    domain: string[];
+    soft: string[];
+  };
+  totalExperienceYears: number;
+  extractionConfidence: number;
+};
+
+type TimelineConcern = {
+  type: string;
+  severity: "ok" | "mild_concern" | "major_concern";
+  description: string;
+  details: string;
+  riskScore: number;
+};
+
+type Pass2Result = {
+  timelineAnalysis: {
+    overlaps: Array<{ job1: string; job2: string; overlapMonths: number }>;
+    gaps: Array<{ afterJob: string; beforeJob: string; gapMonths: number }>;
+    averageTenureMonths: number;
+    jobCount: number;
+    yearsAnalyzed: number;
+    promotionTransitions: Array<{ from: string; to: string; months: number; isUnusual: boolean }>;
+  };
+  concerns: TimelineConcern[];
+  riskScores: {
+    timeline_risk: number;
+    promotion_risk: number;
+    job_hop_risk: number;
+  };
+};
+
+type Pass3Result = {
+  subScores: {
+    skills_match: number;
+    experience_years_match: number;
+    industry_match: number;
+  };
+  fitScore: number;
+  skillsAnalysis: {
+    matched_must_have: string[];
+    missing_must_have: string[];
+    matched_nice_to_have: string[];
+    bonus_skills: string[];
+  };
+  experienceAnalysis: {
+    requiredYears: number;
+    candidateYears: number;
+    relevantYears: number;
+  };
+  industryAnalysis: {
+    targetIndustry: string;
+    candidateIndustries: string[];
+    overlapScore: number;
+  };
+};
+
+type Pass4Result = {
+  summary: string;
+  redFlags: Array<{ flag: string; severity: "critical" | "warning"; details: string }>;
+  greenFlags: Array<{ flag: string; details: string }>;
+  recommendedAction: "proceed_to_interview" | "skills_test_first" | "phone_screen" | "reject" | "needs_review";
+  nextSteps: string[];
+  interviewFocusAreas: string[];
+  overallRiskScore: number;
+  authenticitySignals: {
+    genericWritingScore: number;
+    specificityScore: number;
+    fluffRatio: number;
+    aiStyleLikelihood: number;
+    vaguenessRisk: number;
+  };
 };
 
 type AnalysisResult = {
@@ -78,6 +175,10 @@ type AnalysisResult = {
   summary: string;
   selectedJob?: Job;
   authenticitySignals?: AuthenticitySignals;
+  pass1?: Pass1Result;
+  pass2?: Pass2Result;
+  pass3?: Pass3Result;
+  pass4?: Pass4Result;
 } | null;
 
 export default function ResumeAnalyzerModule() {
@@ -429,9 +530,25 @@ export default function ResumeAnalyzerModule() {
                         result.fitScore > 75 ? "text-green-500" : "text-yellow-500"
                       )} />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Based on skills match and experience level.
-                    </p>
+                    {result.pass3?.subScores && (
+                      <div className="mt-3 space-y-2 text-xs">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Skills Match (50%)</span>
+                          <span className="font-medium">{result.pass3.subScores.skills_match}%</span>
+                        </div>
+                        <Progress value={result.pass3.subScores.skills_match} className="h-1" />
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Experience (30%)</span>
+                          <span className="font-medium">{result.pass3.subScores.experience_years_match}%</span>
+                        </div>
+                        <Progress value={result.pass3.subScores.experience_years_match} className="h-1" />
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Industry (20%)</span>
+                          <span className="font-medium">{result.pass3.subScores.industry_match}%</span>
+                        </div>
+                        <Progress value={result.pass3.subScores.industry_match} className="h-1" />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -451,12 +568,270 @@ export default function ResumeAnalyzerModule() {
                         {result.logicScore < 30 ? "Low Risk" : result.logicScore < 60 ? "Medium Risk" : "High Risk"}
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Probability of inconsistencies or timeline gaps.
-                    </p>
+                    {result.pass2?.riskScores && (
+                      <div className="mt-3 space-y-2 text-xs">
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Timeline (30%)</span>
+                          <span className={cn("font-medium", result.pass2.riskScores.timeline_risk > 50 ? "text-red-600" : "text-green-600")}>
+                            {result.pass2.riskScores.timeline_risk}%
+                          </span>
+                        </div>
+                        <Progress value={result.pass2.riskScores.timeline_risk} className={cn("h-1", result.pass2.riskScores.timeline_risk > 50 ? "[&>div]:bg-red-500" : "")} />
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Promotion (20%)</span>
+                          <span className={cn("font-medium", result.pass2.riskScores.promotion_risk > 50 ? "text-red-600" : "text-green-600")}>
+                            {result.pass2.riskScores.promotion_risk}%
+                          </span>
+                        </div>
+                        <Progress value={result.pass2.riskScores.promotion_risk} className={cn("h-1", result.pass2.riskScores.promotion_risk > 50 ? "[&>div]:bg-red-500" : "")} />
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Job Hopping (20%)</span>
+                          <span className={cn("font-medium", result.pass2.riskScores.job_hop_risk > 50 ? "text-red-600" : "text-green-600")}>
+                            {result.pass2.riskScores.job_hop_risk}%
+                          </span>
+                        </div>
+                        <Progress value={result.pass2.riskScores.job_hop_risk} className={cn("h-1", result.pass2.riskScores.job_hop_risk > 50 ? "[&>div]:bg-red-500" : "")} />
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
+
+              {result.pass4 && (
+                <Card className={cn(
+                  "border-2",
+                  result.pass4.recommendedAction === "proceed_to_interview" ? "border-green-500/50 bg-green-50/30 dark:bg-green-900/10" :
+                  result.pass4.recommendedAction === "reject" ? "border-red-500/50 bg-red-50/30 dark:bg-red-900/10" :
+                  "border-yellow-500/50 bg-yellow-50/30 dark:bg-yellow-900/10"
+                )}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Flag className="h-4 w-4" />
+                      Recommended Action
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Badge className={cn(
+                        "text-sm py-1 px-3",
+                        result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-600" :
+                        result.pass4.recommendedAction === "reject" ? "bg-red-600" :
+                        result.pass4.recommendedAction === "skills_test_first" ? "bg-blue-600" :
+                        "bg-yellow-600"
+                      )}>
+                        {result.pass4.recommendedAction === "proceed_to_interview" && "Proceed to Interview"}
+                        {result.pass4.recommendedAction === "reject" && "Reject"}
+                        {result.pass4.recommendedAction === "skills_test_first" && "Skills Test First"}
+                        {result.pass4.recommendedAction === "phone_screen" && "Phone Screen"}
+                        {result.pass4.recommendedAction === "needs_review" && "Needs Manual Review"}
+                      </Badge>
+                    </div>
+                    {result.pass4.nextSteps.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Next Steps:</p>
+                        <ul className="text-sm space-y-1">
+                          {result.pass4.nextSteps.map((step, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <ArrowRight className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                              <span>{step}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {result.pass1 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Briefcase className="h-4 w-4" />
+                      Extracted Profile
+                    </CardTitle>
+                    <CardDescription>
+                      {result.pass1.totalExperienceYears} years of experience • {result.pass1.jobs.length} positions • Confidence: {result.pass1.extractionConfidence}%
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      {result.pass1.jobs.slice(0, 4).map((job, i) => (
+                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-card">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                            <Building className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{job.title}</p>
+                            <p className="text-xs text-muted-foreground">{job.company}</p>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {job.startDate || "?"} - {job.endDate || "?"}
+                              {job.durationMonths && <span className="text-primary font-medium">({job.durationMonths} mo)</span>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {result.pass1.jobs.length > 4 && (
+                        <p className="text-xs text-muted-foreground text-center">+ {result.pass1.jobs.length - 4} more positions</p>
+                      )}
+                    </div>
+
+                    {result.pass1.education.length > 0 && (
+                      <div className="pt-3 border-t">
+                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                          <GraduationCap className="h-3 w-3" />
+                          Education
+                        </p>
+                        <div className="space-y-2">
+                          {result.pass1.education.map((edu, i) => (
+                            <div key={i} className="text-sm">
+                              <span className="font-medium">{edu.degree}</span> in {edu.field}
+                              <span className="text-muted-foreground"> • {edu.institution}</span>
+                              {edu.graduationYear && <span className="text-muted-foreground"> ({edu.graduationYear})</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-3 border-t grid grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Hard Skills</p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.pass1.skills.hard.slice(0, 5).map((s, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">{s}</Badge>
+                          ))}
+                          {result.pass1.skills.hard.length > 5 && (
+                            <Badge variant="outline" className="text-xs">+{result.pass1.skills.hard.length - 5}</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Domain</p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.pass1.skills.domain.slice(0, 3).map((s, i) => (
+                            <Badge key={i} variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/20">{s}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Soft Skills</p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.pass1.skills.soft.slice(0, 3).map((s, i) => (
+                            <Badge key={i} variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/20">{s}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {result.pass2 && result.pass2.concerns.length > 0 && (
+                <Card className="border-orange-500/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-orange-500" />
+                      Timeline Analysis
+                    </CardTitle>
+                    <CardDescription>
+                      {result.pass2.timelineAnalysis.jobCount} jobs over {result.pass2.timelineAnalysis.yearsAnalyzed.toFixed(1)} years • 
+                      Avg tenure: {result.pass2.timelineAnalysis.averageTenureMonths} months
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {result.pass2.concerns.map((concern, i) => (
+                      <div key={i} className={cn(
+                        "flex gap-3 items-start p-3 rounded-lg border",
+                        concern.severity === "major_concern" ? "bg-red-50/50 border-red-200 dark:bg-red-900/10" :
+                        concern.severity === "mild_concern" ? "bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/10" :
+                        "bg-green-50/50 border-green-200 dark:bg-green-900/10"
+                      )} data-testid={`timeline-concern-${i}`}>
+                        {concern.severity === "major_concern" && <XCircle className="h-4 w-4 text-red-500 mt-0.5" />}
+                        {concern.severity === "mild_concern" && <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />}
+                        {concern.severity === "ok" && <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />}
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{concern.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{concern.details}</p>
+                        </div>
+                        <Badge variant="outline" className="text-xs">
+                          Risk: {concern.riskScore}%
+                        </Badge>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {result.pass4 && (result.pass4.redFlags.length > 0 || result.pass4.greenFlags.length > 0) && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Flag className="h-4 w-4" />
+                      Red & Green Flags
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {result.pass4.greenFlags.length > 0 && (
+                      <div className="space-y-2">
+                        {result.pass4.greenFlags.map((flag, i) => (
+                          <div key={i} className="flex gap-3 items-start p-3 rounded-lg border bg-green-50/50 border-green-200 dark:bg-green-900/10">
+                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
+                            <div>
+                              <p className="font-medium text-sm text-green-700 dark:text-green-400">{flag.flag}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{flag.details}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {result.pass4.redFlags.length > 0 && (
+                      <div className="space-y-2">
+                        {result.pass4.redFlags.map((flag, i) => (
+                          <div key={i} className={cn(
+                            "flex gap-3 items-start p-3 rounded-lg border",
+                            flag.severity === "critical" ? "bg-red-50/50 border-red-200 dark:bg-red-900/10" : "bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/10"
+                          )}>
+                            {flag.severity === "critical" ? (
+                              <XCircle className="h-4 w-4 text-red-500 mt-0.5" />
+                            ) : (
+                              <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
+                            )}
+                            <div>
+                              <p className={cn("font-medium text-sm", flag.severity === "critical" ? "text-red-700 dark:text-red-400" : "text-yellow-700 dark:text-yellow-400")}>{flag.flag}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{flag.details}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {result.pass4 && result.pass4.interviewFocusAreas.length > 0 && (
+                <Card className="border-blue-500/30">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Target className="h-4 w-4 text-blue-500" />
+                      Interview Focus Areas
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {result.pass4.interviewFocusAreas.map((area, i) => (
+                        <li key={i} className="flex items-start gap-2 text-sm">
+                          <div className="h-5 w-5 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-xs text-blue-600 font-medium flex-shrink-0">
+                            {i + 1}
+                          </div>
+                          <span>{area}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader className="pb-3">
@@ -698,7 +1073,7 @@ export default function ResumeAnalyzerModule() {
                       </div>
                     </div>
 
-                    {result.authenticitySignals.clichePhrases.length > 0 && (
+                    {result.authenticitySignals.clichePhrases && result.authenticitySignals.clichePhrases.length > 0 && (
                       <div>
                         <p className="text-xs font-medium text-yellow-600 mb-2 flex items-center gap-1">
                           <Quote className="h-3 w-3" />
@@ -714,7 +1089,7 @@ export default function ResumeAnalyzerModule() {
                       </div>
                     )}
 
-                    {result.authenticitySignals.metricsFound.length > 0 && (
+                    {result.authenticitySignals.metricsFound && result.authenticitySignals.metricsFound.length > 0 && (
                       <div>
                         <p className="text-xs font-medium text-green-600 mb-2 flex items-center gap-1">
                           <Sparkles className="h-3 w-3" />
@@ -730,7 +1105,7 @@ export default function ResumeAnalyzerModule() {
                       </div>
                     )}
 
-                    {result.authenticitySignals.toolsMentioned.length > 0 && (
+                    {result.authenticitySignals.toolsMentioned && result.authenticitySignals.toolsMentioned.length > 0 && (
                       <div>
                         <p className="text-xs font-medium text-blue-600 mb-2 flex items-center gap-1">
                           <Wrench className="h-3 w-3" />
