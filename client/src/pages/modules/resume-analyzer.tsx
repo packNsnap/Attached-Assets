@@ -321,6 +321,10 @@ export default function ResumeAnalyzerModule() {
         selectedJob,
       });
       
+      if (selectedCandidateId) {
+        queryClient.invalidateQueries({ queryKey: ["resume-analysis", selectedCandidateId] });
+      }
+      
       toast({
         title: "Analysis Complete",
         description: "Resume logic and fit have been analyzed using AI.",

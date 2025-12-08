@@ -187,7 +187,8 @@ export default function CandidatesModule() {
       if (!res.ok) throw new Error("Failed to fetch resume analyses");
       return res.json() as Promise<ResumeAnalysis[]>;
     },
-    enabled: !!selectedCandidate
+    enabled: !!selectedCandidate,
+    refetchInterval: 5000
   });
 
   const { data: skillsTestInvitations = [] } = useQuery({
