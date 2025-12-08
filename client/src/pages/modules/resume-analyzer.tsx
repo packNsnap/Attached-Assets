@@ -3,12 +3,21 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns, Calendar, TrendingUp, Building, GraduationCap, ArrowRight, Clock, Flag } from "lucide-react";
+import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns, Calendar, TrendingUp, Building, GraduationCap, ArrowRight, Clock, Flag, Download, Save, Eye } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import { useLocation } from "wouter";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Form,
   FormControl,
@@ -187,6 +196,7 @@ export default function ResumeAnalyzerModule() {
   const [fileName, setFileName] = useState<string>("");
   const [resumeText, setResumeText] = useState<string>("");
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
@@ -320,6 +330,7 @@ export default function ResumeAnalyzerModule() {
         ...analysisResult,
         selectedJob,
       });
+      setIsResultModalOpen(true);
       
       if (selectedCandidateId) {
         queryClient.invalidateQueries({ queryKey: ["resume-analysis", selectedCandidateId] });
@@ -519,106 +530,52 @@ export default function ResumeAnalyzerModule() {
 
         <div className="space-y-6">
           {result ? (
-            <>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Role Fit Score
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4">
-                      <div className="text-3xl font-bold" data-testid="text-fit-score">{result.fitScore}%</div>
-                      <Progress value={result.fitScore} className={cn(
-                        "h-2",
-                        result.fitScore > 75 ? "text-green-500" : "text-yellow-500"
-                      )} />
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  Analysis Complete
+                </CardTitle>
+                <CardDescription>
+                  {result.selectedJob ? `Analyzed for: ${result.selectedJob.title}` : "Resume analysis completed"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex-1 p-4 rounded-lg bg-muted/50 border">
+                    <p className="text-xs text-muted-foreground mb-1">Fit Score</p>
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-2xl font-bold", result.fitScore >= 70 ? "text-green-600" : result.fitScore >= 50 ? "text-yellow-600" : "text-red-600")} data-testid="text-fit-score">
+                        {result.fitScore}%
+                      </span>
+                      <Badge variant={result.fitScore >= 70 ? "default" : "secondary"} className={result.fitScore >= 70 ? "bg-green-600" : ""}>
+                        {result.fitScore >= 70 ? "Good Fit" : result.fitScore >= 50 ? "Partial Fit" : "Low Fit"}
+                      </Badge>
                     </div>
-                    {result.pass3?.subScores && (
-                      <div className="mt-3 space-y-2 text-xs">
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Skills Match (50%)</span>
-                          <span className="font-medium">{result.pass3.subScores.skills_match}%</span>
-                        </div>
-                        <Progress value={result.pass3.subScores.skills_match} className="h-1" />
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Experience (30%)</span>
-                          <span className="font-medium">{result.pass3.subScores.experience_years_match}%</span>
-                        </div>
-                        <Progress value={result.pass3.subScores.experience_years_match} className="h-1" />
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Industry (20%)</span>
-                          <span className="font-medium">{result.pass3.subScores.industry_match}%</span>
-                        </div>
-                        <Progress value={result.pass3.subScores.industry_match} className="h-1" />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">
-                      Logic Risk Score
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-4">
-                      <div className={cn("text-3xl font-bold", 
-                        result.logicScore < 30 ? "text-green-600" : 
-                        result.logicScore < 60 ? "text-yellow-600" : "text-red-600"
-                      )} data-testid="text-logic-score">{result.logicScore}%</div>
-                      <div className="text-xs font-medium px-2 py-1 rounded bg-muted">
+                  </div>
+                  <div className="flex-1 p-4 rounded-lg bg-muted/50 border">
+                    <p className="text-xs text-muted-foreground mb-1">Risk Score</p>
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-2xl font-bold", result.logicScore < 30 ? "text-green-600" : result.logicScore < 60 ? "text-yellow-600" : "text-red-600")} data-testid="text-logic-score">
+                        {result.logicScore}%
+                      </span>
+                      <Badge variant="secondary" className={result.logicScore < 30 ? "bg-green-100 text-green-700" : result.logicScore < 60 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}>
                         {result.logicScore < 30 ? "Low Risk" : result.logicScore < 60 ? "Medium Risk" : "High Risk"}
-                      </div>
+                      </Badge>
                     </div>
-                    {result.pass2?.riskScores && (
-                      <div className="mt-3 space-y-2 text-xs">
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Timeline (30%)</span>
-                          <span className={cn("font-medium", result.pass2.riskScores.timeline_risk > 50 ? "text-red-600" : "text-green-600")}>
-                            {result.pass2.riskScores.timeline_risk}%
-                          </span>
-                        </div>
-                        <Progress value={result.pass2.riskScores.timeline_risk} className={cn("h-1", result.pass2.riskScores.timeline_risk > 50 ? "[&>div]:bg-red-500" : "")} />
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Promotion (20%)</span>
-                          <span className={cn("font-medium", result.pass2.riskScores.promotion_risk > 50 ? "text-red-600" : "text-green-600")}>
-                            {result.pass2.riskScores.promotion_risk}%
-                          </span>
-                        </div>
-                        <Progress value={result.pass2.riskScores.promotion_risk} className={cn("h-1", result.pass2.riskScores.promotion_risk > 50 ? "[&>div]:bg-red-500" : "")} />
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Job Hopping (20%)</span>
-                          <span className={cn("font-medium", result.pass2.riskScores.job_hop_risk > 50 ? "text-red-600" : "text-green-600")}>
-                            {result.pass2.riskScores.job_hop_risk}%
-                          </span>
-                        </div>
-                        <Progress value={result.pass2.riskScores.job_hop_risk} className={cn("h-1", result.pass2.riskScores.job_hop_risk > 50 ? "[&>div]:bg-red-500" : "")} />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {result.pass4 && (
-                <Card className={cn(
-                  "border-2",
-                  result.pass4.recommendedAction === "proceed_to_interview" ? "border-green-500/50 bg-green-50/30 dark:bg-green-900/10" :
-                  result.pass4.recommendedAction === "reject" ? "border-red-500/50 bg-red-50/30 dark:bg-red-900/10" :
-                  "border-yellow-500/50 bg-yellow-50/30 dark:bg-yellow-900/10"
-                )}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  </div>
+                </div>
+                
+                {result.pass4 && (
+                  <div className={cn("p-3 rounded-lg border", 
+                    result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-50/50 border-green-200" :
+                    result.pass4.recommendedAction === "reject" ? "bg-red-50/50 border-red-200" :
+                    "bg-yellow-50/50 border-yellow-200"
+                  )}>
+                    <div className="flex items-center gap-2">
                       <Flag className="h-4 w-4" />
-                      Recommended Action
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-sm font-medium">Recommendation:</span>
                       <Badge className={cn(
-                        "text-sm py-1 px-3",
                         result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-600" :
                         result.pass4.recommendedAction === "reject" ? "bg-red-600" :
                         result.pass4.recommendedAction === "skills_test_first" ? "bg-blue-600" :
@@ -631,547 +588,19 @@ export default function ResumeAnalyzerModule() {
                         {result.pass4.recommendedAction === "needs_review" && "Needs Manual Review"}
                       </Badge>
                     </div>
-                    {result.pass4.nextSteps.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Next Steps:</p>
-                        <ul className="text-sm space-y-1">
-                          {result.pass4.nextSteps.map((step, i) => (
-                            <li key={i} className="flex items-start gap-2">
-                              <ArrowRight className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                              <span>{step}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {result.pass1 && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Briefcase className="h-4 w-4" />
-                      Extracted Profile
-                    </CardTitle>
-                    <CardDescription>
-                      {result.pass1.totalExperienceYears} years of experience • {result.pass1.jobs.length} positions • Confidence: {result.pass1.extractionConfidence}%
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      {result.pass1.jobs.slice(0, 4).map((job, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-card">
-                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                            <Building className="h-4 w-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{job.title}</p>
-                            <p className="text-xs text-muted-foreground">{job.company}</p>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              {job.startDate || "?"} - {job.endDate || "?"}
-                              {job.durationMonths && <span className="text-primary font-medium">({job.durationMonths} mo)</span>}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {result.pass1.jobs.length > 4 && (
-                        <p className="text-xs text-muted-foreground text-center">+ {result.pass1.jobs.length - 4} more positions</p>
-                      )}
-                    </div>
-
-                    {result.pass1.education.length > 0 && (
-                      <div className="pt-3 border-t">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                          <GraduationCap className="h-3 w-3" />
-                          Education
-                        </p>
-                        <div className="space-y-2">
-                          {result.pass1.education.map((edu, i) => (
-                            <div key={i} className="text-sm">
-                              <span className="font-medium">{edu.degree}</span> in {edu.field}
-                              <span className="text-muted-foreground"> • {edu.institution}</span>
-                              {edu.graduationYear && <span className="text-muted-foreground"> ({edu.graduationYear})</span>}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="pt-3 border-t grid grid-cols-3 gap-3">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Hard Skills</p>
-                        <div className="flex flex-wrap gap-1">
-                          {result.pass1.skills.hard.slice(0, 5).map((s, i) => (
-                            <Badge key={i} variant="outline" className="text-xs">{s}</Badge>
-                          ))}
-                          {result.pass1.skills.hard.length > 5 && (
-                            <Badge variant="outline" className="text-xs">+{result.pass1.skills.hard.length - 5}</Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Domain</p>
-                        <div className="flex flex-wrap gap-1">
-                          {result.pass1.skills.domain.slice(0, 3).map((s, i) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/20">{s}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground mb-1">Soft Skills</p>
-                        <div className="flex flex-wrap gap-1">
-                          {result.pass1.skills.soft.slice(0, 3).map((s, i) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/20">{s}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {result.pass2 && result.pass2.concerns.length > 0 && (
-                <Card className="border-orange-500/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-orange-500" />
-                      Timeline Analysis
-                    </CardTitle>
-                    <CardDescription>
-                      {result.pass2.timelineAnalysis.jobCount} jobs over {result.pass2.timelineAnalysis.yearsAnalyzed.toFixed(1)} years • 
-                      Avg tenure: {result.pass2.timelineAnalysis.averageTenureMonths} months
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {result.pass2.concerns.map((concern, i) => (
-                      <div key={i} className={cn(
-                        "flex gap-3 items-start p-3 rounded-lg border",
-                        concern.severity === "major_concern" ? "bg-red-50/50 border-red-200 dark:bg-red-900/10" :
-                        concern.severity === "mild_concern" ? "bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/10" :
-                        "bg-green-50/50 border-green-200 dark:bg-green-900/10"
-                      )} data-testid={`timeline-concern-${i}`}>
-                        {concern.severity === "major_concern" && <XCircle className="h-4 w-4 text-red-500 mt-0.5" />}
-                        {concern.severity === "mild_concern" && <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />}
-                        {concern.severity === "ok" && <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />}
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{concern.description}</p>
-                          <p className="text-xs text-muted-foreground mt-1">{concern.details}</p>
-                        </div>
-                        <Badge variant="outline" className="text-xs">
-                          Risk: {concern.riskScore}%
-                        </Badge>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-              )}
-
-              {result.pass4 && (result.pass4.redFlags.length > 0 || result.pass4.greenFlags.length > 0) && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Flag className="h-4 w-4" />
-                      Red & Green Flags
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {result.pass4.greenFlags.length > 0 && (
-                      <div className="space-y-2">
-                        {result.pass4.greenFlags.map((flag, i) => (
-                          <div key={i} className="flex gap-3 items-start p-3 rounded-lg border bg-green-50/50 border-green-200 dark:bg-green-900/10">
-                            <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
-                            <div>
-                              <p className="font-medium text-sm text-green-700 dark:text-green-400">{flag.flag}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{flag.details}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {result.pass4.redFlags.length > 0 && (
-                      <div className="space-y-2">
-                        {result.pass4.redFlags.map((flag, i) => (
-                          <div key={i} className={cn(
-                            "flex gap-3 items-start p-3 rounded-lg border",
-                            flag.severity === "critical" ? "bg-red-50/50 border-red-200 dark:bg-red-900/10" : "bg-yellow-50/50 border-yellow-200 dark:bg-yellow-900/10"
-                          )}>
-                            {flag.severity === "critical" ? (
-                              <XCircle className="h-4 w-4 text-red-500 mt-0.5" />
-                            ) : (
-                              <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
-                            )}
-                            <div>
-                              <p className={cn("font-medium text-sm", flag.severity === "critical" ? "text-red-700 dark:text-red-400" : "text-yellow-700 dark:text-yellow-400")}>{flag.flag}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{flag.details}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {result.pass4 && result.pass4.interviewFocusAreas.length > 0 && (
-                <Card className="border-blue-500/30">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium flex items-center gap-2">
-                      <Target className="h-4 w-4 text-blue-500" />
-                      Interview Focus Areas
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {result.pass4.interviewFocusAreas.map((area, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm">
-                          <div className="h-5 w-5 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-xs text-blue-600 font-medium flex-shrink-0">
-                            {i + 1}
-                          </div>
-                          <span>{area}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Target className="h-4 w-4" />
-                    Skills Match Analysis
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-muted-foreground">Match Rate</span>
-                      <span className="text-xs font-semibold" data-testid="text-match-rate">
-                        {result.skillMatch.matched.length} / {result.skillMatch.matched.length + result.skillMatch.missing.length} skills
-                      </span>
-                    </div>
-                    <Progress 
-                      value={(result.skillMatch.matched.length / (result.skillMatch.matched.length + result.skillMatch.missing.length)) * 100} 
-                      className="h-2"
-                    />
                   </div>
+                )}
 
-                  {result.skillMatch.matched.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-green-600 mb-2 flex items-center gap-1">
-                        <CheckCircle className="h-3 w-3" />
-                        Matched Skills
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {result.skillMatch.matched.map((skill) => (
-                          <Badge key={skill} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.skillMatch.missing.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-red-600 mb-2 flex items-center gap-1">
-                        <XCircle className="h-3 w-3" />
-                        Missing Skills
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {result.skillMatch.missing.map((skill) => (
-                          <Badge key={skill} variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.skillMatch.extra.length > 0 && (
-                    <div>
-                      <p className="text-xs font-medium text-blue-600 mb-2 flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3" />
-                        Additional Skills (Not Required)
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {result.skillMatch.extra.map((skill) => (
-                          <Badge key={skill} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {result.fitScore >= 70 && result.selectedJob && (
-                    <div className="pt-4 border-t">
-                      <Button
-                        onClick={() => {
-                          const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
-                          if (!selectedCandidate) return;
-                          recommendMutation.mutate({
-                            candidateId: selectedCandidateId,
-                            candidateName: selectedCandidate.name,
-                            jobId: result.selectedJob!.id,
-                            jobTitle: result.selectedJob!.title,
-                            skillsNeeded: result.skillMatch.missing.length > 0 ? result.skillMatch.missing : result.selectedJob!.skills,
-                            fitScore: result.fitScore,
-                          });
-                        }}
-                        disabled={recommendMutation.isPending || !selectedCandidateId}
-                        className="w-full"
-                        variant="outline"
-                        data-testid="button-recommend-skills-test"
-                      >
-                        {recommendMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            <ClipboardList className="mr-2 h-4 w-4" />
-                            Recommend Skills Test
-                          </>
-                        )}
-                      </Button>
-                      <p className="text-xs text-muted-foreground mt-2 text-center">
-                        {selectedCandidateId 
-                          ? "Send this candidate to the Skills Test module for assessment"
-                          : "Select a candidate from the dropdown to enable recommendations"}
-                      </p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    Logic Analysis Report
-                  </CardTitle>
-                  <CardDescription>
-                    Internal consistency checks only. Not a background check.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="p-4 bg-muted/30 rounded-lg text-sm border">
-                    <span className="font-semibold">Summary: </span>
-                    {result.summary}
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wider">Findings</h3>
-                    {result.findings.map((finding, index) => (
-                      <div key={index} className="flex gap-3 items-start p-3 rounded-lg border bg-card hover:bg-accent/5 transition-colors" data-testid={`finding-${index}`}>
-                        <div className="mt-0.5">
-                          {finding.type === "risk" && <XCircle className="h-5 w-5 text-destructive" />}
-                          {finding.type === "warning" && <AlertTriangle className="h-5 w-5 text-yellow-500" />}
-                          {finding.type === "good" && <CheckCircle className="h-5 w-5 text-green-500" />}
-                        </div>
-                        <div className="space-y-1">
-                          <p className="font-medium text-sm">{finding.message}</p>
-                          <p className="text-xs text-muted-foreground">{finding.details}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {result.authenticitySignals && (
-                <Card className="border-purple-500/30" data-testid="card-authenticity-signals">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Bot className="h-5 w-5 text-purple-500" />
-                      Authenticity & Specificity Signals
-                    </CardTitle>
-                    <CardDescription>
-                      AI-style and content quality indicators. Not a definitive AI detection.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                            <Quote className="h-3 w-3" />
-                            Generic Writing
-                          </span>
-                          <span className={cn("text-xs font-semibold", 
-                            result.authenticitySignals.genericWritingScore > 60 ? "text-yellow-600" : "text-green-600"
-                          )}>
-                            {result.authenticitySignals.genericWritingScore}%
-                          </span>
-                        </div>
-                        <Progress 
-                          value={result.authenticitySignals.genericWritingScore} 
-                          className={cn("h-2", result.authenticitySignals.genericWritingScore > 60 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} 
-                        />
-                        <p className="text-xs text-muted-foreground">Cliché phrases & templated structure</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                            <Sparkles className="h-3 w-3" />
-                            Specificity
-                          </span>
-                          <span className={cn("text-xs font-semibold", 
-                            result.authenticitySignals.specificityScore < 40 ? "text-yellow-600" : "text-green-600"
-                          )}>
-                            {result.authenticitySignals.specificityScore}%
-                          </span>
-                        </div>
-                        <Progress 
-                          value={result.authenticitySignals.specificityScore} 
-                          className={cn("h-2", result.authenticitySignals.specificityScore < 40 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} 
-                        />
-                        <p className="text-xs text-muted-foreground">Concrete metrics & named tools</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                            <TrendingDown className="h-3 w-3" />
-                            Fluff Ratio
-                          </span>
-                          <span className={cn("text-xs font-semibold", 
-                            result.authenticitySignals.fluffRatio > 50 ? "text-yellow-600" : "text-green-600"
-                          )}>
-                            {result.authenticitySignals.fluffRatio}%
-                          </span>
-                        </div>
-                        <Progress 
-                          value={result.authenticitySignals.fluffRatio} 
-                          className={cn("h-2", result.authenticitySignals.fluffRatio > 50 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} 
-                        />
-                        <p className="text-xs text-muted-foreground">Vague content vs measurable impact</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                            <Bot className="h-3 w-3" />
-                            AI-Style Likelihood
-                          </span>
-                          <span className={cn("text-xs font-semibold", 
-                            result.authenticitySignals.aiStyleLikelihood > 60 ? "text-orange-600" : 
-                            result.authenticitySignals.aiStyleLikelihood > 40 ? "text-yellow-600" : "text-green-600"
-                          )}>
-                            {result.authenticitySignals.aiStyleLikelihood}%
-                          </span>
-                        </div>
-                        <Progress 
-                          value={result.authenticitySignals.aiStyleLikelihood} 
-                          className={cn("h-2", 
-                            result.authenticitySignals.aiStyleLikelihood > 60 ? "[&>div]:bg-orange-500" : 
-                            result.authenticitySignals.aiStyleLikelihood > 40 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500"
-                          )} 
-                        />
-                        <p className="text-xs text-muted-foreground">Writing uniformity & machine-like patterns</p>
-                      </div>
-                    </div>
-
-                    {result.authenticitySignals.clichePhrases && result.authenticitySignals.clichePhrases.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-yellow-600 mb-2 flex items-center gap-1">
-                          <Quote className="h-3 w-3" />
-                          Cliché Phrases Detected
-                        </p>
-                        <div className="flex flex-wrap gap-1" data-testid="list-cliche-phrases">
-                          {result.authenticitySignals.clichePhrases.map((phrase, i) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-400">
-                              "{phrase}"
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {result.authenticitySignals.metricsFound && result.authenticitySignals.metricsFound.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-green-600 mb-2 flex items-center gap-1">
-                          <Sparkles className="h-3 w-3" />
-                          Concrete Metrics Found
-                        </p>
-                        <div className="flex flex-wrap gap-1" data-testid="list-metrics-found">
-                          {result.authenticitySignals.metricsFound.slice(0, 5).map((metric, i) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400">
-                              {metric}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {result.authenticitySignals.toolsMentioned && result.authenticitySignals.toolsMentioned.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-blue-600 mb-2 flex items-center gap-1">
-                          <Wrench className="h-3 w-3" />
-                          Tools & Technologies Mentioned
-                        </p>
-                        <div className="flex flex-wrap gap-1" data-testid="list-tools-mentioned">
-                          {result.authenticitySignals.toolsMentioned.map((tool, i) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400">
-                              {tool}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {result.authenticitySignals.structuralPatterns && result.authenticitySignals.structuralPatterns.length > 0 && (
-                      <div>
-                        <p className="text-xs font-medium text-orange-600 mb-2 flex items-center gap-1">
-                          <Columns className="h-3 w-3" />
-                          AI Writing Patterns Detected
-                        </p>
-                        <div className="flex flex-wrap gap-1" data-testid="list-structural-patterns">
-                          {result.authenticitySignals.structuralPatterns.map((pattern, i) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400">
-                              {pattern}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {result.authenticitySignals.warnings.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Authenticity Warnings</p>
-                        {result.authenticitySignals.warnings.map((warning, index) => (
-                          <div key={index} className="flex gap-3 items-start p-3 rounded-lg border bg-yellow-50/50 dark:bg-yellow-900/10" data-testid={`authenticity-warning-${index}`}>
-                            <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
-                            <div className="space-y-1">
-                              <p className="font-medium text-sm">{warning.message}</p>
-                              <p className="text-xs text-muted-foreground">{warning.details}</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="p-4 bg-purple-50/50 dark:bg-purple-900/10 rounded-lg border border-purple-200/50 dark:border-purple-800/50">
-                      <div className="flex items-start gap-2">
-                        <Info className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium text-purple-700 dark:text-purple-300">Recommendation</p>
-                          <p className="text-xs text-muted-foreground mt-1" data-testid="text-authenticity-recommendation">
-                            {result.authenticitySignals.recommendation}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
+                <Button 
+                  className="w-full" 
+                  onClick={() => setIsResultModalOpen(true)}
+                  data-testid="button-view-results"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Full Analysis
+                </Button>
+              </CardContent>
+            </Card>
           ) : (
             <Card className="h-full flex items-center justify-center bg-muted/10 border-dashed min-h-[400px]">
               <CardContent className="text-center">
@@ -1187,6 +616,522 @@ export default function ResumeAnalyzerModule() {
           )}
         </div>
       </div>
+
+      <Dialog open={isResultModalOpen} onOpenChange={setIsResultModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-analysis-results">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Resume Analysis Results
+            </DialogTitle>
+            <DialogDescription>
+              {result?.selectedJob ? `Analyzed for: ${result.selectedJob.title}` : "Complete analysis of the resume"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {result && (
+            <>
+              <div className="flex gap-4 py-3 border-b flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Fit Score:</span>
+                  <Badge className={cn(
+                    result.fitScore >= 70 ? "bg-green-600" : result.fitScore >= 50 ? "bg-yellow-600" : "bg-red-600"
+                  )} data-testid="modal-fit-score">
+                    {result.fitScore}%
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Risk Score:</span>
+                  <Badge variant="secondary" className={cn(
+                    result.logicScore < 30 ? "bg-green-100 text-green-700" : result.logicScore < 60 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
+                  )} data-testid="modal-risk-score">
+                    {result.logicScore}%
+                  </Badge>
+                </div>
+                {result.pass4 && (
+                  <Badge className={cn(
+                    result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-600" :
+                    result.pass4.recommendedAction === "reject" ? "bg-red-600" :
+                    result.pass4.recommendedAction === "skills_test_first" ? "bg-blue-600" :
+                    "bg-yellow-600"
+                  )}>
+                    {result.pass4.recommendedAction === "proceed_to_interview" && "Proceed to Interview"}
+                    {result.pass4.recommendedAction === "reject" && "Reject"}
+                    {result.pass4.recommendedAction === "skills_test_first" && "Skills Test First"}
+                    {result.pass4.recommendedAction === "phone_screen" && "Phone Screen"}
+                    {result.pass4.recommendedAction === "needs_review" && "Needs Manual Review"}
+                  </Badge>
+                )}
+              </div>
+
+              <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
+                <TabsList className="flex-shrink-0 w-full justify-start overflow-x-auto">
+                  <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
+                  <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
+                  <TabsTrigger value="timeline" data-testid="tab-timeline">Timeline</TabsTrigger>
+                  <TabsTrigger value="flags" data-testid="tab-flags">Flags</TabsTrigger>
+                  <TabsTrigger value="skills" data-testid="tab-skills">Skills</TabsTrigger>
+                  <TabsTrigger value="authenticity" data-testid="tab-authenticity">Authenticity</TabsTrigger>
+                  <TabsTrigger value="report" data-testid="tab-report">Report</TabsTrigger>
+                </TabsList>
+
+                <div className="flex-1 overflow-y-auto min-h-0 pt-4">
+                  <TabsContent value="overview" className="mt-0 space-y-4">
+                    {result.pass4 && (
+                      <div className={cn("p-4 rounded-lg border",
+                        result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-50/50 border-green-200" :
+                        result.pass4.recommendedAction === "reject" ? "bg-red-50/50 border-red-200" :
+                        "bg-yellow-50/50 border-yellow-200"
+                      )}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <Flag className="h-4 w-4" />
+                          <span className="font-medium">Recommended Action</span>
+                        </div>
+                        {result.pass4.nextSteps.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-medium text-muted-foreground">Next Steps:</p>
+                            <ul className="text-sm space-y-1">
+                              {result.pass4.nextSteps.map((step, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <ArrowRight className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                                  <span>{step}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="p-4 bg-muted/30 rounded-lg border">
+                      <p className="text-sm font-semibold mb-2">Summary</p>
+                      <p className="text-sm">{result.summary}</p>
+                    </div>
+                    {result.pass4?.interviewFocusAreas && result.pass4.interviewFocusAreas.length > 0 && (
+                      <div className="p-4 border rounded-lg">
+                        <p className="text-sm font-medium flex items-center gap-2 mb-3">
+                          <Target className="h-4 w-4 text-blue-500" />
+                          Interview Focus Areas
+                        </p>
+                        <ul className="space-y-2">
+                          {result.pass4.interviewFocusAreas.map((area, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm">
+                              <div className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center text-xs text-blue-600 font-medium flex-shrink-0">
+                                {i + 1}
+                              </div>
+                              <span>{area}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="profile" className="mt-0 space-y-4">
+                    {result.pass1 && (
+                      <>
+                        <div className="text-sm text-muted-foreground mb-3">
+                          {result.pass1.totalExperienceYears} years of experience • {result.pass1.jobs.length} positions • Confidence: {result.pass1.extractionConfidence}%
+                        </div>
+                        <div className="space-y-3">
+                          {result.pass1.jobs.map((job, i) => (
+                            <div key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-card">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+                                <Building className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm">{job.title}</p>
+                                <p className="text-xs text-muted-foreground">{job.company}</p>
+                                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  {job.startDate || "?"} - {job.endDate || "Present"}
+                                  {job.durationMonths && <span className="text-primary font-medium">({job.durationMonths} mo)</span>}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        {result.pass1.education.length > 0 && (
+                          <div className="pt-4 border-t">
+                            <p className="text-sm font-medium flex items-center gap-2 mb-3">
+                              <GraduationCap className="h-4 w-4" />
+                              Education
+                            </p>
+                            <div className="space-y-2">
+                              {result.pass1.education.map((edu, i) => (
+                                <div key={i} className="text-sm">
+                                  <span className="font-medium">{edu.degree}</span> in {edu.field}
+                                  <span className="text-muted-foreground"> • {edu.institution}</span>
+                                  {edu.graduationYear && <span className="text-muted-foreground"> ({edu.graduationYear})</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="pt-4 border-t grid grid-cols-3 gap-4">
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Hard Skills</p>
+                            <div className="flex flex-wrap gap-1">
+                              {result.pass1.skills.hard.map((s, i) => (
+                                <Badge key={i} variant="outline" className="text-xs">{s}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Domain Skills</p>
+                            <div className="flex flex-wrap gap-1">
+                              {result.pass1.skills.domain.map((s, i) => (
+                                <Badge key={i} variant="outline" className="text-xs bg-blue-50">{s}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-2">Soft Skills</p>
+                            <div className="flex flex-wrap gap-1">
+                              {result.pass1.skills.soft.map((s, i) => (
+                                <Badge key={i} variant="outline" className="text-xs bg-purple-50">{s}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="timeline" className="mt-0 space-y-4">
+                    {result.pass2 && (
+                      <>
+                        <div className="text-sm text-muted-foreground mb-3">
+                          {result.pass2.timelineAnalysis.jobCount} jobs over {result.pass2.timelineAnalysis.yearsAnalyzed.toFixed(1)} years • Avg tenure: {result.pass2.timelineAnalysis.averageTenureMonths} months
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                          <div className="p-3 rounded-lg border">
+                            <p className="text-xs text-muted-foreground">Timeline Risk</p>
+                            <p className={cn("text-lg font-bold", result.pass2.riskScores.timeline_risk > 50 ? "text-red-600" : "text-green-600")}>
+                              {result.pass2.riskScores.timeline_risk}%
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-lg border">
+                            <p className="text-xs text-muted-foreground">Promotion Risk</p>
+                            <p className={cn("text-lg font-bold", result.pass2.riskScores.promotion_risk > 50 ? "text-red-600" : "text-green-600")}>
+                              {result.pass2.riskScores.promotion_risk}%
+                            </p>
+                          </div>
+                          <div className="p-3 rounded-lg border">
+                            <p className="text-xs text-muted-foreground">Job Hop Risk</p>
+                            <p className={cn("text-lg font-bold", result.pass2.riskScores.job_hop_risk > 50 ? "text-red-600" : "text-green-600")}>
+                              {result.pass2.riskScores.job_hop_risk}%
+                            </p>
+                          </div>
+                        </div>
+                        {result.pass2.concerns.length > 0 && (
+                          <div className="space-y-3">
+                            {result.pass2.concerns.map((concern, i) => (
+                              <div key={i} className={cn(
+                                "flex gap-3 items-start p-3 rounded-lg border",
+                                concern.severity === "major_concern" ? "bg-red-50/50 border-red-200" :
+                                concern.severity === "mild_concern" ? "bg-yellow-50/50 border-yellow-200" :
+                                "bg-green-50/50 border-green-200"
+                              )} data-testid={`timeline-concern-${i}`}>
+                                {concern.severity === "major_concern" && <XCircle className="h-4 w-4 text-red-500 mt-0.5" />}
+                                {concern.severity === "mild_concern" && <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />}
+                                {concern.severity === "ok" && <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />}
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">{concern.description}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{concern.details}</p>
+                                </div>
+                                <Badge variant="outline" className="text-xs">Risk: {concern.riskScore}%</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="flags" className="mt-0 space-y-4">
+                    {result.pass4 && (
+                      <>
+                        {result.pass4.greenFlags.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-green-600 flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4" />
+                              Green Flags ({result.pass4.greenFlags.length})
+                            </p>
+                            {result.pass4.greenFlags.map((flag, i) => (
+                              <div key={i} className="flex gap-3 items-start p-3 rounded-lg border bg-green-50/50 border-green-200">
+                                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
+                                <div>
+                                  <p className="font-medium text-sm text-green-700">{flag.flag}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{flag.details}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {result.pass4.redFlags.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-red-600 flex items-center gap-2">
+                              <XCircle className="h-4 w-4" />
+                              Red Flags ({result.pass4.redFlags.length})
+                            </p>
+                            {result.pass4.redFlags.map((flag, i) => (
+                              <div key={i} className={cn(
+                                "flex gap-3 items-start p-3 rounded-lg border",
+                                flag.severity === "critical" ? "bg-red-50/50 border-red-200" : "bg-yellow-50/50 border-yellow-200"
+                              )}>
+                                {flag.severity === "critical" ? (
+                                  <XCircle className="h-4 w-4 text-red-500 mt-0.5" />
+                                ) : (
+                                  <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
+                                )}
+                                <div>
+                                  <p className={cn("font-medium text-sm", flag.severity === "critical" ? "text-red-700" : "text-yellow-700")}>{flag.flag}</p>
+                                  <p className="text-xs text-muted-foreground mt-1">{flag.details}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="skills" className="mt-0 space-y-4">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">Match Rate</span>
+                        <span className="text-sm font-semibold" data-testid="text-match-rate">
+                          {result.skillMatch.matched.length} / {result.skillMatch.matched.length + result.skillMatch.missing.length} skills
+                        </span>
+                      </div>
+                      <Progress 
+                        value={(result.skillMatch.matched.length / Math.max(result.skillMatch.matched.length + result.skillMatch.missing.length, 1)) * 100} 
+                        className="h-2"
+                      />
+                    </div>
+                    {result.skillMatch.matched.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-green-600 mb-2 flex items-center gap-1">
+                          <CheckCircle className="h-4 w-4" />
+                          Matched Skills
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.skillMatch.matched.map((skill) => (
+                            <Badge key={skill} variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {result.skillMatch.missing.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-red-600 mb-2 flex items-center gap-1">
+                          <XCircle className="h-4 w-4" />
+                          Missing Skills
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.skillMatch.missing.map((skill) => (
+                            <Badge key={skill} variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {result.skillMatch.extra.length > 0 && (
+                      <div>
+                        <p className="text-sm font-medium text-blue-600 mb-2 flex items-center gap-1">
+                          <Sparkles className="h-4 w-4" />
+                          Additional Skills
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.skillMatch.extra.map((skill) => (
+                            <Badge key={skill} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {skill}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {result.fitScore >= 70 && result.selectedJob && (
+                      <div className="pt-4 border-t">
+                        <Button
+                          onClick={() => {
+                            const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
+                            if (!selectedCandidate) return;
+                            recommendMutation.mutate({
+                              candidateId: selectedCandidateId,
+                              candidateName: selectedCandidate.name,
+                              jobId: result.selectedJob!.id,
+                              jobTitle: result.selectedJob!.title,
+                              skillsNeeded: result.skillMatch.missing.length > 0 ? result.skillMatch.missing : result.selectedJob!.skills,
+                              fitScore: result.fitScore,
+                            });
+                          }}
+                          disabled={recommendMutation.isPending || !selectedCandidateId}
+                          className="w-full"
+                          variant="outline"
+                          data-testid="button-recommend-skills-test"
+                        >
+                          {recommendMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Sending...
+                            </>
+                          ) : (
+                            <>
+                              <ClipboardList className="mr-2 h-4 w-4" />
+                              Recommend Skills Test
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="authenticity" className="mt-0 space-y-4">
+                    {result.authenticitySignals && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-3 rounded-lg border">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                <Quote className="h-3 w-3" />
+                                Generic Writing
+                              </span>
+                              <span className={cn("text-xs font-semibold", result.authenticitySignals.genericWritingScore > 60 ? "text-yellow-600" : "text-green-600")}>
+                                {result.authenticitySignals.genericWritingScore}%
+                              </span>
+                            </div>
+                            <Progress value={result.authenticitySignals.genericWritingScore} className={cn("h-2", result.authenticitySignals.genericWritingScore > 60 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} />
+                          </div>
+                          <div className="p-3 rounded-lg border">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                Specificity
+                              </span>
+                              <span className={cn("text-xs font-semibold", result.authenticitySignals.specificityScore < 40 ? "text-yellow-600" : "text-green-600")}>
+                                {result.authenticitySignals.specificityScore}%
+                              </span>
+                            </div>
+                            <Progress value={result.authenticitySignals.specificityScore} className={cn("h-2", result.authenticitySignals.specificityScore < 40 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} />
+                          </div>
+                          <div className="p-3 rounded-lg border">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                <TrendingDown className="h-3 w-3" />
+                                Fluff Ratio
+                              </span>
+                              <span className={cn("text-xs font-semibold", result.authenticitySignals.fluffRatio > 50 ? "text-yellow-600" : "text-green-600")}>
+                                {result.authenticitySignals.fluffRatio}%
+                              </span>
+                            </div>
+                            <Progress value={result.authenticitySignals.fluffRatio} className={cn("h-2", result.authenticitySignals.fluffRatio > 50 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} />
+                          </div>
+                          <div className="p-3 rounded-lg border">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                                <Bot className="h-3 w-3" />
+                                AI-Style Likelihood
+                              </span>
+                              <span className={cn("text-xs font-semibold", result.authenticitySignals.aiStyleLikelihood > 60 ? "text-orange-600" : result.authenticitySignals.aiStyleLikelihood > 40 ? "text-yellow-600" : "text-green-600")}>
+                                {result.authenticitySignals.aiStyleLikelihood}%
+                              </span>
+                            </div>
+                            <Progress value={result.authenticitySignals.aiStyleLikelihood} className={cn("h-2", result.authenticitySignals.aiStyleLikelihood > 60 ? "[&>div]:bg-orange-500" : result.authenticitySignals.aiStyleLikelihood > 40 ? "[&>div]:bg-yellow-500" : "[&>div]:bg-green-500")} />
+                          </div>
+                        </div>
+                        {result.authenticitySignals.clichePhrases && result.authenticitySignals.clichePhrases.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-yellow-600 mb-2 flex items-center gap-1">
+                              <Quote className="h-3 w-3" />
+                              Cliché Phrases Detected
+                            </p>
+                            <div className="flex flex-wrap gap-1" data-testid="list-cliche-phrases">
+                              {result.authenticitySignals.clichePhrases.map((phrase, i) => (
+                                <Badge key={i} variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
+                                  "{phrase}"
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {result.authenticitySignals.warnings.length > 0 && (
+                          <div className="space-y-2">
+                            {result.authenticitySignals.warnings.map((warning, index) => (
+                              <div key={index} className="flex gap-3 items-start p-3 rounded-lg border bg-yellow-50/50" data-testid={`authenticity-warning-${index}`}>
+                                <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5" />
+                                <div>
+                                  <p className="font-medium text-sm">{warning.message}</p>
+                                  <p className="text-xs text-muted-foreground">{warning.details}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="p-4 bg-purple-50/50 rounded-lg border border-purple-200/50">
+                          <div className="flex items-start gap-2">
+                            <Info className="h-4 w-4 text-purple-500 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-purple-700">Recommendation</p>
+                              <p className="text-xs text-muted-foreground mt-1" data-testid="text-authenticity-recommendation">
+                                {result.authenticitySignals.recommendation}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="report" className="mt-0 space-y-4">
+                    <Card data-testid="card-authenticity-signals">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-medium flex items-center gap-2">
+                          <FileText className="h-4 w-4" />
+                          Analysis Findings
+                        </CardTitle>
+                        <CardDescription>Internal consistency checks only. Not a background check.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {result.findings.map((finding, index) => (
+                          <div key={index} className="flex gap-3 items-start p-3 rounded-lg border bg-card" data-testid={`finding-${index}`}>
+                            <div className="mt-0.5">
+                              {finding.type === "risk" && <XCircle className="h-4 w-4 text-destructive" />}
+                              {finding.type === "warning" && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
+                              {finding.type === "good" && <CheckCircle className="h-4 w-4 text-green-500" />}
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{finding.message}</p>
+                              <p className="text-xs text-muted-foreground">{finding.details}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+                </div>
+              </Tabs>
+
+              <DialogFooter className="flex-shrink-0 pt-4 border-t gap-2">
+                <Button variant="outline" disabled data-testid="button-save-candidate">
+                  <Save className="mr-2 h-4 w-4" />
+                  Save to Candidate
+                </Button>
+                <Button variant="outline" disabled data-testid="button-download-report">
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Report
+                </Button>
+                <Button onClick={() => setIsResultModalOpen(false)} data-testid="button-close-modal">
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
