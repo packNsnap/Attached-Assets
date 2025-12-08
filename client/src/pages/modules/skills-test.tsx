@@ -112,13 +112,15 @@ export default function SkillsTestModule() {
   const [pendingJobDescription, setPendingJobDescription] = useState<string>("");
   const [viewResultsInvitation, setViewResultsInvitation] = useState<SkillsTestInvitation | null>(null);
 
-  // Data queries
+  // Data queries - with auto-refresh every 10 seconds for real-time updates
   const { data: recommendations = [] } = useQuery<SkillsTestRecommendation[]>({
     queryKey: ["/api/skills-test-recommendations"],
+    refetchInterval: 10000,
   });
 
   const { data: invitations = [] } = useQuery<SkillsTestInvitation[]>({
     queryKey: ["/api/skills-test-invitations"],
+    refetchInterval: 10000,
   });
 
   const { data: recentCompletedInvitations = [] } = useQuery<SkillsTestInvitation[]>({
@@ -128,10 +130,12 @@ export default function SkillsTestModule() {
       if (!res.ok) throw new Error("Failed to fetch recent completed");
       return res.json();
     },
+    refetchInterval: 10000,
   });
 
   const { data: savedTests = [] } = useQuery<SkillsTest[]>({
     queryKey: ["/api/skills-tests"],
+    refetchInterval: 10000,
   });
 
   const { data: jobs = [] } = useQuery<{ id: string; title: string; description: string }[]>({
