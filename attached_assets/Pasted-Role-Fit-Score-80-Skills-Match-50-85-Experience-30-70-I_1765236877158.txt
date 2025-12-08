@@ -1,0 +1,191 @@
+Role Fit Score
+80%
+Skills Match (50%)
+85%
+Experience (30%)
+70%
+Industry (20%)
+80%
+Logic Risk Score
+41%
+Medium Risk
+Timeline (30%)
+80%
+Promotion (20%)
+0%
+Job Hopping (20%)
+30%
+Recommended Action
+Phone Screen
+Next Steps:
+
+Conduct a phone screen to discuss job overlap and employment gap.
+Verify employment history and clarify any discrepancies.
+Extracted Profile
+3.5 years of experience • 3 positions • Confidence: 85%
+3D Printing & CNC Production Specialist
+
+Impeccable Printz / Freelance
+
+2021 - Present
+(59 mo)
+CNC Laser Operator
+
+Freelance & Personal Production
+
+2022 - Present
+(47 mo)
+Manufacturing & Maker Support
+
+Various Short-Term Projects
+
+2020 - 2021
+(12 mo)
+Education
+
+High School in • Bayside Community Day School - Moreno Valley (2003)
+Hard Skills
+
+FDM & Resin 3D Printing
+Cura
+PrusaSlicer
+Lychee
+Chitubox
++6
+Domain
+
+3D printing
+CNC production
+laser engraving
+Soft Skills
+
+troubleshooting
+problem-solving
+mechanical intuition
+Timeline Analysis
+3 jobs over 3.5 years • Avg tenure: 39 months
+Significant Job Overlap
+
+There is a 47-month overlap between the roles of CNC Laser Operator and 3D Printing & CNC Production Specialist. This extensive overlap may indicate potential issues with job commitment or misrepresentation of employment history.
+
+Risk: 80%
+Extended Employment Gap
+
+There is a 12-month gap between the role of Manufacturing & Maker Support and CNC Laser Operator. This extended gap could be a concern unless there is a reasonable explanation, such as further education or personal circumstances.
+
+Risk: 80%
+Normal Promotion Speed
+
+The transition from CNC Laser Operator to 3D Printing & CNC Production Specialist took 59 months, which is within a normal range and does not raise any concerns.
+
+Risk: 0%
+Average Tenure
+
+The average tenure of 39 months per job is above the threshold of concern, indicating stable employment history.
+
+Risk: 30%
+Stable Job Count
+
+With 3 jobs over 3.5 years, the job count does not indicate a risk of job hopping, as it is below the threshold of 5 jobs in 4 years.
+
+Risk: 30%
+Red & Green Flags
+Strong Technical Skills
+
+John has a robust set of technical skills, including proficiency in multiple 3D printing and CNC software, which aligns well with industry needs.
+
+Stable Job Count
+
+With only three jobs over 3.5 years, John's employment history suggests stability and commitment.
+
+Significant Job Overlap
+
+There is a 47-month overlap between the roles of CNC Laser Operator and 3D Printing & CNC Production Specialist, raising concerns about potential misrepresentation of employment history.
+
+Extended Employment Gap
+
+A 12-month gap exists between the role of Manufacturing & Maker Support and CNC Laser Operator, which may require further explanation.
+
+Interview Focus Areas
+1
+Clarify reasons for job overlap and employment gap.
+2
+Discuss specific achievements and impact in previous roles.
+Skills Match Analysis
+Match Rate
+5 / 5 skills
+Matched Skills
+
+FDM & Resin 3D Printing
+Cura
+PrusaSlicer
+Fusion 360
+Blender
+Additional Skills (Not Required)
+
+CNC Laser Engraving/Cutting
+Python
+Recommend Skills Test
+Send this candidate to the Skills Test module for assessment
+
+Logic Analysis Report
+Internal consistency checks only. Not a background check.
+Summary: John Acosta is a skilled maker with hands-on experience in 3D printing, CNC production, and laser engraving. With over three years in the technology industry, John has demonstrated proficiency in operating and maintaining various 3D printers and CNC machines, optimizing workflows, and ensuring safety compliance. Despite some concerns regarding job overlap and an employment gap, John's technical skills and stable job count suggest a reliable and capable candidate. His experience aligns well with industry requirements, making him a strong candidate for roles requiring technical expertise in manufacturing and production environments.
+Findings
+Significant Job Overlap
+
+There is a 47-month overlap between the roles of CNC Laser Operator and 3D Printing & CNC Production Specialist. This extensive overlap may indicate potential issues with job commitment or misrepresentation of employment history.
+
+Extended Employment Gap
+
+There is a 12-month gap between the role of Manufacturing & Maker Support and CNC Laser Operator. This extended gap could be a concern unless there is a reasonable explanation, such as further education or personal circumstances.
+
+Normal Promotion Speed
+
+The transition from CNC Laser Operator to 3D Printing & CNC Production Specialist took 59 months, which is within a normal range and does not raise any concerns.
+
+Average Tenure
+
+The average tenure of 39 months per job is above the threshold of concern, indicating stable employment history.
+
+Stable Job Count
+
+With 3 jobs over 3.5 years, the job count does not indicate a risk of job hopping, as it is below the threshold of 5 jobs in 4 years.
+
+Significant Job Overlap
+
+There is a 47-month overlap between the roles of CNC Laser Operator and 3D Printing & CNC Production Specialist, raising concerns about potential misrepresentation of employment history.
+
+Extended Employment Gap
+
+A 12-month gap exists between the role of Manufacturing & Maker Support and CNC Laser Operator, which may require further explanation.
+
+Strong Technical Skills
+
+John has a robust set of technical skills, including proficiency in multiple 3D printing and CNC software, which aligns well with industry needs.
+
+Stable Job Count
+
+With only three jobs over 3.5 years, John's employment history suggests stability and commitment.
+
+Authenticity & Specificity Signals
+AI-style and content quality indicators. Not a definitive AI detection.
+Generic Writing
+20%
+Cliché phrases & templated structure
+
+Specificity
+75%
+Concrete metrics & named tools
+
+Fluff Ratio
+50%
+Vague content vs measurable impact
+
+AI-Style Likelihood
+40%
+Writing uniformity & machine-like patterns
+
+Recommendation
+
+Conduct a phone screen to discuss job overlap and employment gap. Verify employment history and clarify any discrepancies.
