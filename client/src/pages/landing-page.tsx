@@ -205,55 +205,34 @@ export default function LandingPage() {
             transition={{ delay: 0.3, duration: 0.6 }}
             className="space-y-4"
           >
-            <div className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Resumes Analyzed</p>
-                  <p className="font-bold text-lg">12,847</p>
-                </div>
-              </div>
-            </div>
-            
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.5, duration: 0.6 }}
-              className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg ml-6"
+            {/* Floating module icons */}
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/25"
             >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                  <Brain className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">AI Detections</p>
-                  <p className="font-bold text-lg">3,421</p>
-                </div>
-              </div>
+              <Brain className="h-7 w-7 text-white" />
+            </motion.div>
+            
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/25 ml-8"
+            >
+              <ClipboardCheck className="h-6 w-6 text-white" />
             </motion.div>
 
             <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.7, duration: 0.6 }}
-              className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25"
             >
-              <div className="flex items-center gap-2">
-                <div className="flex -space-x-2">
-                  {[...Array(4)].map((_, i) => (
-                    <div key={i} className={`h-8 w-8 rounded-full border-2 border-background bg-gradient-to-br ${
-                      i === 0 ? 'from-blue-400 to-blue-600' :
-                      i === 1 ? 'from-green-400 to-green-600' :
-                      i === 2 ? 'from-purple-400 to-purple-600' :
-                      'from-orange-400 to-orange-600'
-                    }`} />
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">+2.4k users</p>
-              </div>
+              <FileSearch className="h-5 w-5 text-white" />
             </motion.div>
+
+            {/* Decorative lines */}
+            <div className="absolute -left-4 top-20 w-20 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+            <div className="absolute -left-2 top-40 w-16 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
           </motion.div>
         </div>
 
@@ -265,46 +244,37 @@ export default function LandingPage() {
             transition={{ delay: 0.4, duration: 0.6 }}
             className="space-y-4"
           >
-            <div className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                  <Briefcase className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Jobs Posted</p>
-                  <p className="font-bold text-lg">5,892</p>
-                </div>
-              </div>
+            {/* Floating module icons */}
+            <motion.div
+              animate={{ y: [0, -6, 0] }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+              className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25"
+            >
+              <Briefcase className="h-7 w-7 text-white" />
+            </motion.div>
+
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
+              className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/25 mr-8"
+            >
+              <MessageSquare className="h-6 w-6 text-white" />
+            </motion.div>
+
+            <motion.div
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
+              className="h-10 w-10 rounded-lg bg-gradient-to-br from-rose-500 to-red-500 flex items-center justify-center shadow-lg shadow-rose-500/25"
+            >
+              <Users className="h-5 w-5 text-white" />
+            </motion.div>
+
+            {/* Decorative dots */}
+            <div className="absolute -right-2 top-16 flex flex-col gap-2">
+              <div className="h-2 w-2 rounded-full bg-purple-500/40" />
+              <div className="h-1.5 w-1.5 rounded-full bg-blue-500/40" />
+              <div className="h-1 w-1 rounded-full bg-pink-500/40" />
             </div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.6, duration: 0.6 }}
-              className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg mr-6"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
-                  <BarChart3 className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Time Saved</p>
-                  <p className="font-bold text-lg">8.2hrs/week</p>
-                </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.8, duration: 0.6 }}
-              className="p-3 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 shadow-lg"
-            >
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <p className="text-xs font-medium text-green-600 dark:text-green-400">Live: 847 active users</p>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
 
