@@ -1121,13 +1121,26 @@ Respond with JSON in this exact format:
         if (typeof q.goodAnswerIndex !== "number" || q.goodAnswerIndex < 0 || q.goodAnswerIndex > 3 || q.goodAnswerIndex === q.bestAnswerIndex) {
           q.goodAnswerIndex = q.bestAnswerIndex === 0 ? 1 : 0; // Default to different option
         }
+        
+        // Shuffle options to randomize answer positions
+        const optionsWithIndices = q.options.map((opt: string, i: number) => ({ text: opt, originalIndex: i }));
+        for (let i = optionsWithIndices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [optionsWithIndices[i], optionsWithIndices[j]] = [optionsWithIndices[j], optionsWithIndices[i]];
+        }
+        
+        // Find new positions of best and good answers after shuffle
+        const newBestIndex = optionsWithIndices.findIndex((opt: any) => opt.originalIndex === q.bestAnswerIndex);
+        const newGoodIndex = optionsWithIndices.findIndex((opt: any) => opt.originalIndex === q.goodAnswerIndex);
+        const shuffledOptions = optionsWithIndices.map((opt: any) => opt.text);
+        
         return {
           id: q.id || idx + 1,
           type: "multiple_choice" as const,
           text: q.text,
-          options: q.options,
-          bestAnswerIndex: q.bestAnswerIndex,
-          goodAnswerIndex: q.goodAnswerIndex,
+          options: shuffledOptions,
+          bestAnswerIndex: newBestIndex,
+          goodAnswerIndex: newGoodIndex,
           skill: q.skill || skills.split(",")[0]?.trim() || "general",
         };
       }).filter(Boolean);
