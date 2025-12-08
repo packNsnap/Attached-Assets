@@ -378,6 +378,16 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/candidates/unread-notes", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const unreadNotes = await storage.getCandidatesWithUnreadNotes(userId);
+      res.json(unreadNotes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch unread notes" });
+    }
+  });
+
   app.get("/api/candidates/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -406,6 +416,21 @@ export async function registerRoutes(
       res.json(assessments);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch candidate assessments" });
+    }
+  });
+
+  app.post("/api/candidates/:id/mark-notes-viewed", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const candidateId = req.params.id;
+      const candidate = await storage.markCandidateNotesAsViewed(candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to mark notes as viewed" });
     }
   });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -135,6 +135,7 @@ export default function CandidatesModule() {
   const [newDocument, setNewDocument] = useState({ fileName: "", fileUrl: "", fileType: "", documentType: "resume" });
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
+  const markedNotesViewedRef = useRef<Set<string>>(new Set());
 
   const { data: jobs = [] } = useQuery({
     queryKey: ["jobs-with-candidates"],
@@ -459,6 +460,27 @@ export default function CandidatesModule() {
       toast({ title: "Error", description: "Failed to delete analysis", variant: "destructive" });
     }
   });
+
+  const markNotesViewedMutation = useMutation({
+    mutationFn: async (candidateId: string) => {
+      const res = await fetch(`/api/candidates/${candidateId}/mark-notes-viewed`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!res.ok) throw new Error("Failed to mark notes as viewed");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidates-unread-notes"] });
+    }
+  });
+
+  useEffect(() => {
+    if (selectedCandidate && activeTab === "notes" && !markedNotesViewedRef.current.has(selectedCandidate.id)) {
+      markedNotesViewedRef.current.add(selectedCandidate.id);
+      markNotesViewedMutation.mutate(selectedCandidate.id);
+    }
+  }, [selectedCandidate?.id, activeTab]);
 
   const uploadResumeMutation = useMutation({
     mutationFn: async ({ file, candidateId }: { file: File; candidateId: string }) => {

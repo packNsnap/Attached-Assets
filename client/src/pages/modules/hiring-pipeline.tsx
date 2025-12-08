@@ -106,6 +106,21 @@ export default function HiringPipelineModule() {
     }
   });
 
+  const { data: unreadNotesData = [] } = useQuery({
+    queryKey: ["candidates-unread-notes"],
+    queryFn: async () => {
+      const res = await fetch("/api/candidates/unread-notes");
+      if (!res.ok) throw new Error("Failed to fetch unread notes");
+      return res.json() as Promise<{ candidateId: string; unreadCount: number }[]>;
+    },
+    refetchInterval: 30000
+  });
+
+  const unreadNotesMap = unreadNotesData.reduce((acc, item) => {
+    acc[item.candidateId] = item.unreadCount;
+    return acc;
+  }, {} as Record<string, number>);
+
   const [assessmentsMap, setAssessmentsMap] = useState<Record<string, CandidateAssessments>>({});
 
   const fetchAssessments = async (candidateId: string) => {
@@ -304,6 +319,29 @@ export default function HiringPipelineModule() {
                             </span>
                           ))}
                         </div>
+                        
+                        {unreadNotesMap[candidate.id] > 0 && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/candidates?id=${candidate.id}`);
+                                  }}
+                                  className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border border-orange-200 dark:border-orange-800 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
+                                  data-testid={`badge-unread-notes-${candidate.id}`}
+                                >
+                                  <MessageSquare className="h-3 w-3" />
+                                  {unreadNotesMap[candidate.id]} new
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{unreadNotesMap[candidate.id]} unread note{unreadNotesMap[candidate.id] > 1 ? 's' : ''}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                         
                         {/* Assessment Scores */}
                         {assessmentsMap[candidate.id] && (
