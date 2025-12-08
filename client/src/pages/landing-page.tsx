@@ -23,6 +23,7 @@ import {
   UserPlus,
   Award,
   ChevronRight,
+  Briefcase,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -194,6 +195,117 @@ export default function LandingPage() {
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl" />
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-3xl" />
+        </div>
+
+        {/* Left Side Decorative Elements */}
+        <div className="absolute left-4 lg:left-8 xl:left-16 top-32 hidden lg:block">
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+            className="space-y-4"
+          >
+            <div className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Resumes Analyzed</p>
+                  <p className="font-bold text-lg">12,847</p>
+                </div>
+              </div>
+            </div>
+            
+            <motion.div 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg ml-6"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <Brain className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">AI Detections</p>
+                  <p className="font-bold text-lg">3,421</p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.7, duration: 0.6 }}
+              className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg"
+            >
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-2">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className={`h-8 w-8 rounded-full border-2 border-background bg-gradient-to-br ${
+                      i === 0 ? 'from-blue-400 to-blue-600' :
+                      i === 1 ? 'from-green-400 to-green-600' :
+                      i === 2 ? 'from-purple-400 to-purple-600' :
+                      'from-orange-400 to-orange-600'
+                    }`} />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">+2.4k users</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* Right Side Decorative Elements */}
+        <div className="absolute right-4 lg:right-8 xl:right-16 top-32 hidden lg:block">
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="space-y-4"
+          >
+            <div className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                  <Briefcase className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Jobs Posted</p>
+                  <p className="font-bold text-lg">5,892</p>
+                </div>
+              </div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6, duration: 0.6 }}
+              className="p-3 rounded-xl bg-background/80 backdrop-blur-sm border shadow-lg mr-6"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Time Saved</p>
+                  <p className="font-bold text-lg">8.2hrs/week</p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8, duration: 0.6 }}
+              className="p-3 rounded-xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 backdrop-blur-sm border border-green-500/20 shadow-lg"
+            >
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <p className="text-xs font-medium text-green-600 dark:text-green-400">Live: 847 active users</p>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
 
         <div className="max-w-7xl mx-auto relative">
