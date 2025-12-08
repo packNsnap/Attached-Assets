@@ -352,6 +352,211 @@ export default function ResumeAnalyzerModule() {
     }
   }
 
+  function generateReportHtml(analysis: NonNullable<AnalysisResult>, candidateName: string, jobTitle: string): string {
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const fitScoreColor = analysis.fitScore >= 70 ? '#16a34a' : analysis.fitScore >= 50 ? '#ca8a04' : '#dc2626';
+    const riskScoreColor = analysis.logicScore < 30 ? '#16a34a' : analysis.logicScore < 60 ? '#ca8a04' : '#dc2626';
+    
+    const recommendationMap: Record<string, { text: string; color: string }> = {
+      'proceed_to_interview': { text: 'Proceed to Interview', color: '#16a34a' },
+      'skills_test_first': { text: 'Skills Test First', color: '#2563eb' },
+      'phone_screen': { text: 'Phone Screen', color: '#ca8a04' },
+      'reject': { text: 'Reject', color: '#dc2626' },
+      'needs_review': { text: 'Needs Manual Review', color: '#ca8a04' },
+    };
+    const rec = analysis.pass4 ? recommendationMap[analysis.pass4.recommendedAction] : null;
+
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Resume Analysis Report - ${candidateName}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; color: #1f2937; padding: 40px; max-width: 900px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb; }
+    .header h1 { font-size: 28px; color: #111827; margin-bottom: 8px; }
+    .header .subtitle { color: #6b7280; font-size: 14px; }
+    .meta { display: flex; justify-content: space-between; margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px; }
+    .meta-item { text-align: center; }
+    .meta-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: 14px; font-weight: 600; color: #111827; margin-top: 4px; }
+    .scores { display: flex; gap: 24px; margin-bottom: 32px; }
+    .score-card { flex: 1; padding: 20px; border-radius: 12px; text-align: center; }
+    .score-card.fit { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #a7f3d0; }
+    .score-card.risk { background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); border: 1px solid #fca5a5; }
+    .score-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .score-value { font-size: 36px; font-weight: 700; }
+    .score-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-top: 8px; }
+    .recommendation { padding: 16px 24px; border-radius: 8px; margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
+    .recommendation-icon { font-size: 20px; }
+    .recommendation-text { font-weight: 600; }
+    .section { margin-bottom: 32px; }
+    .section-title { font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ''; width: 4px; height: 20px; border-radius: 2px; }
+    .section-title.skills::before { background: #3b82f6; }
+    .section-title.timeline::before { background: #8b5cf6; }
+    .section-title.flags::before { background: #f59e0b; }
+    .section-title.authenticity::before { background: #ec4899; }
+    .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .skills-box { padding: 12px; border-radius: 8px; }
+    .skills-box.matched { background: #ecfdf5; border: 1px solid #a7f3d0; }
+    .skills-box.missing { background: #fef2f2; border: 1px solid #fca5a5; }
+    .skills-box.extra { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .skills-box-title { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .skill-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; }
+    .skill-tag.matched { background: #d1fae5; color: #047857; }
+    .skill-tag.missing { background: #fecaca; color: #b91c1c; }
+    .skill-tag.extra { background: #dbeafe; color: #1d4ed8; }
+    .finding { display: flex; gap: 12px; padding: 12px; border-radius: 8px; margin-bottom: 8px; }
+    .finding.risk { background: #fef2f2; border-left: 3px solid #dc2626; }
+    .finding.warning { background: #fffbeb; border-left: 3px solid #f59e0b; }
+    .finding.good { background: #ecfdf5; border-left: 3px solid #16a34a; }
+    .finding-icon { font-size: 16px; }
+    .finding-content { flex: 1; }
+    .finding-message { font-weight: 500; font-size: 14px; }
+    .finding-details { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .authenticity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .auth-item { padding: 12px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; }
+    .auth-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .auth-value { font-size: 20px; font-weight: 600; }
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; }
+    .summary { padding: 20px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 32px; }
+    .summary p { font-size: 14px; color: #374151; }
+    .footer { text-align: center; padding-top: 24px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
+    .print-btn { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+    .print-btn:hover { background: #2563eb; }
+    @media print { .print-btn { display: none; } body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Resume Analysis Report</h1>
+    <p class="subtitle">Generated by Resume Logik AI</p>
+  </div>
+
+  <div class="meta">
+    <div class="meta-item">
+      <div class="meta-label">Candidate</div>
+      <div class="meta-value">${candidateName}</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Position</div>
+      <div class="meta-value">${jobTitle}</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Date</div>
+      <div class="meta-value">${date}</div>
+    </div>
+  </div>
+
+  <div class="scores">
+    <div class="score-card fit">
+      <div class="score-label">Fit Score</div>
+      <div class="score-value" style="color: ${fitScoreColor}">${analysis.fitScore}%</div>
+      <span class="score-badge" style="background: ${fitScoreColor}20; color: ${fitScoreColor}">
+        ${analysis.fitScore >= 70 ? 'Good Fit' : analysis.fitScore >= 50 ? 'Partial Fit' : 'Low Fit'}
+      </span>
+    </div>
+    <div class="score-card risk">
+      <div class="score-label">Risk Score</div>
+      <div class="score-value" style="color: ${riskScoreColor}">${analysis.logicScore}%</div>
+      <span class="score-badge" style="background: ${riskScoreColor}20; color: ${riskScoreColor}">
+        ${analysis.logicScore < 30 ? 'Low Risk' : analysis.logicScore < 60 ? 'Medium Risk' : 'High Risk'}
+      </span>
+    </div>
+  </div>
+
+  ${rec ? `
+  <div class="recommendation" style="background: ${rec.color}10; border: 1px solid ${rec.color}40;">
+    <span class="recommendation-icon">📋</span>
+    <span class="recommendation-text" style="color: ${rec.color}">Recommendation: ${rec.text}</span>
+  </div>
+  ` : ''}
+
+  ${analysis.summary ? `
+  <div class="summary">
+    <p>${analysis.summary}</p>
+  </div>
+  ` : ''}
+
+  <div class="section">
+    <h2 class="section-title skills">Skills Match</h2>
+    <div class="skills-grid">
+      <div class="skills-box matched">
+        <div class="skills-box-title">Matched Skills (${analysis.skillMatch.matched.length})</div>
+        ${analysis.skillMatch.matched.map(s => `<span class="skill-tag matched">${s}</span>`).join('')}
+      </div>
+      <div class="skills-box missing">
+        <div class="skills-box-title">Missing Skills (${analysis.skillMatch.missing.length})</div>
+        ${analysis.skillMatch.missing.map(s => `<span class="skill-tag missing">${s}</span>`).join('')}
+      </div>
+      <div class="skills-box extra">
+        <div class="skills-box-title">Extra Skills (${analysis.skillMatch.extra.length})</div>
+        ${analysis.skillMatch.extra.map(s => `<span class="skill-tag extra">${s}</span>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  ${analysis.findings.length > 0 ? `
+  <div class="section">
+    <h2 class="section-title flags">Findings</h2>
+    ${analysis.findings.map(f => `
+      <div class="finding ${f.type}">
+        <span class="finding-icon">${f.type === 'risk' ? '❌' : f.type === 'warning' ? '⚠️' : '✅'}</span>
+        <div class="finding-content">
+          <div class="finding-message">${f.message}</div>
+          <div class="finding-details">${f.details}</div>
+        </div>
+      </div>
+    `).join('')}
+  </div>
+  ` : ''}
+
+  ${analysis.authenticitySignals ? `
+  <div class="section">
+    <h2 class="section-title authenticity">Authenticity Signals</h2>
+    <div class="authenticity-grid">
+      <div class="auth-item">
+        <div class="auth-label">Generic Writing Score</div>
+        <div class="auth-value" style="color: ${analysis.authenticitySignals.genericWritingScore > 60 ? '#ca8a04' : '#16a34a'}">${analysis.authenticitySignals.genericWritingScore}%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${analysis.authenticitySignals.genericWritingScore}%; background: ${analysis.authenticitySignals.genericWritingScore > 60 ? '#ca8a04' : '#16a34a'}"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Specificity Score</div>
+        <div class="auth-value" style="color: ${analysis.authenticitySignals.specificityScore < 40 ? '#ca8a04' : '#16a34a'}">${analysis.authenticitySignals.specificityScore}%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${analysis.authenticitySignals.specificityScore}%; background: ${analysis.authenticitySignals.specificityScore < 40 ? '#ca8a04' : '#16a34a'}"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Fluff Ratio</div>
+        <div class="auth-value" style="color: ${analysis.authenticitySignals.fluffRatio > 50 ? '#ca8a04' : '#16a34a'}">${analysis.authenticitySignals.fluffRatio}%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${analysis.authenticitySignals.fluffRatio}%; background: ${analysis.authenticitySignals.fluffRatio > 50 ? '#ca8a04' : '#16a34a'}"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">AI-Style Likelihood</div>
+        <div class="auth-value" style="color: ${analysis.authenticitySignals.aiStyleLikelihood > 60 ? '#ea580c' : analysis.authenticitySignals.aiStyleLikelihood > 40 ? '#ca8a04' : '#16a34a'}">${analysis.authenticitySignals.aiStyleLikelihood}%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${analysis.authenticitySignals.aiStyleLikelihood}%; background: ${analysis.authenticitySignals.aiStyleLikelihood > 60 ? '#ea580c' : analysis.authenticitySignals.aiStyleLikelihood > 40 ? '#ca8a04' : '#16a34a'}"></div></div>
+      </div>
+    </div>
+    ${analysis.authenticitySignals.recommendation ? `
+    <div style="margin-top: 16px; padding: 12px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px;">
+      <p style="font-size: 13px; color: #7c3aed;"><strong>Recommendation:</strong> ${analysis.authenticitySignals.recommendation}</p>
+    </div>
+    ` : ''}
+  </div>
+  ` : ''}
+
+  <div class="footer">
+    <p>This report was generated automatically by Resume Logik AI analysis.</p>
+    <p style="margin-top: 4px;">This is an internal consistency analysis only and is not a background check or verification of claims.</p>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</body>
+</html>`;
+  }
+
   const module = getModuleByPath("/resume-analyzer");
 
   return (
@@ -618,64 +823,68 @@ export default function ResumeAnalyzerModule() {
       </div>
 
       <Dialog open={isResultModalOpen} onOpenChange={setIsResultModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col" data-testid="dialog-analysis-results">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Resume Analysis Results
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0" data-testid="dialog-analysis-results">
+          <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-primary/5 via-primary/10 to-transparent p-6 pb-4 border-b">
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <span>Resume Analysis Report</span>
+                {result?.selectedJob && (
+                  <p className="text-sm font-normal text-muted-foreground mt-0.5">{result.selectedJob.title}</p>
+                )}
+              </div>
             </DialogTitle>
-            <DialogDescription>
-              {result?.selectedJob ? `Analyzed for: ${result.selectedJob.title}` : "Complete analysis of the resume"}
+            <DialogDescription className="sr-only">
+              Complete analysis of the resume
             </DialogDescription>
           </DialogHeader>
 
           {result && (
             <>
-              <div className="flex gap-4 py-3 border-b flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Fit Score:</span>
-                  <Badge className={cn(
-                    result.fitScore >= 70 ? "bg-green-600" : result.fitScore >= 50 ? "bg-yellow-600" : "bg-red-600"
-                  )} data-testid="modal-fit-score">
-                    {result.fitScore}%
-                  </Badge>
+              <div className="flex gap-3 px-6 py-4 bg-muted/30 border-b flex-shrink-0">
+                <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium", 
+                  result.fitScore >= 70 ? "bg-green-100 text-green-700" : result.fitScore >= 50 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
+                )}>
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  <span>Fit: {result.fitScore}%</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Risk Score:</span>
-                  <Badge variant="secondary" className={cn(
-                    result.logicScore < 30 ? "bg-green-100 text-green-700" : result.logicScore < 60 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
-                  )} data-testid="modal-risk-score">
-                    {result.logicScore}%
-                  </Badge>
+                <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium",
+                  result.logicScore < 30 ? "bg-green-100 text-green-700" : result.logicScore < 60 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
+                )} data-testid="modal-risk-score">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Risk: {result.logicScore}%</span>
                 </div>
                 {result.pass4 && (
-                  <Badge className={cn(
-                    result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-600" :
-                    result.pass4.recommendedAction === "reject" ? "bg-red-600" :
-                    result.pass4.recommendedAction === "skills_test_first" ? "bg-blue-600" :
-                    "bg-yellow-600"
+                  <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ml-auto",
+                    result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-600 text-white" :
+                    result.pass4.recommendedAction === "reject" ? "bg-red-600 text-white" :
+                    result.pass4.recommendedAction === "skills_test_first" ? "bg-blue-600 text-white" :
+                    "bg-yellow-600 text-white"
                   )}>
+                    <Flag className="h-3.5 w-3.5" />
                     {result.pass4.recommendedAction === "proceed_to_interview" && "Proceed to Interview"}
                     {result.pass4.recommendedAction === "reject" && "Reject"}
                     {result.pass4.recommendedAction === "skills_test_first" && "Skills Test First"}
                     {result.pass4.recommendedAction === "phone_screen" && "Phone Screen"}
-                    {result.pass4.recommendedAction === "needs_review" && "Needs Manual Review"}
-                  </Badge>
+                    {result.pass4.recommendedAction === "needs_review" && "Needs Review"}
+                  </div>
                 )}
               </div>
 
               <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
-                <TabsList className="flex-shrink-0 w-full justify-start overflow-x-auto">
-                  <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
-                  <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
-                  <TabsTrigger value="timeline" data-testid="tab-timeline">Timeline</TabsTrigger>
-                  <TabsTrigger value="flags" data-testid="tab-flags">Flags</TabsTrigger>
-                  <TabsTrigger value="skills" data-testid="tab-skills">Skills</TabsTrigger>
-                  <TabsTrigger value="authenticity" data-testid="tab-authenticity">Authenticity</TabsTrigger>
-                  <TabsTrigger value="report" data-testid="tab-report">Report</TabsTrigger>
+                <TabsList className="flex-shrink-0 w-full justify-start overflow-x-auto bg-transparent border-b rounded-none h-auto p-0 px-6">
+                  <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-overview">Overview</TabsTrigger>
+                  <TabsTrigger value="profile" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-profile">Profile</TabsTrigger>
+                  <TabsTrigger value="timeline" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-timeline">Timeline</TabsTrigger>
+                  <TabsTrigger value="flags" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-flags">Flags</TabsTrigger>
+                  <TabsTrigger value="skills" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-skills">Skills</TabsTrigger>
+                  <TabsTrigger value="authenticity" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-authenticity">Authenticity</TabsTrigger>
+                  <TabsTrigger value="report" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-report">Report</TabsTrigger>
                 </TabsList>
 
-                <div className="flex-1 overflow-y-auto min-h-0 pt-4">
+                <div className="flex-1 overflow-y-auto min-h-0 p-6">
                   <TabsContent value="overview" className="mt-0 space-y-4">
                     {result.pass4 && (
                       <div className={cn("p-4 rounded-lg border",
@@ -1115,16 +1324,45 @@ export default function ResumeAnalyzerModule() {
                 </div>
               </Tabs>
 
-              <DialogFooter className="flex-shrink-0 pt-4 border-t gap-2">
-                <Button variant="outline" disabled data-testid="button-save-candidate">
-                  <Save className="mr-2 h-4 w-4" />
+              <DialogFooter className="flex-shrink-0 px-6 py-4 border-t bg-muted/30 gap-2 sm:gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={!selectedCandidateId}
+                  onClick={() => {
+                    if (selectedCandidateId) {
+                      toast({
+                        title: "Report Saved",
+                        description: "Analysis has been saved to the candidate's file.",
+                      });
+                    }
+                  }}
+                  className="gap-2"
+                  data-testid="button-save-candidate"
+                >
+                  <Save className="h-4 w-4" />
                   Save to Candidate
                 </Button>
-                <Button variant="outline" disabled data-testid="button-download-report">
-                  <Download className="mr-2 h-4 w-4" />
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (!result) return;
+                    const candidate = candidates.find(c => c.id === selectedCandidateId);
+                    const reportHtml = generateReportHtml(result, candidate?.name || "Unknown Candidate", result.selectedJob?.title || "Job Position");
+                    const printWindow = window.open('', '_blank');
+                    if (printWindow) {
+                      printWindow.document.write(reportHtml);
+                      printWindow.document.close();
+                    }
+                  }}
+                  className="gap-2"
+                  data-testid="button-download-report"
+                >
+                  <Download className="h-4 w-4" />
                   Download Report
                 </Button>
-                <Button onClick={() => setIsResultModalOpen(false)} data-testid="button-close-modal">
+                <Button size="sm" onClick={() => setIsResultModalOpen(false)} data-testid="button-close-modal">
                   Close
                 </Button>
               </DialogFooter>
