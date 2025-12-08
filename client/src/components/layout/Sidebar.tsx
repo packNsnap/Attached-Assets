@@ -3,17 +3,17 @@ import { cn } from "@/lib/utils";
 import { MODULES, APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Sparkles, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ModeToggle } from "@/components/mode-toggle";
+import { Badge } from "@/components/ui/badge";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { toast } = useToast();
 
   const handleLogout = () => {
-    // Mock logout
-    window.location.href = "/auth";
+    window.location.href = "/";
     toast({
       title: "Logged out",
       description: "You have been successfully logged out."
@@ -21,19 +21,22 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
-      <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4">
-        <div className="flex items-center gap-2 font-heading font-bold text-xl tracking-tight">
-          <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <span className="text-sidebar-primary-foreground">AI</span>
+    <div className="flex h-screen w-72 flex-col border-r bg-gradient-to-b from-background to-muted/30">
+      {/* Header with gradient branding */}
+      <div className="flex h-16 items-center justify-between border-b px-4">
+        <Link href="/dashboard" className="flex items-center gap-2.5 group">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/40 transition-shadow">
+            <Sparkles className="h-5 w-5 text-white" />
           </div>
-          {APP_NAME}
-        </div>
+          <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            {APP_NAME}
+          </span>
+        </Link>
         <ModeToggle />
       </div>
       
       <ScrollArea className="flex-1 py-4">
-        <nav className="grid gap-1 px-2">
+        <nav className="grid gap-1 px-3">
           {MODULES.map((module) => {
             const Icon = module.icon;
             const isActive = location === module.path;
@@ -43,36 +46,75 @@ export function Sidebar() {
                 key={module.path} 
                 href={module.path}
                 className={cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70"
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  isActive 
+                    ? "bg-gradient-to-r from-blue-600/10 to-purple-600/10 text-foreground shadow-sm border border-blue-500/20" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                <Icon className="h-4 w-4" />
-                {module.title}
+                <div className={cn(
+                  "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                  isActive 
+                    ? `bg-gradient-to-br ${module.color} shadow-md`
+                    : "bg-muted"
+                )}>
+                  <Icon className={cn(
+                    "h-4 w-4",
+                    isActive ? "text-white" : "text-muted-foreground"
+                  )} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className={cn(
+                    "block truncate",
+                    isActive && "font-semibold"
+                  )}>
+                    {module.title}
+                  </span>
+                </div>
+                {module.featured && (
+                  <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-1.5 py-0">
+                    AI
+                  </Badge>
+                )}
               </Link>
             );
           })}
         </nav>
       </ScrollArea>
 
-      <div className="border-t border-sidebar-border p-4">
-        <div className="flex items-center gap-3 mb-4 px-2">
-          <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-accent-foreground">
-            <User className="h-4 w-4" />
+      {/* User section with enhanced styling */}
+      <div className="border-t p-4 bg-muted/30">
+        <div className="flex items-center gap-3 mb-4 p-2 rounded-xl bg-background/50 border">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-md">
+            <User className="h-5 w-5 text-white" />
           </div>
-          <div className="text-sm">
-            <p className="font-medium">HR Admin</p>
-            <p className="text-xs text-sidebar-foreground/60">admin@company.com</p>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm truncate">HR Admin</p>
+            <p className="text-xs text-muted-foreground truncate">admin@company.com</p>
           </div>
         </div>
-        <Button 
-          variant="outline" 
-          className="w-full justify-start gap-2 border-sidebar-border bg-transparent hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground/70"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4" />
-          Sign Out
-        </Button>
+        <div className="grid gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="w-full justify-start gap-2 hover:bg-muted"
+            asChild
+          >
+            <Link href="/">
+              <ExternalLink className="h-4 w-4" />
+              View Landing Page
+            </Link>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="w-full justify-start gap-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </Button>
+        </div>
       </div>
     </div>
   );
