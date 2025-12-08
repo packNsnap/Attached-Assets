@@ -239,6 +239,8 @@ export async function registerRoutes(
       }
       
       const jobData = insertJobSchema.parse(req.body);
+      // Override userId with authenticated user's ID to prevent privilege escalation
+      jobData.userId = userId;
       const job = await storage.createJob(jobData);
       await storage.incrementJobsCreated(userId);
       res.json(job);
@@ -351,6 +353,8 @@ export async function registerRoutes(
       }
       
       const candidateData = insertCandidateSchema.parse(req.body);
+      // Override userId with authenticated user's ID to prevent privilege escalation
+      candidateData.userId = userId;
       const candidate = await storage.createCandidate(candidateData);
       await storage.incrementCandidatesAdded(userId);
       res.json(candidate);
@@ -639,6 +643,8 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const updateData = insertCandidateSchema.partial().parse(req.body);
+      // Strip userId from update data to prevent ownership transfer
+      delete (updateData as any).userId;
       const candidate = await storage.updateCandidate(req.params.id, userId, updateData);
       if (!candidate) {
         res.status(404).json({ error: "Candidate not found" });
@@ -1018,8 +1024,9 @@ Respond in this exact JSON format:
     }
   });
 
-  app.post("/api/generate-skills-test", async (req, res) => {
+  app.post("/api/generate-skills-test", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { roleName, difficulty, skills, questionCount, jobDescription, timePerQuestion } = req.body;
       
       if (!roleName || !difficulty || !skills) {
@@ -1136,6 +1143,7 @@ Respond with JSON in this exact format:
         questions: JSON.stringify(validatedQuestions),
         status: "active",
         timePerQuestion: questionTimeLimit,
+        userId,
       });
       
       res.json({
@@ -1302,9 +1310,12 @@ Make the description professional but engaging. Use bullet points for responsibi
   });
 
   // Skills Tests CRUD
-  app.post("/api/skills-tests", async (req, res) => {
+  app.post("/api/skills-tests", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const testData = insertSkillsTestSchema.parse(req.body);
+      // Override userId with authenticated user's ID to prevent privilege escalation
+      testData.userId = userId;
       const test = await storage.createSkillsTest(testData);
       res.json(test);
     } catch (error) {
