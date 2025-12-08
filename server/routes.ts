@@ -579,8 +579,9 @@ export async function registerRoutes(
   });
 
   // Complete an interview - saves scores, notes, and updates candidate stage
-  app.post("/api/complete-interview", async (req, res) => {
+  app.post("/api/complete-interview", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { recommendationId, candidateId, candidateName, averageScore, interviewSummary } = req.body;
       
       if (!recommendationId) {
@@ -598,7 +599,7 @@ export async function registerRoutes(
       const recommendation = await storage.updateInterviewRecommendation(recommendationId, {
         status: "completed",
         interviewScore: averageScore || null,
-        interviewSummary: summaryText || null,
+        interviewSummary: summaryText || undefined,
         completedAt: new Date()
       });
 
@@ -609,7 +610,7 @@ export async function registerRoutes(
 
       // Update candidate stage to "interviewed" if candidateId is provided
       if (candidateId) {
-        await storage.updateCandidateStage(candidateId, "interviewed");
+        await storage.updateCandidateStage(candidateId, userId, "interviewed");
         
         // Save interview notes as a candidate note
         if (interviewSummary && interviewSummary.length > 0) {
@@ -791,8 +792,9 @@ export async function registerRoutes(
     }
   }
 
-  app.post("/api/upload-resume", upload.single("file"), async (req, res) => {
+  app.post("/api/upload-resume", isAuthenticated, upload.single("file"), async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { candidateId } = req.body;
       const file = req.file;
 
@@ -822,7 +824,7 @@ export async function registerRoutes(
       // Store resume text in memory with candidateId as key
       resumeStore.set(candidateId, resumeText);
 
-      const candidate = await storage.updateCandidate(candidateId, { 
+      const candidate = await storage.updateCandidate(candidateId, userId, { 
         resumeUrl: fileName
       });
 
@@ -848,9 +850,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/resume/:candidateId", async (req, res) => {
+  app.get("/api/resume/:candidateId", isAuthenticated, async (req: any, res) => {
     try {
-      const candidate = await storage.getCandidate(req.params.candidateId);
+      const userId = req.user.claims.sub;
+      const candidate = await storage.getCandidate(req.params.candidateId, userId);
       if (!candidate || !candidate.resumeUrl) {
         res.status(404).json({ error: "Resume not found" });
         return;
