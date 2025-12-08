@@ -49,7 +49,7 @@ import {
   aiActionUsage
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { eq, sql, desc, and, gte, lte } from "drizzle-orm";
+import { eq, sql, desc, and, gte, lte, inArray } from "drizzle-orm";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -68,16 +68,16 @@ export interface IStorage {
   
   createJob(job: InsertJob): Promise<Job>;
   getJobs(userId: string): Promise<Job[]>;
-  getJob(id: string): Promise<Job | undefined>;
-  updateJob(id: string, data: Partial<InsertJob>): Promise<Job | undefined>;
-  deleteJob(id: string): Promise<boolean>;
+  getJob(id: string, userId: string): Promise<Job | undefined>;
+  updateJob(id: string, userId: string, data: Partial<InsertJob>): Promise<Job | undefined>;
+  deleteJob(id: string, userId: string): Promise<boolean>;
   
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
   getCandidates(userId: string): Promise<Candidate[]>;
-  getCandidate(id: string): Promise<Candidate | undefined>;
+  getCandidate(id: string, userId: string): Promise<Candidate | undefined>;
   getCandidatesByJobId(jobId: string, userId: string): Promise<Candidate[]>;
-  updateCandidateStage(id: string, stage: string): Promise<Candidate | undefined>;
-  updateCandidateJobId(id: string, jobId: string | null): Promise<Candidate | undefined>;
+  updateCandidateStage(id: string, userId: string, stage: string): Promise<Candidate | undefined>;
+  updateCandidateJobId(id: string, userId: string, jobId: string | null): Promise<Candidate | undefined>;
   
   getJobsWithCandidateCounts(userId: string): Promise<(Job & { candidateCount: number })[]>;
   
@@ -94,7 +94,7 @@ export interface IStorage {
   updateInterviewRecommendationStatus(id: string, status: string): Promise<InterviewRecommendation | undefined>;
   updateInterviewRecommendation(id: string, data: { recommendedQuestions?: string[]; strengths?: string[]; weaknesses?: string[]; status?: string; interviewScore?: number; interviewSummary?: string; completedAt?: Date }): Promise<InterviewRecommendation | undefined>;
   
-  updateCandidate(id: string, data: Partial<InsertCandidate>): Promise<Candidate | undefined>;
+  updateCandidate(id: string, userId: string, data: Partial<InsertCandidate>): Promise<Candidate | undefined>;
   
   createCandidateNote(note: InsertCandidateNote): Promise<CandidateNote>;
   getCandidateNotes(candidateId: string): Promise<CandidateNote[]>;
@@ -120,7 +120,8 @@ export interface IStorage {
   deleteSkillsTestRecommendation(id: string): Promise<boolean>;
   
   createSkillsTest(test: InsertSkillsTest): Promise<SkillsTest>;
-  getSkillsTest(id: string): Promise<SkillsTest | undefined>;
+  getSkillsTest(id: string, userId: string): Promise<SkillsTest | undefined>;
+  getSkillsTestById(id: string): Promise<SkillsTest | undefined>;
   getSkillsTests(userId: string): Promise<SkillsTest[]>;
   
   createSkillsTestInvitation(invitation: InsertSkillsTestInvitation): Promise<SkillsTestInvitation>;
@@ -136,6 +137,8 @@ export interface IStorage {
   
   updateCandidateTestScore(candidateId: string, score: number): Promise<Candidate | undefined>;
   getRecentCompletedInvitations(limit: number): Promise<SkillsTestInvitation[]>;
+  getSkillsTestInvitationsByUserId(userId: string): Promise<SkillsTestInvitation[]>;
+  getRecentCompletedInvitationsByUserId(userId: string, limit: number): Promise<SkillsTestInvitation[]>;
   
   // Subscription methods
   getSubscription(userId: string): Promise<Subscription | undefined>;
@@ -204,18 +207,18 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(jobs).where(eq(jobs.userId, userId));
   }
 
-  async getJob(id: string): Promise<Job | undefined> {
-    const result = await db.select().from(jobs).where(eq(jobs.id, id)).limit(1);
+  async getJob(id: string, userId: string): Promise<Job | undefined> {
+    const result = await db.select().from(jobs).where(and(eq(jobs.id, id), eq(jobs.userId, userId))).limit(1);
     return result[0];
   }
 
-  async updateJob(id: string, data: Partial<InsertJob>): Promise<Job | undefined> {
-    const result = await db.update(jobs).set(data).where(eq(jobs.id, id)).returning();
+  async updateJob(id: string, userId: string, data: Partial<InsertJob>): Promise<Job | undefined> {
+    const result = await db.update(jobs).set(data).where(and(eq(jobs.id, id), eq(jobs.userId, userId))).returning();
     return result[0];
   }
 
-  async deleteJob(id: string): Promise<boolean> {
-    const result = await db.delete(jobs).where(eq(jobs.id, id)).returning();
+  async deleteJob(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(jobs).where(and(eq(jobs.id, id), eq(jobs.userId, userId))).returning();
     return result.length > 0;
   }
 
@@ -228,16 +231,16 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(candidates).where(eq(candidates.userId, userId));
   }
 
-  async getCandidate(id: string): Promise<Candidate | undefined> {
-    const result = await db.select().from(candidates).where(eq(candidates.id, id)).limit(1);
+  async getCandidate(id: string, userId: string): Promise<Candidate | undefined> {
+    const result = await db.select().from(candidates).where(and(eq(candidates.id, id), eq(candidates.userId, userId))).limit(1);
     return result[0];
   }
 
-  async updateCandidateStage(id: string, stage: string): Promise<Candidate | undefined> {
+  async updateCandidateStage(id: string, userId: string, stage: string): Promise<Candidate | undefined> {
     const result = await db
       .update(candidates)
       .set({ stage })
-      .where(eq(candidates.id, id))
+      .where(and(eq(candidates.id, id), eq(candidates.userId, userId)))
       .returning();
     return result[0];
   }
@@ -246,11 +249,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(candidates).where(and(eq(candidates.jobId, jobId), eq(candidates.userId, userId)));
   }
 
-  async updateCandidateJobId(id: string, jobId: string | null): Promise<Candidate | undefined> {
+  async updateCandidateJobId(id: string, userId: string, jobId: string | null): Promise<Candidate | undefined> {
     const result = await db
       .update(candidates)
       .set({ jobId })
-      .where(eq(candidates.id, id))
+      .where(and(eq(candidates.id, id), eq(candidates.userId, userId)))
       .returning();
     return result[0];
   }
@@ -332,11 +335,11 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateCandidate(id: string, data: Partial<InsertCandidate>): Promise<Candidate | undefined> {
+  async updateCandidate(id: string, userId: string, data: Partial<InsertCandidate>): Promise<Candidate | undefined> {
     const result = await db
       .update(candidates)
       .set(data)
-      .where(eq(candidates.id, id))
+      .where(and(eq(candidates.id, id), eq(candidates.userId, userId)))
       .returning();
     return result[0];
   }
@@ -425,7 +428,12 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getSkillsTest(id: string): Promise<SkillsTest | undefined> {
+  async getSkillsTest(id: string, userId: string): Promise<SkillsTest | undefined> {
+    const result = await db.select().from(skillsTests).where(and(eq(skillsTests.id, id), eq(skillsTests.userId, userId))).limit(1);
+    return result[0];
+  }
+
+  async getSkillsTestById(id: string): Promise<SkillsTest | undefined> {
     const result = await db.select().from(skillsTests).where(eq(skillsTests.id, id)).limit(1);
     return result[0];
   }
@@ -483,6 +491,28 @@ export class DatabaseStorage implements IStorage {
 
   async getRecentCompletedInvitations(limit: number): Promise<SkillsTestInvitation[]> {
     return await db.select().from(skillsTestInvitations).where(eq(skillsTestInvitations.status, "completed")).orderBy(desc(skillsTestInvitations.completedAt)).limit(limit);
+  }
+
+  async getSkillsTestInvitationsByUserId(userId: string): Promise<SkillsTestInvitation[]> {
+    const userTests = await db.select().from(skillsTests).where(eq(skillsTests.userId, userId));
+    const userTestIds = userTests.map(t => t.id);
+    if (userTestIds.length === 0) return [];
+    return await db.select().from(skillsTestInvitations)
+      .where(inArray(skillsTestInvitations.testId, userTestIds))
+      .orderBy(desc(skillsTestInvitations.createdAt));
+  }
+
+  async getRecentCompletedInvitationsByUserId(userId: string, limit: number): Promise<SkillsTestInvitation[]> {
+    const userTests = await db.select().from(skillsTests).where(eq(skillsTests.userId, userId));
+    const userTestIds = userTests.map(t => t.id);
+    if (userTestIds.length === 0) return [];
+    return await db.select().from(skillsTestInvitations)
+      .where(and(
+        inArray(skillsTestInvitations.testId, userTestIds),
+        eq(skillsTestInvitations.status, "completed")
+      ))
+      .orderBy(desc(skillsTestInvitations.completedAt))
+      .limit(limit);
   }
 
   // Subscription methods

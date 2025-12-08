@@ -261,9 +261,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs/:id", async (req, res) => {
+  app.get("/api/jobs/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const job = await storage.getJob(req.params.id);
+      const userId = req.user.claims.sub;
+      const job = await storage.getJob(req.params.id, userId);
       if (!job) {
         res.status(404).json({ error: "Job not found" });
         return;
@@ -274,8 +275,9 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/jobs/:id", async (req, res) => {
+  app.patch("/api/jobs/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const rawData = req.body;
       
       // Coerce and validate the data before updating
@@ -306,7 +308,7 @@ export async function registerRoutes(
         if (!isNaN(parsed)) jobData.salaryMax = parsed;
       }
       
-      const job = await storage.updateJob(req.params.id, jobData);
+      const job = await storage.updateJob(req.params.id, userId, jobData);
       if (!job) {
         res.status(404).json({ error: "Job not found" });
         return;
@@ -318,9 +320,10 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/jobs/:id", async (req, res) => {
+  app.delete("/api/jobs/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteJob(req.params.id);
+      const userId = req.user.claims.sub;
+      const deleted = await storage.deleteJob(req.params.id, userId);
       if (!deleted) {
         res.status(404).json({ error: "Job not found" });
         return;
@@ -370,9 +373,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/candidates/:id", async (req, res) => {
+  app.get("/api/candidates/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const candidate = await storage.getCandidate(req.params.id);
+      const userId = req.user.claims.sub;
+      const candidate = await storage.getCandidate(req.params.id, userId);
       if (!candidate) {
         res.status(404).json({ error: "Candidate not found" });
         return;
@@ -383,9 +387,16 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/candidates/:id/assessments", async (req, res) => {
+  app.get("/api/candidates/:id/assessments", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const candidateId = req.params.id;
+      // Verify candidate belongs to user first
+      const candidate = await storage.getCandidate(candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
       const assessments = await storage.getCandidateAssessments(candidateId);
       res.json(assessments);
     } catch (error) {
@@ -393,14 +404,15 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/candidates/:id/stage", async (req, res) => {
+  app.patch("/api/candidates/:id/stage", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { stage } = req.body;
       if (!stage || typeof stage !== "string") {
         res.status(400).json({ error: "Stage is required and must be a string" });
         return;
       }
-      const candidate = await storage.updateCandidateStage(req.params.id, stage);
+      const candidate = await storage.updateCandidateStage(req.params.id, userId, stage);
       if (!candidate) {
         res.status(404).json({ error: "Candidate not found" });
         return;
@@ -411,21 +423,22 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/candidates/:id/job", async (req, res) => {
+  app.patch("/api/candidates/:id/job", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { jobId } = req.body;
       if (jobId !== null && (typeof jobId !== "string" || jobId === "")) {
         res.status(400).json({ error: "jobId must be a string or null" });
         return;
       }
       if (jobId !== null) {
-        const job = await storage.getJob(jobId);
+        const job = await storage.getJob(jobId, userId);
         if (!job) {
           res.status(404).json({ error: "Job not found" });
           return;
         }
       }
-      const candidate = await storage.updateCandidateJobId(req.params.id, jobId);
+      const candidate = await storage.updateCandidateJobId(req.params.id, userId, jobId);
       if (!candidate) {
         res.status(404).json({ error: "Candidate not found" });
         return;
@@ -622,10 +635,11 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/candidates/:id", async (req, res) => {
+  app.patch("/api/candidates/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const updateData = insertCandidateSchema.partial().parse(req.body);
-      const candidate = await storage.updateCandidate(req.params.id, updateData);
+      const candidate = await storage.updateCandidate(req.params.id, userId, updateData);
       if (!candidate) {
         res.status(404).json({ error: "Candidate not found" });
         return;
@@ -1312,9 +1326,10 @@ Make the description professional but engaging. Use bullet points for responsibi
     }
   });
 
-  app.get("/api/skills-tests/:id", async (req, res) => {
+  app.get("/api/skills-tests/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const test = await storage.getSkillsTest(req.params.id);
+      const userId = req.user.claims.sub;
+      const test = await storage.getSkillsTest(req.params.id, userId);
       if (!test) {
         res.status(404).json({ error: "Skills test not found" });
         return;
@@ -1361,9 +1376,10 @@ Make the description professional but engaging. Use bullet points for responsibi
     }
   });
 
-  app.get("/api/skills-test-invitations", async (req, res) => {
+  app.get("/api/skills-test-invitations", isAuthenticated, async (req: any, res) => {
     try {
-      const invitations = await storage.getSkillsTestInvitations();
+      const userId = req.user.claims.sub;
+      const invitations = await storage.getSkillsTestInvitationsByUserId(userId);
       res.json(invitations);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch invitations" });
@@ -1371,20 +1387,28 @@ Make the description professional but engaging. Use bullet points for responsibi
   });
 
   // Get recent completed invitations (limited) - must be before /:id route
-  app.get("/api/skills-test-invitations/recent-completed", async (req, res) => {
+  app.get("/api/skills-test-invitations/recent-completed", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const limit = parseInt(req.query.limit as string) || 5;
-      const invitations = await storage.getRecentCompletedInvitations(limit);
+      const invitations = await storage.getRecentCompletedInvitationsByUserId(userId, limit);
       res.json(invitations);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch recent completed invitations" });
     }
   });
 
-  app.get("/api/skills-test-invitations/:id", async (req, res) => {
+  app.get("/api/skills-test-invitations/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const invitation = await storage.getSkillsTestInvitation(req.params.id);
       if (!invitation) {
+        res.status(404).json({ error: "Invitation not found" });
+        return;
+      }
+      // Verify ownership through the test
+      const test = await storage.getSkillsTest(invitation.testId, userId);
+      if (!test) {
         res.status(404).json({ error: "Invitation not found" });
         return;
       }
@@ -1394,8 +1418,15 @@ Make the description professional but engaging. Use bullet points for responsibi
     }
   });
 
-  app.get("/api/candidates/:id/skills-test-invitations", async (req, res) => {
+  app.get("/api/candidates/:id/skills-test-invitations", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      // Verify candidate belongs to user
+      const candidate = await storage.getCandidate(req.params.id, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
       const invitations = await storage.getSkillsTestInvitationsByCandidateId(req.params.id);
       res.json(invitations);
     } catch (error) {
@@ -1424,8 +1455,8 @@ Make the description professional but engaging. Use bullet points for responsibi
         return;
       }
       
-      // Get the actual test questions
-      const test = await storage.getSkillsTest(invitation.testId);
+      // Get the actual test questions (using internal method for public access)
+      const test = await storage.getSkillsTestById(invitation.testId);
       if (!test) {
         res.status(404).json({ error: "Test not found" });
         return;
@@ -1482,8 +1513,8 @@ Make the description professional but engaging. Use bullet points for responsibi
         return;
       }
       
-      // Get test for scoring
-      const test = await storage.getSkillsTest(invitation.testId);
+      // Get test for scoring (using internal method for public access)
+      const test = await storage.getSkillsTestById(invitation.testId);
       if (!test) {
         res.status(404).json({ error: "Test not found" });
         return;
@@ -1670,8 +1701,20 @@ Respond with ONLY a number between 0 and 100.`;
   });
 
   // Get test responses by invitation
-  app.get("/api/skills-test-invitations/:id/responses", async (req, res) => {
+  app.get("/api/skills-test-invitations/:id/responses", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      const invitation = await storage.getSkillsTestInvitation(req.params.id);
+      if (!invitation) {
+        res.status(404).json({ error: "Invitation not found" });
+        return;
+      }
+      // Verify ownership through the test
+      const test = await storage.getSkillsTest(invitation.testId, userId);
+      if (!test) {
+        res.status(404).json({ error: "Invitation not found" });
+        return;
+      }
       const responses = await storage.getSkillsTestResponsesByInvitationId(req.params.id);
       res.json(responses);
     } catch (error) {
@@ -1680,22 +1723,24 @@ Respond with ONLY a number between 0 and 100.`;
   });
 
   // Rescore a completed test invitation
-  app.post("/api/skills-test-invitations/:id/rescore", async (req, res) => {
+  app.post("/api/skills-test-invitations/:id/rescore", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const invitation = await storage.getSkillsTestInvitation(req.params.id);
       if (!invitation) {
         res.status(404).json({ error: "Invitation not found" });
         return;
       }
 
-      if (invitation.status !== "completed") {
-        res.status(400).json({ error: "Can only rescore completed tests" });
+      // Verify ownership through the test
+      const test = await storage.getSkillsTest(invitation.testId, userId);
+      if (!test) {
+        res.status(404).json({ error: "Invitation not found" });
         return;
       }
 
-      const test = await storage.getSkillsTest(invitation.testId);
-      if (!test) {
-        res.status(404).json({ error: "Test not found" });
+      if (invitation.status !== "completed") {
+        res.status(400).json({ error: "Can only rescore completed tests" });
         return;
       }
 
@@ -1883,7 +1928,7 @@ Respond with ONLY a number between 0 and 100.`;
         const completedInvitation = invitations.find(inv => inv.status === "completed");
         if (completedInvitation) {
           testResponses = await storage.getSkillsTestResponsesByInvitationId(completedInvitation.id);
-          const test = await storage.getSkillsTest(completedInvitation.testId);
+          const test = await storage.getSkillsTestById(completedInvitation.testId);
           if (test) {
             skillsTestInfo = {
               roleName: test.roleName,
