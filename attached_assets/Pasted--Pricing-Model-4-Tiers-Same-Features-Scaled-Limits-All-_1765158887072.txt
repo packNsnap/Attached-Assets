@@ -1,0 +1,117 @@
+⭐ Pricing Model (4 Tiers — Same Features, Scaled Limits)
+All plans include the FULL HR suite:
+
+Resume Logic Analyzer (non-CRA safe)
+
+AI Job Description Generator
+
+AI Skills Test Builder
+
+Interview Question Generator
+
+Workflow Automations
+
+Offer Letter / Onboarding Docs
+
+HR Policies & Handbooks
+
+Reference Email Generator (safe version)
+
+Calendar Scheduling
+
+All Templates
+
+Unlimited Users per company
+
+The ONLY differences:
+✔️ Active job positions allowed
+✔️ Monthly candidate volume
+✔️ AI usage per candidate
+
+🟦 1. Free Tier — “Starter”
+
+Price: $0 / month
+Ideal For: Solopreneurs, micro-businesses, or first-time testers.
+
+Limits:
+
+1 active job
+
+10 candidates per month
+
+AI usage: 2 AI actions per candidate
+
+(e.g., Run Resume Logic Check + Generate Interview Questions)
+
+Purpose:
+
+Let small businesses actually use your platform before committing.
+
+Free users self-qualify → many convert to paid once they start actively hiring.
+
+🟩 2. Eco Tier — “Eco”
+
+Price: $29.99 / month
+Ideal For: Small businesses hiring occasionally.
+
+Limits:
+
+3 active job positions
+
+50 candidates per month
+
+AI usage: 2 AI actions per candidate (same as all tiers)
+
+Why it sells:
+
+Most small companies only hire 2–5 times a year.
+
+3 positions = good breathing room without overwhelming you with costs.
+
+Perfect mid-range entry-tier for SMBs.
+
+🟧 3. Pro Tier — “Pro”
+
+Price: $49.99 / month
+Ideal For: Growing companies, agencies, or businesses hiring regularly.
+
+Limits:
+
+10 active job positions
+
+250 candidates per month
+
+AI usage: 2 AI actions per candidate
+
+Perks:
+
+Higher active job cap fits companies with multiple roles (warehouse + office + seasonal hiring).
+
+Gives plenty of headroom without enterprise pricing.
+
+🟥 4. Enterprise Tier — “Enterprise”
+
+Price: $100.00+ per month
+Pricing scales based on:
+
+Candidate volume
+
+Position volume
+
+Optional onboarding setup
+
+Limits:
+
+Unlimited active positions
+
+Unlimited candidates
+
+Higher or custom AI usage per candidate
+
+Notes:
+
+“Contact us” for volume pricing
+
+Optional: onboarding support, SSO, custom integrations, data export API
+
+Upsell opportunities: assessments packs, priority compute queue, custom branding
