@@ -51,6 +51,8 @@ export const jobs = pgTable("jobs", {
 export const insertJobSchema = createInsertSchema(jobs).omit({
   id: true,
   createdAt: true,
+}).extend({
+  userId: z.string().optional(),
 });
 
 export type InsertJob = z.infer<typeof insertJobSchema>;
@@ -79,6 +81,8 @@ export const candidates = pgTable("candidates", {
 export const insertCandidateSchema = createInsertSchema(candidates).omit({
   id: true,
   createdAt: true,
+}).extend({
+  userId: z.string().optional(),
 });
 
 export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
@@ -222,6 +226,8 @@ export const skillsTests = pgTable("skills_tests", {
 export const insertSkillsTestSchema = createInsertSchema(skillsTests).omit({
   id: true,
   createdAt: true,
+}).extend({
+  userId: z.string().optional(),
 });
 
 export type InsertSkillsTest = z.infer<typeof insertSkillsTestSchema>;
