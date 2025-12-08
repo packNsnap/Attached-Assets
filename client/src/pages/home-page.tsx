@@ -1,16 +1,31 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MODULES } from "@/lib/constants";
 import { Link } from "wouter";
-import { ArrowRight, Sparkles, TrendingUp, Users, Calendar, Gift, Brain, Zap } from "lucide-react";
+import { ArrowRight, Sparkles, Users, Calendar, Gift, Brain, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import type { Job, Candidate } from "@shared/schema";
 
 export default function Dashboard() {
+  const { data: jobs = [] } = useQuery<Job[]>({
+    queryKey: ["/api/jobs"],
+  });
+  
+  const { data: candidates = [] } = useQuery<Candidate[]>({
+    queryKey: ["/api/candidates"],
+  });
+
+  const openRoles = jobs.filter(j => j.status === "open" || j.status === "active").length;
+  const activeCandidates = candidates.length;
+  const interviewsThisWeek = candidates.filter(c => c.stage === "interview").length;
+  const offersPending = candidates.filter(c => c.stage === "offer").length;
+
   const stats = [
-    { label: "Open Roles", value: "12", icon: Sparkles, trend: "+2", color: "from-blue-500 to-cyan-500" },
-    { label: "Active Candidates", value: "48", icon: Users, trend: "+8", color: "from-purple-500 to-pink-500" },
-    { label: "Interviews This Week", value: "8", icon: Calendar, trend: "+3", color: "from-orange-500 to-amber-500" },
-    { label: "Offers Pending", value: "3", icon: Gift, trend: "0", color: "from-green-500 to-emerald-500" },
+    { label: "Open Roles", value: String(openRoles), icon: Sparkles, color: "from-blue-500 to-cyan-500" },
+    { label: "Active Candidates", value: String(activeCandidates), icon: Users, color: "from-purple-500 to-pink-500" },
+    { label: "Interviews This Week", value: String(interviewsThisWeek), icon: Calendar, color: "from-orange-500 to-amber-500" },
+    { label: "Offers Pending", value: String(offersPending), icon: Gift, color: "from-green-500 to-emerald-500" },
   ];
 
   return (
@@ -49,12 +64,6 @@ export default function Dashboard() {
               <CardContent>
                 <div className="flex items-end gap-2">
                   <span className="text-3xl font-bold">{stat.value}</span>
-                  {stat.trend !== "0" && (
-                    <Badge variant="secondary" className="mb-1 text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                      <TrendingUp className="h-3 w-3 mr-1" />
-                      {stat.trend}
-                    </Badge>
-                  )}
                 </div>
               </CardContent>
             </Card>

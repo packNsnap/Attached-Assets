@@ -8,10 +8,12 @@ import { useToast } from "@/hooks/use-toast";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Badge } from "@/components/ui/badge";
 import { UsageDisplay } from "@/components/UsageDisplay";
+import { useAuth } from "@/hooks/useAuth";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleLogout = () => {
     window.location.href = "/";
@@ -94,8 +96,12 @@ export function Sidebar() {
             <User className="h-5 w-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">HR Admin</p>
-            <p className="text-xs text-muted-foreground truncate">admin@company.com</p>
+            <p className="font-semibold text-sm truncate">
+              {user?.firstName && user?.lastName 
+                ? `${user.firstName} ${user.lastName}` 
+                : user?.firstName || user?.email?.split('@')[0] || 'User'}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email || ''}</p>
           </div>
         </div>
         <div className="grid gap-2">
