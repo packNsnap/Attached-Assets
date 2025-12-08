@@ -177,10 +177,10 @@ export default function LandingPage() {
                 <a href="/pricing">Pricing</a>
               </Button>
               <Button variant="ghost" asChild data-testid="link-login">
-                <a href="/api/login">Log In</a>
+                <a href="/auth">Log In</a>
               </Button>
               <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" asChild data-testid="link-get-started">
-                <a href="/api/login">
+                <a href="/auth">
                   Get Started Free
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </a>
@@ -310,7 +310,7 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
               <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-6" asChild data-testid="button-start-free">
-                <a href="/api/login">
+                <a href="/auth">
                   Start Free Today
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </a>
@@ -696,7 +696,7 @@ export default function LandingPage() {
           </p>
           
           <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-10 py-7" asChild data-testid="button-final-cta">
-            <a href="/api/login">
+            <a href="/auth">
               Start Using Resume Logik Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </a>
