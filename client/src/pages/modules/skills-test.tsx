@@ -692,10 +692,10 @@ export default function SkillsTestModule() {
                           />
                         </FormControl>
                         <FormDescription>
-                          {parseInt(field.value) > 20 ? (
+                          {parseInt(field.value) > 30 ? (
                             <span className="text-amber-600 flex items-center gap-1">
                               <AlertCircle className="h-3 w-3" />
-                              Times over 20 seconds may allow candidates to look up answers
+                              Times over 30 seconds may allow candidates to look up answers
                             </span>
                           ) : (
                             "Recommended: 15 seconds to prevent answer lookup"
