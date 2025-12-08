@@ -1,8 +1,8 @@
-# HR Nexus - AI-Powered HR Workflow Automation
+# Resume Logik - AI-Powered HR Workflow Automation
 
 ## Overview
 
-HR Nexus is a modular HR web application that provides AI-powered decision support for hiring and HR workflows. The platform helps employers manage the complete hiring lifecycle without handling payroll, background checks, or consumer reporting. It's designed as a layer that sits alongside existing HRIS/payroll systems.
+Resume Logik is a modular HR web application that provides AI-powered decision support for hiring and HR workflows. The platform helps employers manage the complete hiring lifecycle without handling payroll, background checks, or consumer reporting. It's designed as a layer that sits alongside existing HRIS/payroll systems.
 
 The application features 10 core modules accessible through a sidebar navigation:
 1. Job Description & Salary Generation

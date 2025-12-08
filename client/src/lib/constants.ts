@@ -14,7 +14,7 @@ import {
   Brain
 } from "lucide-react";
 
-export const APP_NAME = "HR Nexus";
+export const APP_NAME = "Resume Logik";
 
 export const MODULES = [
   {

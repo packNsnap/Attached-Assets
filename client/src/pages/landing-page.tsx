@@ -170,7 +170,7 @@ export default function LandingPage() {
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                HR Nexus
+                Resume Logik
               </span>
             </div>
             <div className="flex items-center gap-4">
@@ -589,10 +589,10 @@ export default function LandingPage() {
             className="text-center mb-12"
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              HR Nexus vs Traditional ATS
+              Resume Logik vs Traditional ATS
             </h2>
             <p className="text-lg text-muted-foreground">
-              See why growing businesses choose HR Nexus over expensive enterprise solutions.
+              See why growing businesses choose Resume Logik over expensive enterprise solutions.
             </p>
           </motion.div>
 
@@ -611,7 +611,7 @@ export default function LandingPage() {
                       <div className="h-6 w-6 rounded bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
                         <Sparkles className="h-3.5 w-3.5 text-white" />
                       </div>
-                      <span>HR Nexus</span>
+                      <span>Resume Logik</span>
                     </div>
                   </th>
                   <th className="px-6 py-4 text-center text-muted-foreground">Traditional ATS</th>
@@ -695,7 +695,7 @@ export default function LandingPage() {
           
           <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-10 py-7" asChild data-testid="button-final-cta">
             <Link href="/auth">
-              Start Using HR Nexus Free
+              Start Using Resume Logik Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
@@ -714,10 +714,10 @@ export default function LandingPage() {
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
-              <span className="font-bold">HR Nexus</span>
+              <span className="font-bold">Resume Logik</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2025 HR Nexus. AI-powered HR for modern businesses.
+              © 2025 Resume Logik. AI-powered HR for modern businesses.
             </p>
             <div className="flex gap-6 text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
