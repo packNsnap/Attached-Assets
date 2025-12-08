@@ -36,6 +36,7 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export const jobs = pgTable("jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
   title: text("title").notNull(),
   level: text("level").notNull(),
   location: text("location").notNull(),
@@ -57,6 +58,7 @@ export type Job = typeof jobs.$inferSelect;
 
 export const candidates = pgTable("candidates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
@@ -207,6 +209,7 @@ export type ResumeAnalysis = typeof resumeAnalysis.$inferSelect;
 
 export const skillsTests = pgTable("skills_tests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
   roleName: text("role_name").notNull(),
   difficulty: text("difficulty").notNull(),
   skills: text("skills").array().notNull(),
