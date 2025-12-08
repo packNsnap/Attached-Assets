@@ -59,7 +59,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Candidate, Job, ResumeAnalysis, SkillsTestRecommendation, InterviewRecommendation } from "@shared/schema";
+import type { Candidate, Job, ResumeAnalysis, SkillsTestRecommendation, InterviewRecommendation, SkillsTestInvitation } from "@shared/schema";
 import {
   Tooltip,
   TooltipContent,
@@ -72,6 +72,7 @@ type JobWithCandidates = Job & { candidateCount: number };
 type CandidateAssessments = {
   resumeAnalysis: ResumeAnalysis[];
   skillsTests: SkillsTestRecommendation[];
+  skillsTestInvitations: SkillsTestInvitation[];
   interviews: InterviewRecommendation[];
 };
 
@@ -328,26 +329,54 @@ export default function HiringPipelineModule() {
                                   </TooltipContent>
                                 </Tooltip>
                               )}
-                              {assessmentsMap[candidate.id].skillsTests.length > 0 && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate("/skills-test");
-                                      }}
-                                      className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
-                                      data-testid={`link-skills-score-${candidate.id}`}
-                                    >
-                                      <ClipboardCheck className="h-3 w-3" />
-                                      {assessmentsMap[candidate.id].skillsTests[0].fitScore}%
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Skills Test Score: {assessmentsMap[candidate.id].skillsTests[0].fitScore}%</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
+                              {(() => {
+                                const completedInvitations = assessmentsMap[candidate.id].skillsTestInvitations?.filter(inv => inv.status === "completed" && inv.score !== null) || [];
+                                if (completedInvitations.length > 0) {
+                                  const latestScore = completedInvitations[0].score;
+                                  return (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate("/skills-test");
+                                          }}
+                                          className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                                          data-testid={`link-skills-score-${candidate.id}`}
+                                        >
+                                          <ClipboardCheck className="h-3 w-3" />
+                                          {latestScore}%
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Skills Test Score: {latestScore}%</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  );
+                                } else if (assessmentsMap[candidate.id].skillsTests.length > 0) {
+                                  return (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate("/skills-test");
+                                          }}
+                                          className="flex items-center gap-1 text-[10px] px-2 py-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 hover:bg-amber-200 dark:hover:bg-amber-900/50 transition-colors"
+                                          data-testid={`link-skills-pending-${candidate.id}`}
+                                        >
+                                          <ClipboardCheck className="h-3 w-3" />
+                                          Pending
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Skills Test: Pending ({assessmentsMap[candidate.id].skillsTests[0].fitScore}% fit)</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  );
+                                }
+                                return null;
+                              })()}
                               {assessmentsMap[candidate.id].interviews.length > 0 && (
                                 <Tooltip>
                                   <TooltipTrigger asChild>
