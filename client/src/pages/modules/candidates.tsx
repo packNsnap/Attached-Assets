@@ -59,7 +59,41 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation, SkillsTestResponse, InterviewRecommendation } from "@shared/schema";
+
+interface ParsedInterviewQuestion {
+  question: string;
+  category: string;
+  score: number;
+  notes: string;
+}
+
+function parseInterviewSummary(summary: string | null): ParsedInterviewQuestion[] {
+  if (!summary) return [];
+  try {
+    const parsed = JSON.parse(summary);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function getCategoryColor(category: string): string {
+  const cat = category?.toLowerCase() || "";
+  if (cat.includes("technical")) return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
+  if (cat.includes("behavioral")) return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300";
+  if (cat.includes("culture")) return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+  return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+}
 import { Progress } from "@/components/ui/progress";
 import { ListChecks } from "lucide-react";
 
@@ -900,44 +934,88 @@ export default function CandidatesModule() {
                         <Separator />
                         <div className="space-y-3">
                           <h4 className="text-sm font-medium text-muted-foreground">Interview Results</h4>
-                          <div className="space-y-3">
-                            {completedInterviews.map((rec) => (
-                              <div 
-                                key={rec.id} 
-                                className="p-3 rounded-lg border bg-muted/30"
-                                data-testid={`interview-result-${rec.id}`}
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-sm font-medium">{rec.jobTitle}</span>
-                                  <div className="flex items-center gap-1">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                      <Star
-                                        key={star}
-                                        className={cn(
-                                          "h-4 w-4",
-                                          star <= (rec.interviewScore ?? 0)
-                                            ? "fill-yellow-400 text-yellow-400"
-                                            : "text-muted-foreground"
+                          <Accordion type="single" collapsible className="w-full">
+                            {completedInterviews.map((rec) => {
+                              const parsedQuestions = parseInterviewSummary(rec.interviewSummary);
+                              return (
+                                <AccordionItem 
+                                  key={rec.id} 
+                                  value={rec.id}
+                                  className="border rounded-lg bg-muted/30 px-3 mb-2"
+                                  data-testid={`interview-result-${rec.id}`}
+                                >
+                                  <AccordionTrigger className="hover:no-underline py-3">
+                                    <div className="flex items-center justify-between w-full pr-2">
+                                      <div className="flex flex-col items-start gap-1">
+                                        <span className="text-sm font-medium">{rec.jobTitle}</span>
+                                        {rec.completedAt && (
+                                          <span className="text-xs text-muted-foreground">
+                                            Completed: {new Date(rec.completedAt).toLocaleDateString()}
+                                          </span>
                                         )}
-                                      />
-                                    ))}
-                                    <span className="ml-1 text-sm font-medium">{rec.interviewScore}/5</span>
-                                  </div>
-                                </div>
-                                {rec.interviewSummary && (
-                                  <div className="flex gap-2 text-sm text-muted-foreground">
-                                    <MessageSquare className="h-4 w-4 shrink-0 mt-0.5" />
-                                    <p>{rec.interviewSummary}</p>
-                                  </div>
-                                )}
-                                {rec.completedAt && (
-                                  <p className="text-xs text-muted-foreground mt-2">
-                                    Completed: {new Date(rec.completedAt).toLocaleDateString()}
-                                  </p>
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                                      </div>
+                                      <div className="flex items-center gap-1 mr-2">
+                                        {[1, 2, 3, 4, 5].map((star) => (
+                                          <Star
+                                            key={star}
+                                            className={cn(
+                                              "h-4 w-4",
+                                              star <= (rec.interviewScore ?? 0)
+                                                ? "fill-yellow-400 text-yellow-400"
+                                                : "text-muted-foreground"
+                                            )}
+                                          />
+                                        ))}
+                                        <span className="ml-1 text-sm font-medium">{rec.interviewScore}/5</span>
+                                      </div>
+                                    </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent className="pb-3">
+                                    {parsedQuestions.length > 0 ? (
+                                      <div className="space-y-3 pt-2">
+                                        {parsedQuestions.map((q, idx) => (
+                                          <div 
+                                            key={idx} 
+                                            className="p-3 rounded-md border bg-background"
+                                            data-testid={`interview-question-${rec.id}-${idx}`}
+                                          >
+                                            <div className="flex items-center justify-between mb-2">
+                                              <Badge className={getCategoryColor(q.category)} variant="secondary">
+                                                {q.category || "General"}
+                                              </Badge>
+                                              <div className="flex items-center gap-1">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                  <Star
+                                                    key={star}
+                                                    className={cn(
+                                                      "h-3 w-3",
+                                                      star <= (q.score ?? 0)
+                                                        ? "fill-yellow-400 text-yellow-400"
+                                                        : "text-muted-foreground"
+                                                    )}
+                                                  />
+                                                ))}
+                                                <span className="ml-1 text-xs font-medium">{q.score}/5</span>
+                                              </div>
+                                            </div>
+                                            <p className="text-sm font-medium mb-1">{q.question}</p>
+                                            {q.notes && (
+                                              <p className="text-sm text-muted-foreground">{q.notes}</p>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="text-sm text-muted-foreground pt-2">
+                                        <MessageSquare className="h-4 w-4 inline-block mr-2" />
+                                        No detailed interview notes available.
+                                      </div>
+                                    )}
+                                  </AccordionContent>
+                                </AccordionItem>
+                              );
+                            })}
+                          </Accordion>
                         </div>
                       </>
                     );
