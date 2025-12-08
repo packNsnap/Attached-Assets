@@ -13,7 +13,8 @@ import {
   insertResumeAnalysisSchema,
   insertSkillsTestSchema,
   insertSkillsTestInvitationSchema,
-  insertSkillsTestResponseSchema
+  insertSkillsTestResponseSchema,
+  insertScheduledInterviewSchema
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -637,6 +638,77 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Complete interview error:", error);
       res.status(500).json({ error: "Failed to complete interview" });
+    }
+  });
+
+  // Scheduled interviews routes
+  app.post("/api/scheduled-interviews", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const interviewData = insertScheduledInterviewSchema.parse(req.body);
+      interviewData.userId = userId;
+      const interview = await storage.createScheduledInterview(interviewData);
+      res.json(interview);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        console.error("Create scheduled interview error:", error);
+        res.status(500).json({ error: "Failed to schedule interview" });
+      }
+    }
+  });
+
+  app.get("/api/scheduled-interviews", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const interviews = await storage.getScheduledInterviews(userId);
+      res.json(interviews);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch scheduled interviews" });
+    }
+  });
+
+  app.get("/api/scheduled-interviews/candidate/:candidateId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const interviews = await storage.getScheduledInterviewsByCandidateId(req.params.candidateId, userId);
+      res.json(interviews);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch candidate interviews" });
+    }
+  });
+
+  app.patch("/api/scheduled-interviews/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const updateData = insertScheduledInterviewSchema.partial().parse(req.body);
+      const interview = await storage.updateScheduledInterview(req.params.id, userId, updateData);
+      if (!interview) {
+        res.status(404).json({ error: "Scheduled interview not found" });
+        return;
+      }
+      res.json(interview);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to update scheduled interview" });
+      }
+    }
+  });
+
+  app.delete("/api/scheduled-interviews/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const deleted = await storage.deleteScheduledInterview(req.params.id, userId);
+      if (!deleted) {
+        res.status(404).json({ error: "Scheduled interview not found" });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete scheduled interview" });
     }
   });
 

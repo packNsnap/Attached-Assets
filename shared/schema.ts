@@ -339,3 +339,31 @@ export const insertAiActionUsageSchema = createInsertSchema(aiActionUsage).omit(
 
 export type InsertAiActionUsage = z.infer<typeof insertAiActionUsageSchema>;
 export type AiActionUsage = typeof aiActionUsage.$inferSelect;
+
+export const scheduledInterviews = pgTable("scheduled_interviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  candidateId: varchar("candidate_id").notNull(),
+  candidateName: text("candidate_name").notNull(),
+  jobTitle: text("job_title").notNull(),
+  interviewType: text("interview_type").notNull().default("video"),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  duration: integer("duration").notNull().default(60),
+  interviewerName: text("interviewer_name"),
+  interviewerEmail: text("interviewer_email"),
+  location: text("location"),
+  notes: text("notes"),
+  status: text("status").notNull().default("scheduled"),
+  recommendationId: varchar("recommendation_id"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertScheduledInterviewSchema = createInsertSchema(scheduledInterviews).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  userId: z.string().optional(),
+});
+
+export type InsertScheduledInterview = z.infer<typeof insertScheduledInterviewSchema>;
+export type ScheduledInterview = typeof scheduledInterviews.$inferSelect;

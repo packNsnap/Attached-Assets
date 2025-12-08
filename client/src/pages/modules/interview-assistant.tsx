@@ -3,10 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, ChevronDown, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch, Eye, StickyNote } from "lucide-react";
+import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, ChevronDown, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch, Eye, StickyNote, Calendar, Clock, MapPin, Video, Phone, Building, Plus, X, CalendarDays } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
-import type { InterviewRecommendation } from "@shared/schema";
+import type { InterviewRecommendation, ScheduledInterview, Candidate } from "@shared/schema";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, isToday, parseISO } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,8 +28,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 
 const formSchema = z.object({
   candidateName: z.string().min(2, "Candidate name is required"),
@@ -106,11 +110,60 @@ export default function InterviewAssistantModule() {
   const [scores, setScores] = useState<Record<number, number>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [expandedInterviews, setExpandedInterviews] = useState<Set<string>>(new Set());
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    candidateId: "",
+    candidateName: "",
+    jobTitle: "",
+    interviewType: "video",
+    scheduledTime: "10:00",
+    duration: 60,
+    interviewerName: "",
+    interviewerEmail: "",
+    location: "",
+    notes: "",
+  });
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: recommendations = [] } = useQuery<InterviewRecommendation[]>({
     queryKey: ["/api/interview-recommendations"],
+  });
+
+  const { data: scheduledInterviews = [] } = useQuery<ScheduledInterview[]>({
+    queryKey: ["/api/scheduled-interviews"],
+  });
+
+  const { data: candidates = [] } = useQuery<Candidate[]>({
+    queryKey: ["/api/candidates"],
+  });
+
+  const createScheduledInterview = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/scheduled-interviews", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-interviews"] });
+      setScheduleDialogOpen(false);
+      toast({ title: "Interview Scheduled", description: "The interview has been added to the calendar." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to schedule interview.", variant: "destructive" });
+    },
+  });
+
+  const deleteScheduledInterview = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/scheduled-interviews/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/scheduled-interviews"] });
+      toast({ title: "Interview Cancelled", description: "The scheduled interview has been removed." });
+    },
   });
 
   const updateRecommendationStatus = useMutation({
@@ -321,7 +374,7 @@ export default function InterviewAssistantModule() {
       </PageHeader>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+        <TabsList className="grid w-full grid-cols-5 lg:w-[700px]">
           <TabsTrigger value="recommendations" data-testid="tab-recommendations">
             Queue
             {queueRecommendations.length > 0 && (
@@ -329,6 +382,10 @@ export default function InterviewAssistantModule() {
                 {queueRecommendations.length}
               </Badge>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="schedule" data-testid="tab-schedule">
+            <Calendar className="h-4 w-4 mr-1" />
+            Schedule
           </TabsTrigger>
           <TabsTrigger value="interview" disabled={!session} data-testid="tab-interview">
             {session ? "Active" : "Interview"}
@@ -502,6 +559,285 @@ export default function InterviewAssistantModule() {
               );})
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="schedule" className="mt-6">
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Card className="lg:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5" />
+                    Interview Calendar
+                  </CardTitle>
+                  <CardDescription>Schedule and manage upcoming interviews</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+                    <ChevronDown className="h-4 w-4 rotate-90" />
+                  </Button>
+                  <span className="text-sm font-medium min-w-[120px] text-center">
+                    {format(currentMonth, "MMMM yyyy")}
+                  </span>
+                  <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+                    <ChevronDown className="h-4 w-4 -rotate-90" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-7 gap-px bg-muted rounded-lg overflow-hidden">
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                    <div key={day} className="bg-muted-foreground/10 p-2 text-center text-xs font-medium">
+                      {day}
+                    </div>
+                  ))}
+                  {(() => {
+                    const monthStart = startOfMonth(currentMonth);
+                    const monthEnd = endOfMonth(currentMonth);
+                    const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
+                    const startPadding = monthStart.getDay();
+                    const paddedDays = [...Array(startPadding).fill(null), ...days];
+                    
+                    return paddedDays.map((day, idx) => {
+                      if (!day) {
+                        return <div key={`pad-${idx}`} className="bg-background p-2 min-h-[80px]" />;
+                      }
+                      const dayInterviews = scheduledInterviews.filter((interview) => {
+                        const interviewDate = new Date(interview.scheduledDate);
+                        return isSameDay(interviewDate, day);
+                      });
+                      return (
+                        <div
+                          key={day.toISOString()}
+                          className={cn(
+                            "bg-background p-2 min-h-[80px] cursor-pointer hover:bg-muted/50 transition-colors",
+                            isToday(day) && "ring-2 ring-primary ring-inset",
+                            !isSameMonth(day, currentMonth) && "opacity-50"
+                          )}
+                          onClick={() => {
+                            setSelectedDate(day);
+                            setScheduleDialogOpen(true);
+                          }}
+                          data-testid={`calendar-day-${format(day, "yyyy-MM-dd")}`}
+                        >
+                          <span className={cn(
+                            "text-xs font-medium",
+                            isToday(day) && "text-primary"
+                          )}>
+                            {format(day, "d")}
+                          </span>
+                          <div className="mt-1 space-y-1">
+                            {dayInterviews.slice(0, 2).map((interview) => (
+                              <div
+                                key={interview.id}
+                                className="text-xs p-1 bg-primary/10 text-primary rounded truncate"
+                                title={`${interview.candidateName} - ${interview.jobTitle}`}
+                              >
+                                {format(new Date(interview.scheduledDate), "h:mm a")} {interview.candidateName.split(" ")[0]}
+                              </div>
+                            ))}
+                            {dayInterviews.length > 2 && (
+                              <div className="text-xs text-muted-foreground">+{dayInterviews.length - 2} more</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Upcoming Interviews</CardTitle>
+                <CardDescription>Next 7 days</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[400px]">
+                  <div className="space-y-3">
+                    {scheduledInterviews
+                      .filter((i) => new Date(i.scheduledDate) >= new Date())
+                      .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
+                      .slice(0, 10)
+                      .map((interview) => (
+                        <div key={interview.id} className="p-3 border rounded-lg" data-testid={`scheduled-interview-${interview.id}`}>
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <p className="font-medium text-sm">{interview.candidateName}</p>
+                              <p className="text-xs text-muted-foreground">{interview.jobTitle}</p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Clock className="h-3 w-3" />
+                                {format(new Date(interview.scheduledDate), "MMM d, h:mm a")}
+                                <span>({interview.duration}min)</span>
+                              </div>
+                              <Badge variant="outline" className="text-xs">
+                                {interview.interviewType === "video" && <Video className="h-3 w-3 mr-1" />}
+                                {interview.interviewType === "phone" && <Phone className="h-3 w-3 mr-1" />}
+                                {interview.interviewType === "in_person" && <Building className="h-3 w-3 mr-1" />}
+                                {interview.interviewType}
+                              </Badge>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive"
+                              onClick={() => deleteScheduledInterview.mutate(interview.id)}
+                              data-testid={`delete-interview-${interview.id}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    {scheduledInterviews.filter((i) => new Date(i.scheduledDate) >= new Date()).length === 0 && (
+                      <div className="text-center text-muted-foreground py-8">
+                        <Calendar className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No upcoming interviews</p>
+                        <p className="text-xs">Click on a calendar date to schedule</p>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Schedule Interview</DialogTitle>
+                <DialogDescription>
+                  {selectedDate && `Schedule an interview for ${format(selectedDate, "EEEE, MMMM d, yyyy")}`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Candidate</label>
+                  <Select
+                    value={scheduleForm.candidateId}
+                    onValueChange={(value) => {
+                      const candidate = candidates.find((c) => c.id === value);
+                      setScheduleForm((prev) => ({
+                        ...prev,
+                        candidateId: value,
+                        candidateName: candidate?.name || "",
+                        jobTitle: candidate?.role || "",
+                      }));
+                    }}
+                  >
+                    <SelectTrigger data-testid="select-candidate">
+                      <SelectValue placeholder="Select a candidate" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {candidates.map((candidate) => (
+                        <SelectItem key={candidate.id} value={candidate.id}>
+                          {candidate.name} - {candidate.role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium">Time</label>
+                    <Input
+                      type="time"
+                      value={scheduleForm.scheduledTime}
+                      onChange={(e) => setScheduleForm((prev) => ({ ...prev, scheduledTime: e.target.value }))}
+                      data-testid="input-time"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <label className="text-sm font-medium">Duration</label>
+                    <Select
+                      value={String(scheduleForm.duration)}
+                      onValueChange={(value) => setScheduleForm((prev) => ({ ...prev, duration: parseInt(value) }))}
+                    >
+                      <SelectTrigger data-testid="select-duration">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="30">30 minutes</SelectItem>
+                        <SelectItem value="45">45 minutes</SelectItem>
+                        <SelectItem value="60">60 minutes</SelectItem>
+                        <SelectItem value="90">90 minutes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Interview Type</label>
+                  <Select
+                    value={scheduleForm.interviewType}
+                    onValueChange={(value) => setScheduleForm((prev) => ({ ...prev, interviewType: value }))}
+                  >
+                    <SelectTrigger data-testid="select-type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="video"><Video className="h-4 w-4 inline mr-2" />Video Call</SelectItem>
+                      <SelectItem value="phone"><Phone className="h-4 w-4 inline mr-2" />Phone Call</SelectItem>
+                      <SelectItem value="in_person"><Building className="h-4 w-4 inline mr-2" />In Person</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Interviewer Name</label>
+                  <Input
+                    value={scheduleForm.interviewerName}
+                    onChange={(e) => setScheduleForm((prev) => ({ ...prev, interviewerName: e.target.value }))}
+                    placeholder="e.g., John Smith"
+                    data-testid="input-interviewer"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <label className="text-sm font-medium">Notes (optional)</label>
+                  <Textarea
+                    value={scheduleForm.notes}
+                    onChange={(e) => setScheduleForm((prev) => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Any additional notes..."
+                    data-testid="input-notes"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>Cancel</Button>
+                <Button
+                  onClick={() => {
+                    if (!selectedDate || !scheduleForm.candidateId) {
+                      toast({ title: "Error", description: "Please select a candidate", variant: "destructive" });
+                      return;
+                    }
+                    const [hours, minutes] = scheduleForm.scheduledTime.split(":").map(Number);
+                    const scheduledDate = new Date(selectedDate);
+                    scheduledDate.setHours(hours, minutes, 0, 0);
+                    
+                    createScheduledInterview.mutate({
+                      candidateId: scheduleForm.candidateId,
+                      candidateName: scheduleForm.candidateName,
+                      jobTitle: scheduleForm.jobTitle,
+                      interviewType: scheduleForm.interviewType,
+                      scheduledDate: scheduledDate.toISOString(),
+                      duration: scheduleForm.duration,
+                      interviewerName: scheduleForm.interviewerName || null,
+                      interviewerEmail: scheduleForm.interviewerEmail || null,
+                      location: scheduleForm.location || null,
+                      notes: scheduleForm.notes || null,
+                    });
+                  }}
+                  disabled={createScheduledInterview.isPending}
+                  data-testid="button-schedule"
+                >
+                  {createScheduledInterview.isPending ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Scheduling...</>
+                  ) : (
+                    <><Plus className="mr-2 h-4 w-4" />Schedule Interview</>
+                  )}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="manual" className="mt-6">
