@@ -468,7 +468,8 @@ export default function CandidatesModule() {
       
       const res = await fetch("/api/upload-resume", {
         method: "POST",
-        body: formData
+        body: formData,
+        credentials: "include"
       });
       if (!res.ok) {
         const error = await res.json();
