@@ -232,21 +232,25 @@ export default function SkillsTestModule() {
   const [isSendingToInterview, setIsSendingToInterview] = useState(false);
   
   const handleSendForInterview = async (candidateId: string | null | undefined, candidateName: string, jobTitle: string, testScore: number | null) => {
-    if (!candidateId || isSendingToInterview) return;
+    if (isSendingToInterview) return;
     setIsSendingToInterview(true);
     try {
-      const stageRes = await fetch(`/api/candidates/${candidateId}/stage`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stage: "Interview" }),
-      });
-      if (!stageRes.ok) throw new Error("Failed to update stage");
+      // If we have a candidateId, update their stage
+      if (candidateId) {
+        const stageRes = await fetch(`/api/candidates/${candidateId}/stage`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ stage: "Interview" }),
+        });
+        if (!stageRes.ok) throw new Error("Failed to update stage");
+      }
       
+      // Create interview recommendation (works with or without candidateId)
       const interviewRes = await fetch("/api/interview-recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          candidateId,
+          candidateId: candidateId || null,
           candidateName,
           jobTitle,
           testScore: testScore ?? 0,
@@ -260,6 +264,7 @@ export default function SkillsTestModule() {
       
       toast({ title: "Sent for Interview", description: `${candidateName} has been added to the Interview queue.` });
       setViewResultsInvitation(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/interview-recommendations"] });
     } catch (e) {
       toast({ title: "Error", description: "Failed to send for interview", variant: "destructive" });
     } finally {
@@ -1046,26 +1051,24 @@ HR Team`
                     </>
                   )}
                 </Button>
-                {viewResultsInvitation.candidateId && (
-                  <Button
-                    size="sm"
-                    onClick={() => handleSendForInterview(viewResultsInvitation.candidateId, viewResultsInvitation.candidateName, viewResultsInvitation.jobTitle, viewResultsInvitation.score)}
-                    disabled={isSendingToInterview}
-                    data-testid="button-send-interview"
-                  >
-                    {isSendingToInterview ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <ArrowRight className="h-4 w-4 mr-2" />
-                        Send for Interview
-                      </>
-                    )}
-                  </Button>
-                )}
+                <Button
+                  size="sm"
+                  onClick={() => handleSendForInterview(viewResultsInvitation.candidateId, viewResultsInvitation.candidateName, viewResultsInvitation.jobTitle, viewResultsInvitation.score)}
+                  disabled={isSendingToInterview}
+                  data-testid="button-send-interview"
+                >
+                  {isSendingToInterview ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      Send for Interview
+                    </>
+                  )}
+                </Button>
                 <div className="text-right text-sm text-muted-foreground ml-2">
                   <p>Submitted</p>
                   <p>{viewResultsInvitation.completedAt 
