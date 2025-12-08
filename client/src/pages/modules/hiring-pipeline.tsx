@@ -94,7 +94,8 @@ export default function HiringPipelineModule() {
       const res = await fetch("/api/jobs-with-candidates");
       if (!res.ok) throw new Error("Failed to fetch jobs");
       return res.json() as Promise<JobWithCandidates[]>;
-    }
+    },
+    refetchInterval: 5000,
   });
 
   const { data: candidates = [], isLoading } = useQuery({
@@ -103,7 +104,8 @@ export default function HiringPipelineModule() {
       const res = await fetch("/api/candidates");
       if (!res.ok) throw new Error("Failed to fetch candidates");
       return res.json() as Promise<Candidate[]>;
-    }
+    },
+    refetchInterval: 5000,
   });
 
   const { data: unreadNotesData = [] } = useQuery({
@@ -113,7 +115,7 @@ export default function HiringPipelineModule() {
       if (!res.ok) throw new Error("Failed to fetch unread notes");
       return res.json() as Promise<{ candidateId: string; unreadCount: number }[]>;
     },
-    refetchInterval: 30000
+    refetchInterval: 5000,
   });
 
   const unreadNotesMap = unreadNotesData.reduce((acc, item) => {

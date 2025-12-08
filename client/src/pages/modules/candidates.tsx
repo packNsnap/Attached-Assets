@@ -143,7 +143,8 @@ export default function CandidatesModule() {
       const res = await fetch("/api/jobs-with-candidates");
       if (!res.ok) throw new Error("Failed to fetch jobs");
       return res.json() as Promise<JobWithCandidates[]>;
-    }
+    },
+    refetchInterval: 5000,
   });
 
   const { data: candidates = [], isLoading } = useQuery({
@@ -152,7 +153,8 @@ export default function CandidatesModule() {
       const res = await fetch("/api/candidates");
       if (!res.ok) throw new Error("Failed to fetch candidates");
       return res.json() as Promise<Candidate[]>;
-    }
+    },
+    refetchInterval: 5000,
   });
 
   const { data: notes = [] } = useQuery({
@@ -315,6 +317,7 @@ export default function CandidatesModule() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["candidates-with-resumes"] });
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
       setAddDialogOpen(false);
       setNewCandidate({
@@ -501,6 +504,7 @@ export default function CandidatesModule() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["candidates-with-resumes"] });
       queryClient.invalidateQueries({ queryKey: ["candidate-documents", selectedCandidate?.id] });
       if (selectedCandidate) setSelectedCandidate(data.candidate);
       setResumeFile(null);

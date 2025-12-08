@@ -197,7 +197,8 @@ export default function ResumeAnalyzerModule() {
       const res = await fetch("/api/candidates");
       if (!res.ok) throw new Error("Failed to fetch candidates");
       return res.json();
-    }
+    },
+    refetchInterval: 5000,
   });
 
   const recommendMutation = useMutation({

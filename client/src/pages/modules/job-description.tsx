@@ -100,7 +100,8 @@ export default function JobDescriptionModule() {
       const res = await fetch("/api/jobs-with-candidates");
       if (!res.ok) throw new Error("Failed to fetch jobs");
       return res.json() as Promise<JobWithCandidates[]>;
-    }
+    },
+    refetchInterval: 5000,
   });
 
   const { data: allCandidates = [] } = useQuery({
@@ -109,7 +110,8 @@ export default function JobDescriptionModule() {
       const res = await fetch("/api/candidates");
       if (!res.ok) throw new Error("Failed to fetch candidates");
       return res.json();
-    }
+    },
+    refetchInterval: 5000,
   });
 
   const unassignedCandidateCount = allCandidates.filter((c: any) => !c.jobId).length;

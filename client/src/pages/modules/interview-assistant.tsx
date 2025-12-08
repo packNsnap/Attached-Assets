@@ -130,14 +130,17 @@ export default function InterviewAssistantModule() {
 
   const { data: recommendations = [] } = useQuery<InterviewRecommendation[]>({
     queryKey: ["/api/interview-recommendations"],
+    refetchInterval: 5000,
   });
 
   const { data: scheduledInterviews = [] } = useQuery<ScheduledInterview[]>({
     queryKey: ["/api/scheduled-interviews"],
+    refetchInterval: 5000,
   });
 
   const { data: candidates = [] } = useQuery<Candidate[]>({
     queryKey: ["/api/candidates"],
+    refetchInterval: 5000,
   });
 
   const createScheduledInterview = useMutation({
