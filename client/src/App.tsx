@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import Dashboard from "@/pages/home-page";
+import LandingPage from "@/pages/landing-page";
 import { Layout } from "@/components/layout/Layout";
 import JobDescriptionModule from "@/pages/modules/job-description";
 import ResumeAnalyzerModule from "@/pages/modules/resume-analyzer";
@@ -23,6 +24,7 @@ import SkillsTestPublic from "@/pages/public/SkillsTestPublic";
 function Router() {
   return (
     <Switch>
+      <Route path="/" component={LandingPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/test/:token" component={SkillsTestPublic} />
       
@@ -30,7 +32,7 @@ function Router() {
       <Route>
         <Layout>
           <Switch>
-            <Route path="/" component={Dashboard} />
+            <Route path="/dashboard" component={Dashboard} />
             <Route path="/jobs" component={JobDescriptionModule} />
             <Route path="/resume-analyzer" component={ResumeAnalyzerModule} />
             <Route path="/skills-test" component={SkillsTestModule} />

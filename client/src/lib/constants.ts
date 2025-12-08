@@ -18,7 +18,7 @@ export const APP_NAME = "HR Nexus";
 export const MODULES = [
   {
     title: "Dashboard",
-    path: "/",
+    path: "/dashboard",
     icon: LayoutDashboard,
     description: "Overview of your HR activities"
   },

@@ -39,7 +39,7 @@ export default function AuthPage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     // Mock login - in a real app this would hit an API
     console.log(values);
-    setLocation("/");
+    setLocation("/dashboard");
   }
 
   return (
