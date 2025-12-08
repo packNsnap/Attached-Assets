@@ -185,7 +185,7 @@ export default function SkillsTestModule() {
   });
 
   const createInvitation = useMutation({
-    mutationFn: async (data: { testId: string; candidateName: string; candidateEmail: string; jobTitle: string }) => {
+    mutationFn: async (data: { testId: string; candidateId?: string | null; candidateName: string; candidateEmail: string; jobTitle: string }) => {
       const res = await fetch("/api/skills-test-invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -783,7 +783,7 @@ export default function SkillsTestModule() {
                               <div className="space-y-2 mt-2">
                                 {q.options.map((opt, i) => (
                                   <div key={i} className="flex items-center gap-2">
-                                    <div className={`w-1 h-6 rounded ${i === q.correctIndex ? 'bg-green-500' : 'bg-muted'}`} />
+                                    <div className={`w-1 h-6 rounded ${i === (q as any).bestAnswerIndex ? 'bg-green-500' : 'bg-muted'}`} />
                                     <Input
                                       value={opt}
                                       onChange={(e) => {
@@ -829,6 +829,7 @@ export default function SkillsTestModule() {
                         if (selectedRecommendation && candidateEmail && testId) {
                           createInvitation.mutate({
                             testId,
+                            candidateId: selectedRecommendation.candidateId,
                             candidateName: selectedRecommendation.candidateName,
                             candidateEmail,
                             jobTitle: selectedRecommendation.jobTitle,
