@@ -67,19 +67,19 @@ export interface IStorage {
   upsertUser(userData: UpsertUser): Promise<User>;
   
   createJob(job: InsertJob): Promise<Job>;
-  getJobs(): Promise<Job[]>;
+  getJobs(userId: string): Promise<Job[]>;
   getJob(id: string): Promise<Job | undefined>;
   updateJob(id: string, data: Partial<InsertJob>): Promise<Job | undefined>;
   deleteJob(id: string): Promise<boolean>;
   
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
-  getCandidates(): Promise<Candidate[]>;
+  getCandidates(userId: string): Promise<Candidate[]>;
   getCandidate(id: string): Promise<Candidate | undefined>;
-  getCandidatesByJobId(jobId: string): Promise<Candidate[]>;
+  getCandidatesByJobId(jobId: string, userId: string): Promise<Candidate[]>;
   updateCandidateStage(id: string, stage: string): Promise<Candidate | undefined>;
   updateCandidateJobId(id: string, jobId: string | null): Promise<Candidate | undefined>;
   
-  getJobsWithCandidateCounts(): Promise<(Job & { candidateCount: number })[]>;
+  getJobsWithCandidateCounts(userId: string): Promise<(Job & { candidateCount: number })[]>;
   
   createInterviewNote(note: InsertInterviewNote): Promise<InterviewNote>;
   getInterviewNotesByCandidateId(candidateId: string): Promise<InterviewNote[]>;
@@ -121,7 +121,7 @@ export interface IStorage {
   
   createSkillsTest(test: InsertSkillsTest): Promise<SkillsTest>;
   getSkillsTest(id: string): Promise<SkillsTest | undefined>;
-  getSkillsTests(): Promise<SkillsTest[]>;
+  getSkillsTests(userId: string): Promise<SkillsTest[]>;
   
   createSkillsTestInvitation(invitation: InsertSkillsTestInvitation): Promise<SkillsTestInvitation>;
   getSkillsTestInvitation(id: string): Promise<SkillsTestInvitation | undefined>;
@@ -200,8 +200,8 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getJobs(): Promise<Job[]> {
-    return await db.select().from(jobs);
+  async getJobs(userId: string): Promise<Job[]> {
+    return await db.select().from(jobs).where(eq(jobs.userId, userId));
   }
 
   async getJob(id: string): Promise<Job | undefined> {
@@ -224,8 +224,8 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getCandidates(): Promise<Candidate[]> {
-    return await db.select().from(candidates);
+  async getCandidates(userId: string): Promise<Candidate[]> {
+    return await db.select().from(candidates).where(eq(candidates.userId, userId));
   }
 
   async getCandidate(id: string): Promise<Candidate | undefined> {
@@ -242,8 +242,8 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getCandidatesByJobId(jobId: string): Promise<Candidate[]> {
-    return await db.select().from(candidates).where(eq(candidates.jobId, jobId));
+  async getCandidatesByJobId(jobId: string, userId: string): Promise<Candidate[]> {
+    return await db.select().from(candidates).where(and(eq(candidates.jobId, jobId), eq(candidates.userId, userId)));
   }
 
   async updateCandidateJobId(id: string, jobId: string | null): Promise<Candidate | undefined> {
@@ -255,9 +255,9 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getJobsWithCandidateCounts(): Promise<(Job & { candidateCount: number })[]> {
-    const allJobs = await db.select().from(jobs).orderBy(desc(jobs.createdAt));
-    const allCandidates = await db.select().from(candidates);
+  async getJobsWithCandidateCounts(userId: string): Promise<(Job & { candidateCount: number })[]> {
+    const allJobs = await db.select().from(jobs).where(eq(jobs.userId, userId)).orderBy(desc(jobs.createdAt));
+    const allCandidates = await db.select().from(candidates).where(eq(candidates.userId, userId));
     
     return allJobs.map(job => ({
       ...job,
@@ -430,8 +430,8 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getSkillsTests(): Promise<SkillsTest[]> {
-    return await db.select().from(skillsTests).orderBy(desc(skillsTests.createdAt));
+  async getSkillsTests(userId: string): Promise<SkillsTest[]> {
+    return await db.select().from(skillsTests).where(eq(skillsTests.userId, userId)).orderBy(desc(skillsTests.createdAt));
   }
 
   async createSkillsTestInvitation(invitation: InsertSkillsTestInvitation): Promise<SkillsTestInvitation> {
@@ -606,8 +606,8 @@ export class DatabaseStorage implements IStorage {
     const plan = (sub.plan as PlanType) || "starter";
     const limits = PLAN_LIMITS[plan];
     
-    // Get active jobs count
-    const allJobs = await this.getJobs();
+    // Get active jobs count for this user
+    const allJobs = await this.getJobs(userId);
     const activeJobs = allJobs.filter(j => j.status === "active").length;
     
     if (limits.jobs === -1) {
@@ -659,7 +659,7 @@ export class DatabaseStorage implements IStorage {
     
     const usage = await this.getOrCreateCurrentUsageTracking(userId);
     
-    const allJobs = await this.getJobs();
+    const allJobs = await this.getJobs(userId);
     const activeJobs = allJobs.filter(j => j.status === "active").length;
     
     return {

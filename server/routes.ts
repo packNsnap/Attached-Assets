@@ -251,9 +251,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs", async (req, res) => {
+  app.get("/api/jobs", isAuthenticated, async (req: any, res) => {
     try {
-      const jobs = await storage.getJobs();
+      const userId = req.user.claims.sub;
+      const jobs = await storage.getJobs(userId);
       res.json(jobs);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch jobs" });
@@ -359,9 +360,10 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/candidates", async (req, res) => {
+  app.get("/api/candidates", isAuthenticated, async (req: any, res) => {
     try {
-      const candidates = await storage.getCandidates();
+      const userId = req.user.claims.sub;
+      const candidates = await storage.getCandidates(userId);
       res.json(candidates);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch candidates" });
@@ -434,18 +436,20 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/jobs/:id/candidates", async (req, res) => {
+  app.get("/api/jobs/:id/candidates", isAuthenticated, async (req: any, res) => {
     try {
-      const candidates = await storage.getCandidatesByJobId(req.params.id);
+      const userId = req.user.claims.sub;
+      const candidates = await storage.getCandidatesByJobId(req.params.id, userId);
       res.json(candidates);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch candidates for job" });
     }
   });
 
-  app.get("/api/jobs-with-candidates", async (req, res) => {
+  app.get("/api/jobs-with-candidates", isAuthenticated, async (req: any, res) => {
     try {
-      const jobsWithCounts = await storage.getJobsWithCandidateCounts();
+      const userId = req.user.claims.sub;
+      const jobsWithCounts = await storage.getJobsWithCandidateCounts(userId);
       res.json(jobsWithCounts);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch jobs with candidate counts" });
@@ -1298,9 +1302,10 @@ Make the description professional but engaging. Use bullet points for responsibi
     }
   });
 
-  app.get("/api/skills-tests", async (req, res) => {
+  app.get("/api/skills-tests", isAuthenticated, async (req: any, res) => {
     try {
-      const tests = await storage.getSkillsTests();
+      const userId = req.user.claims.sub;
+      const tests = await storage.getSkillsTests(userId);
       res.json(tests);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch skills tests" });
