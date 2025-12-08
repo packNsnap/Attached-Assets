@@ -1,0 +1,67 @@
+2. Build a real scoring framework (not vibes)
+Right now your “Fit Score” & “Risk Score” are probably loose. If you want people to trust them, you need a clear formula, even if GPT helps.
+Example:
+Fit Score (0–100)
+Let:
+•	skills_match (0–100)
+•	experience_years_match (0–100)
+•	industry_match (0–100)
+You decide weights:
+Fit = 0.5 * skills_match + 0.3 * experience_years_match + 0.2 * industry_match
+You can have GPT rate each dimension, but you control the combination.
+Risk / Logic Score (0–100)
+Break into factors:
+•	Timeline consistency (no overlaps, believable durations)
+•	Promotion realism
+•	Job-hopping frequency
+•	Vibe of accomplishments (specific vs vague)
+•	AI/generic language score
+Example:
+Risk = 0.3 * timeline_risk +
+       0.2 * promotion_risk +
+       0.2 * job_hop_risk +
+       0.15 * vagueness_risk +
+       0.15 * ai_style_risk
+You can compute some of these with hard rules:
+•	Overlap > 6 months ⇒ timeline_risk 80+
+•	5 jobs in 4 years ⇒ job_hop_risk 60+
+•	Title jump from “Junior” to “Director” in < 2 years ⇒ promotion_risk 80+
+Then let GPT refine/justify – but your rules make it consistent.
+________________________________________
+3. Timeline & promotions: make it visual and explicit
+This is where your “Logic” angle can shine without being a CRA.
+What to add:
+•	Build a simple timeline visual:
+o	Each job: bar from start to end.
+o	Color overlap in red.
+•	Label each transition:
+o	Junior → Mid → Senior → Lead → Manager → Director → VP → C-level
+•	Compute:
+o	Average time per level
+o	Total experience in target domain
+o	Longest gap
+In the UI, show:
+•	“3 employers in last 2 years (potential job-hopping)”
+•	“8-month unexplained gap between roles”
+•	“Jump from Analyst → VP in 18 months (outlier; check manually)”
+Then in the AI summary, explicitly point back to these facts.
+________________________________________
+4. Skills & JD matching: make it more specific
+Right now you’re likely doing generic “matches many skills / missing a few.” That’s not enough.
+Improvements:
+1.	Extract and normalize skills into categories
+o	Hard skills (Python, Excel, React)
+o	Domain skills (logistics, payroll, compliance)
+o	Soft skills (leadership, communication)
+2.	From the job description, extract:
+o	Must-have skills
+o	Nice-to-have skills
+o	Years required
+o	Domain/industry
+3.	In your UI:
+o	Show 3 lists:
+	✅ Matched must-have skills
+	⚠️ Missing must-have skills
+	➕ Bonus/extra skills
+4.	Have GPT fill the lists but you keep the UI structure.
+This makes the “Fit” feel real, not hand-wavy.
