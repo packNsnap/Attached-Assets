@@ -216,18 +216,9 @@ export default function SkillsTestPublic() {
                 <Award className="h-10 w-10 text-white" />
               </div>
               <h2 className="mt-6 text-2xl font-bold">Test Submitted!</h2>
-              <p className="mt-2 text-muted-foreground">
+              <p className="mt-3 text-muted-foreground leading-relaxed">
                 Thank you for completing the {data.test.roleName} assessment.
               </p>
-              <div className="mt-8 relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl" />
-                <div className="relative p-6 rounded-2xl border border-green-200/50">
-                  <p className="text-sm text-muted-foreground font-medium">Your Score</p>
-                  <p className="text-5xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mt-2">
-                    {submissionResult.score}%
-                  </p>
-                </div>
-              </div>
               <p className="mt-6 text-sm text-muted-foreground">
                 The employer will review your results and contact you if they'd like to proceed.
               </p>
