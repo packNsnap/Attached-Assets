@@ -114,6 +114,7 @@ export interface IStorage {
   getCandidateAssessments(candidateId: string): Promise<{
     resumeAnalysis: ResumeAnalysis[];
     skillsTests: SkillsTestRecommendation[];
+    skillsTestInvitations: SkillsTestInvitation[];
     interviews: InterviewRecommendation[];
   }>;
   
@@ -403,17 +404,20 @@ export class DatabaseStorage implements IStorage {
   async getCandidateAssessments(candidateId: string): Promise<{
     resumeAnalysis: ResumeAnalysis[];
     skillsTests: SkillsTestRecommendation[];
+    skillsTestInvitations: SkillsTestInvitation[];
     interviews: InterviewRecommendation[];
   }> {
-    const [resumeResults, skillsResults, interviewResults] = await Promise.all([
+    const [resumeResults, skillsResults, invitationResults, interviewResults] = await Promise.all([
       this.getResumeAnalysisByCandidateId(candidateId),
       this.getSkillsTestRecommendationsByCandidateId(candidateId),
+      this.getSkillsTestInvitationsByCandidateId(candidateId),
       this.getInterviewRecommendationsByCandidateId(candidateId)
     ]);
     
     return {
       resumeAnalysis: resumeResults,
       skillsTests: skillsResults,
+      skillsTestInvitations: invitationResults,
       interviews: interviewResults
     };
   }
