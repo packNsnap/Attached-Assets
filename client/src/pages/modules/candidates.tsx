@@ -227,8 +227,6 @@ export default function CandidatesModule() {
     enabled: !!viewTestResultsInvitation
   });
 
-  const [isRerunningAnalysis, setIsRerunningAnalysis] = useState(false);
-
   const handleRescore = async (invitationId: string) => {
     if (isRescoring) return;
     setIsRescoring(true);
@@ -251,42 +249,6 @@ export default function CandidatesModule() {
       setIsRescoring(false);
     }
   };
-
-  const rerunAnalysisMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedCandidate) throw new Error("No candidate selected");
-      const resumeDoc = documents.find(d => d.documentType === "Resume" && d.resumeText);
-      if (!resumeDoc?.resumeText) throw new Error("No resume text found");
-      
-      const assignedJob = jobs.find(j => j.id === selectedCandidate.jobId);
-      
-      setIsRerunningAnalysis(true);
-      const res = await fetch("/api/analyze-resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resumeText: resumeDoc.resumeText,
-          jobDescription: assignedJob?.description || "",
-          jobSkills: assignedJob?.skills || [],
-          jobTitle: assignedJob?.title || selectedCandidate.role,
-          jobLevel: assignedJob?.level || "",
-          candidateId: selectedCandidate.id,
-          jobId: assignedJob?.id
-        })
-      });
-      if (!res.ok) throw new Error("Failed to analyze resume");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["resume-analysis", selectedCandidate?.id] });
-      toast({ title: "Analysis Complete", description: "Resume has been re-analyzed." });
-      setIsRerunningAnalysis(false);
-    },
-    onError: (error) => {
-      toast({ title: "Error", description: error.message || "Failed to analyze resume", variant: "destructive" });
-      setIsRerunningAnalysis(false);
-    }
-  });
 
   useEffect(() => {
     if (candidates.length > 0 && searchString) {
@@ -1113,23 +1075,6 @@ export default function CandidatesModule() {
                 <TabsContent value="analysis" className="px-6 pb-6 space-y-4 mt-4">
                   <div className="flex items-center justify-between">
                     <h4 className="text-sm font-medium text-muted-foreground">Resume Analysis</h4>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => rerunAnalysisMutation.mutate()}
-                      disabled={isRerunningAnalysis || !documents.some(d => d.documentType === "Resume" && d.resumeText)}
-                      data-testid="button-rerun-analysis"
-                    >
-                      {isRerunningAnalysis ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" /> Analyzing...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-1" /> Run Analysis
-                        </>
-                      )}
-                    </Button>
                   </div>
 
                   {analysisLoading ? (
@@ -1142,10 +1087,7 @@ export default function CandidatesModule() {
                         <BarChart3 className="h-8 w-8 mx-auto text-muted-foreground/50" />
                         <p className="text-sm text-muted-foreground">No resume analysis yet.</p>
                         <p className="text-xs text-muted-foreground">
-                          {documents.some(d => d.documentType === "Resume" && d.resumeText) 
-                            ? "Click 'Run Analysis' to analyze the candidate's resume."
-                            : "Upload a resume first to run analysis."
-                          }
+                          Go to Resume Logic Analyzer to run analysis on this candidate's resume.
                         </p>
                       </div>
                     </Card>
