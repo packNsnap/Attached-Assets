@@ -851,13 +851,29 @@ export default function SkillsTestModule() {
                   <>
                     <Card className="bg-green-50 border-green-200">
                       <CardContent className="py-4">
-                        <div className="flex items-center gap-2 text-green-700 mb-2">
+                        <div className="flex items-center gap-2 text-green-700 mb-3">
                           <CheckCircle2 className="h-5 w-5" />
                           <span className="font-medium">Test Link Ready!</span>
                         </div>
-                        <code className="block text-xs break-all bg-white p-2 rounded border mt-2">
-                          {generatedInvitation.testLink}
-                        </code>
+                        <div className="relative">
+                          <Input
+                            readOnly
+                            value={generatedInvitation.testLink}
+                            className="pr-20 text-sm bg-white font-mono"
+                            onClick={(e) => (e.target as HTMLInputElement).select()}
+                            data-testid="input-test-link"
+                          />
+                          <a
+                            href={generatedInvitation.testLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                            data-testid="link-open-test"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Open
+                          </a>
+                        </div>
                       </CardContent>
                     </Card>
 
