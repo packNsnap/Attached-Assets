@@ -38,6 +38,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -744,7 +745,7 @@ export default function SkillsTestModule() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium">{generatedTest.roleName}</h3>
-                    <p className="text-sm text-muted-foreground">{generatedTest.questions.length} questions</p>
+                    <p className="text-sm text-muted-foreground">{generatedTest.questions.length} questions • Click to edit</p>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => setWorkflowStep("configure")}>
                     <RotateCcw className="mr-2 h-4 w-4" />
@@ -752,32 +753,53 @@ export default function SkillsTestModule() {
                   </Button>
                 </div>
 
-                <div className="space-y-3">
-                  {generatedTest.questions.map((q, idx) => (
-                    <Card key={q.id}>
-                      <CardContent className="py-4">
-                        <div className="flex items-start gap-3">
-                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-medium text-primary">{idx + 1}</span>
-                          </div>
-                          <div className="flex-1 space-y-2">
-                            <p className="text-sm">{q.text}</p>
-                            {q.skill && (
-                              <Badge variant="outline" className="text-xs">{q.skill}</Badge>
-                            )}
-                            <div className="space-y-1 mt-2">
-                              {q.options.map((opt, i) => (
-                                <p key={i} className="text-xs text-muted-foreground pl-2 border-l-2 border-muted">
-                                  {opt}
-                                </p>
-                              ))}
+                <ScrollArea className="h-[350px] pr-2">
+                  <div className="space-y-3">
+                    {generatedTest.questions.map((q, idx) => (
+                      <Card key={q.id}>
+                        <CardContent className="py-4">
+                          <div className="flex items-start gap-3">
+                            <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-medium text-primary">{idx + 1}</span>
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <Textarea
+                                value={q.text}
+                                onChange={(e) => {
+                                  const updated = { ...generatedTest };
+                                  updated.questions[idx].text = e.target.value;
+                                  setGeneratedTest(updated);
+                                }}
+                                className="text-sm min-h-[60px] resize-none"
+                                data-testid={`input-question-${idx}`}
+                              />
+                              {q.skill && (
+                                <Badge variant="outline" className="text-xs">{q.skill}</Badge>
+                              )}
+                              <div className="space-y-2 mt-2">
+                                {q.options.map((opt, i) => (
+                                  <div key={i} className="flex items-center gap-2">
+                                    <div className={`w-1 h-6 rounded ${i === q.correctIndex ? 'bg-green-500' : 'bg-muted'}`} />
+                                    <Input
+                                      value={opt}
+                                      onChange={(e) => {
+                                        const updated = { ...generatedTest };
+                                        updated.questions[idx].options[i] = e.target.value;
+                                        setGeneratedTest(updated);
+                                      }}
+                                      className="text-xs h-8"
+                                      data-testid={`input-option-${idx}-${i}`}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </ScrollArea>
               </div>
             )}
 
