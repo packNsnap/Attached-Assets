@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, UserCheck, Copy, Mail, Send, FileText, Link, ExternalLink, CheckCircle2, User, Briefcase, Building } from "lucide-react";
+import { Loader2, UserCheck, Copy, Mail, Send, FileText, Link, ExternalLink, CheckCircle2, User, Briefcase, Building, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import type { Candidate } from "@shared/schema";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
 import {
