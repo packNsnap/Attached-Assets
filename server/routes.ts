@@ -2626,6 +2626,18 @@ Respond in this exact JSON format:
         submittedAt: new Date()
       });
 
+      // Also save to candidate references if candidateId exists
+      if (referenceRequest.candidateId) {
+        await storage.createCandidateReference({
+          candidateId: referenceRequest.candidateId,
+          referenceName,
+          referenceEmail,
+          relationship: referenceRelationship,
+          consentGiven: "true",
+          source: "candidate_link"
+        });
+      }
+
       res.json({
         success: true,
         message: "Reference details submitted successfully. Thank you!"

@@ -40,6 +40,7 @@ const formSchema = z.object({
   referenceRelationship: z.string().optional(),
   templateType: z.string().optional(),
   resumeText: z.string().optional(),
+  candidateEmail: z.string().email("Valid email required").optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,6 +58,7 @@ type GeneratedResult = {
   questions: string[] | null;
   mailtoTemplate: string | null;
   candidateLinkRequestText: string | null;
+  candidateEmail: string | null;
 } | null;
 
 export default function ReferenceCheckModule() {
@@ -82,6 +84,7 @@ export default function ReferenceCheckModule() {
       referenceRelationship: "",
       templateType: "formal",
       resumeText: "",
+      candidateEmail: "",
     },
   });
 
@@ -92,6 +95,9 @@ export default function ReferenceCheckModule() {
     if (candidate) {
       form.setValue("candidateName", candidate.name);
       form.setValue("position", candidate.role);
+      if (candidate.email) {
+        form.setValue("candidateEmail", candidate.email);
+      }
       
       setIsLoadingResume(true);
       try {
@@ -138,7 +144,7 @@ export default function ReferenceCheckModule() {
       }
 
       const data = await response.json();
-      setResult(data);
+      setResult({ ...data, candidateEmail: values.candidateEmail || null });
       toast({
         title: "Reference Check Generated",
         description: mode === "request_link" 
@@ -167,6 +173,13 @@ export default function ReferenceCheckModule() {
   const openMailClient = () => {
     if (!result?.mailtoTemplate) return;
     window.open(result.mailtoTemplate, "_blank");
+  };
+
+  const openOutlookForCandidate = () => {
+    if (!result?.candidateLinkRequestText || !result?.candidateEmail) return;
+    const subject = encodeURIComponent(`Reference Request for ${form.getValues("candidateName")} - ${form.getValues("position")}`);
+    const body = encodeURIComponent(result.candidateLinkRequestText);
+    window.open(`mailto:${result.candidateEmail}?subject=${subject}&body=${body}`, "_blank");
   };
 
   const module = getModuleByPath("/references");
@@ -262,6 +275,22 @@ export default function ReferenceCheckModule() {
                       </FormItem>
                     )}
                   />
+
+                  {mode === "request_link" && (
+                    <FormField
+                      control={form.control}
+                      name="candidateEmail"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Candidate Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="candidate@email.com" {...field} data-testid="input-candidate-email" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
 
                   {mode === "from_form" && (
                     <>
@@ -412,15 +441,27 @@ export default function ReferenceCheckModule() {
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
                         <CardTitle className="text-lg">Candidate Link Request</CardTitle>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => copyToClipboard(result.candidateLinkRequestText!, "Link request text")} 
-                          data-testid="button-copy-link-request"
-                        >
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => copyToClipboard(result.candidateLinkRequestText!, "Link request text")} 
+                            data-testid="button-copy-link-request"
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy
+                          </Button>
+                          {result.candidateEmail && (
+                            <Button 
+                              size="sm" 
+                              onClick={openOutlookForCandidate}
+                              data-testid="button-open-outlook"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-2" />
+                              Open in Outlook
+                            </Button>
+                          )}
+                        </div>
                       </div>
                       <CardDescription>Send this to the candidate to request their references</CardDescription>
                     </CardHeader>
