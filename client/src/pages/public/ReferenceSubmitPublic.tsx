@@ -261,7 +261,7 @@ export default function ReferenceSubmitPublic() {
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel>
-                            I confirm that I agree to be contacted as a reference for {requestData.candidateName}
+                            I confirm that I have permission from my reference to share their contact information
                           </FormLabel>
                           <FormMessage />
                         </div>
