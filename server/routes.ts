@@ -484,10 +484,21 @@ export async function registerRoutes(
     try {
       const userId = req.user.claims.sub;
       const { isActive, isArchived } = req.body;
-      if (!isActive || !isArchived) {
-        res.status(400).json({ error: "isActive and isArchived are required" });
+      
+      // Validate isActive - must be "active" or "deactivated"
+      const validIsActive = ["active", "deactivated"];
+      if (!isActive || !validIsActive.includes(isActive)) {
+        res.status(400).json({ error: "isActive must be 'active' or 'deactivated'" });
         return;
       }
+      
+      // Validate isArchived - must be "true" or "false"
+      const validIsArchived = ["true", "false"];
+      if (!isArchived || !validIsArchived.includes(isArchived)) {
+        res.status(400).json({ error: "isArchived must be 'true' or 'false'" });
+        return;
+      }
+      
       const candidate = await storage.updateCandidateStatus(req.params.id, userId, isActive, isArchived);
       if (!candidate) {
         res.status(404).json({ error: "Candidate not found" });

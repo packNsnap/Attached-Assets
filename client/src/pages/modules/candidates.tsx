@@ -27,7 +27,10 @@ import {
   AlertTriangle,
   Loader2,
   Star,
-  MessageSquare
+  MessageSquare,
+  Archive,
+  UserX,
+  UserCheck
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
@@ -112,6 +115,7 @@ export default function CandidatesModule() {
   const [searchQuery, setSearchQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [jobFilter, setJobFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
   const searchString = useSearch();
@@ -486,7 +490,19 @@ export default function CandidatesModule() {
       c.role.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStage = stageFilter === "all" || c.stage === stageFilter;
     const matchesJob = jobFilter === "all" || (jobFilter === "unassigned" ? !c.jobId : c.jobId === jobFilter);
-    return matchesSearch && matchesStage && matchesJob;
+    
+    const candidateIsActive = (c as any).isActive || "active";
+    const candidateIsArchived = (c as any).isArchived || "false";
+    let matchesStatus = true;
+    if (statusFilter === "active") {
+      matchesStatus = candidateIsActive === "active" && candidateIsArchived === "false";
+    } else if (statusFilter === "deactivated") {
+      matchesStatus = candidateIsActive === "deactivated" && candidateIsArchived === "false";
+    } else if (statusFilter === "archived") {
+      matchesStatus = candidateIsArchived === "true";
+    }
+    
+    return matchesSearch && matchesStage && matchesJob && matchesStatus;
   });
 
   const getStageColor = (stage: string) => {
@@ -708,6 +724,17 @@ export default function CandidatesModule() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[140px]" data-testid="select-status-filter">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="deactivated">Deactivated</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <ScrollArea className="flex-1">
@@ -747,6 +774,18 @@ export default function CandidatesModule() {
                             <Badge className={cn("rounded-full", getStageColor(candidate.stage))} data-testid={`badge-stage-${candidate.id}`}>
                               {candidate.stage}
                             </Badge>
+                            {(candidate as any).isArchived === "true" && (
+                              <Badge variant="secondary" className="bg-slate-500 text-white text-xs">
+                                <Archive className="h-3 w-3 mr-1" />
+                                Archived
+                              </Badge>
+                            )}
+                            {(candidate as any).isActive === "deactivated" && (candidate as any).isArchived !== "true" && (
+                              <Badge variant="secondary" className="bg-red-500 text-white text-xs">
+                                <UserX className="h-3 w-3 mr-1" />
+                                Deactivated
+                              </Badge>
+                            )}
                             {job && (
                               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                 <Briefcase className="h-3 w-3" />
@@ -883,6 +922,97 @@ export default function CandidatesModule() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-medium text-muted-foreground">Candidate Status</h4>
+                    <div className="flex flex-col gap-2">
+                      {(selectedCandidate as any).isArchived === "true" ? (
+                        <Badge variant="secondary" className="bg-slate-500 text-white w-fit">
+                          <Archive className="h-3 w-3 mr-1" />
+                          Archived
+                        </Badge>
+                      ) : (selectedCandidate as any).isActive === "deactivated" ? (
+                        <Badge variant="secondary" className="bg-red-500 text-white w-fit">
+                          <UserX className="h-3 w-3 mr-1" />
+                          Deactivated
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-green-500 text-white w-fit">
+                          <UserCheck className="h-3 w-3 mr-1" />
+                          Active
+                        </Badge>
+                      )}
+                      <div className="flex gap-2 mt-2">
+                        {(selectedCandidate as any).isActive === "active" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => updateCandidateStatusMutation.mutate({
+                              id: selectedCandidate.id,
+                              isActive: "deactivated",
+                              isArchived: (selectedCandidate as any).isArchived || "false"
+                            })}
+                            disabled={updateCandidateStatusMutation.isPending}
+                            data-testid="button-deactivate-candidate"
+                          >
+                            <UserX className="h-4 w-4 mr-1" />
+                            Deactivate
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-green-600 border-green-200 hover:bg-green-50"
+                            onClick={() => updateCandidateStatusMutation.mutate({
+                              id: selectedCandidate.id,
+                              isActive: "active",
+                              isArchived: (selectedCandidate as any).isArchived || "false"
+                            })}
+                            disabled={updateCandidateStatusMutation.isPending}
+                            data-testid="button-reactivate-candidate"
+                          >
+                            <UserCheck className="h-4 w-4 mr-1" />
+                            Reactivate
+                          </Button>
+                        )}
+                        {(selectedCandidate as any).isArchived === "true" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => updateCandidateStatusMutation.mutate({
+                              id: selectedCandidate.id,
+                              isActive: (selectedCandidate as any).isActive || "active",
+                              isArchived: "false"
+                            })}
+                            disabled={updateCandidateStatusMutation.isPending}
+                            data-testid="button-unarchive-candidate"
+                          >
+                            <Archive className="h-4 w-4 mr-1" />
+                            Unarchive
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-slate-600 border-slate-200 hover:bg-slate-50"
+                            onClick={() => updateCandidateStatusMutation.mutate({
+                              id: selectedCandidate.id,
+                              isActive: (selectedCandidate as any).isActive || "active",
+                              isArchived: "true"
+                            })}
+                            disabled={updateCandidateStatusMutation.isPending}
+                            data-testid="button-archive-candidate"
+                          >
+                            <Archive className="h-4 w-4 mr-1" />
+                            Archive
+                          </Button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <Separator />
