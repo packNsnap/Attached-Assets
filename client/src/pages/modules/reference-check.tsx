@@ -1,13 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, UserCheck, Copy, Mail, Send, FileText, Link, ExternalLink, CheckCircle2, User, Briefcase, Building, AlertCircle } from "lucide-react";
+import { Loader2, UserCheck, Copy, Mail, FileText, Link, ExternalLink, CheckCircle2, User, Building } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import type { Candidate } from "@shared/schema";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -64,6 +63,7 @@ export default function ReferenceCheckModule() {
   const [mode, setMode] = useState<"from_form" | "from_resume" | "request_link">("from_form");
   const [result, setResult] = useState<GeneratedResult>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
   const { toast } = useToast();
 
   const { data: candidates = [] } = useQuery<Candidate[]>({
@@ -82,6 +82,15 @@ export default function ReferenceCheckModule() {
       resumeText: "",
     },
   });
+
+  const handleCandidateSelect = (candidateId: string) => {
+    setSelectedCandidateId(candidateId);
+    const candidate = candidates.find(c => c.id === candidateId);
+    if (candidate) {
+      form.setValue("candidateName", candidate.name);
+      form.setValue("position", candidate.role);
+    }
+  };
 
   async function onSubmit(values: FormValues) {
     setIsGenerating(true);
@@ -182,6 +191,28 @@ export default function ReferenceCheckModule() {
             <CardContent>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Select Candidate</label>
+                    <Select value={selectedCandidateId} onValueChange={handleCandidateSelect}>
+                      <SelectTrigger data-testid="select-candidate">
+                        <SelectValue placeholder="Choose a candidate from your pipeline" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {candidates.map((candidate) => (
+                          <SelectItem key={candidate.id} value={candidate.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{candidate.name}</span>
+                              <Badge variant="outline" className="text-xs">{candidate.stage}</Badge>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Or enter details manually below</p>
+                  </div>
+
+                  <Separator className="my-4" />
+
                   <FormField
                     control={form.control}
                     name="candidateName"
