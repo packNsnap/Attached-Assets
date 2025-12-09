@@ -1115,9 +1115,11 @@ export async function registerRoutes(
       }
       
       // Return resume text as a download (as plain text since we don't have the original file)
-      res.setHeader("Content-Type", "text/plain");
-      res.setHeader("Content-Disposition", `attachment; filename="${resumeDoc.fileName}"`);
-      res.send(resumeDoc.resumeText);
+      // Use .txt extension since we only have the extracted text, not the original file
+      const baseName = resumeDoc.fileName.replace(/\.[^/.]+$/, "") || "resume";
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${baseName}.txt"`);
+      res.send(resumeDoc.resumeText || "Resume text not available");
     } catch (error) {
       console.error("Resume download error:", error);
       res.status(500).json({ error: "Failed to download resume" });
