@@ -1468,7 +1468,7 @@ export default function CandidatesModule() {
                                 className="h-7 w-7"
                                 asChild
                               >
-                                <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">
+                                <a href={`/api/resume/${selectedCandidate?.id}/download`} target="_blank" rel="noopener noreferrer">
                                   <ExternalLink className="h-4 w-4" />
                                 </a>
                               </Button>
