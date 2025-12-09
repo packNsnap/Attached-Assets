@@ -180,10 +180,24 @@ type FraudFlag = {
   confidence: number;
 };
 
+type Pass5Result = {
+  authenticityScore: number;
+  plausibilityScore: number;
+  overallVerdict: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
+  fraudFlags: FraudFlag[];
+  timelineNotes: string;
+  roleFitNotes: string;
+  certEducationNotes: string;
+  recommendation: "verified" | "needs_verification" | "high_risk" | "likely_fraudulent";
+  summary: string;
+};
+
 type AnalysisResult = {
   fitScore: number;
   logicScore: number;
   authenticityScore?: number;
+  plausibilityScore?: number;
+  overallVerdict?: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   skillMatch: SkillMatch;
   findings: {
     type: "risk" | "warning" | "good";
@@ -194,10 +208,14 @@ type AnalysisResult = {
   selectedJob?: Job;
   authenticitySignals?: AuthenticitySignals;
   fraudFlags?: FraudFlag[];
+  timelineNotes?: string;
+  roleFitNotes?: string;
+  certEducationNotes?: string;
   pass1?: Pass1Result;
   pass2?: Pass2Result;
   pass3?: Pass3Result;
   pass4?: Pass4Result;
+  pass5?: Pass5Result;
 } | null;
 
 export default function ResumeAnalyzerModule() {
@@ -842,29 +860,26 @@ export default function ResumeAnalyzerModule() {
                 
                 {result.authenticityScore !== undefined && (
                   <div className={cn("p-4 rounded-lg border", 
-                    result.authenticityScore >= 75 ? "bg-green-50/50 border-green-200" :
-                    result.authenticityScore >= 50 ? "bg-yellow-50/50 border-yellow-200" :
-                    result.authenticityScore >= 25 ? "bg-orange-50/50 border-orange-200" :
+                    result.overallVerdict === "LIKELY_REAL" ? "bg-green-50/50 border-green-200" :
+                    result.overallVerdict === "SUSPICIOUS" ? "bg-yellow-50/50 border-yellow-200" :
                     "bg-red-50/50 border-red-200"
                   )}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className={cn("p-2 rounded-lg", 
-                          result.authenticityScore >= 75 ? "bg-green-100" :
-                          result.authenticityScore >= 50 ? "bg-yellow-100" :
-                          result.authenticityScore >= 25 ? "bg-orange-100" :
+                          result.overallVerdict === "LIKELY_REAL" ? "bg-green-100" :
+                          result.overallVerdict === "SUSPICIOUS" ? "bg-yellow-100" :
                           "bg-red-100"
                         )}>
-                          {result.authenticityScore >= 75 ? <CheckCircle className="h-5 w-5 text-green-600" /> :
-                           result.authenticityScore >= 50 ? <AlertTriangle className="h-5 w-5 text-yellow-600" /> :
+                          {result.overallVerdict === "LIKELY_REAL" ? <CheckCircle className="h-5 w-5 text-green-600" /> :
+                           result.overallVerdict === "SUSPICIOUS" ? <AlertTriangle className="h-5 w-5 text-yellow-600" /> :
                            <XCircle className="h-5 w-5 text-red-600" />}
                         </div>
                         <div>
-                          <p className="text-sm font-medium">Authenticity Score</p>
+                          <p className="text-sm font-medium">Plausibility Score</p>
                           <p className={cn("text-2xl font-bold",
-                            result.authenticityScore >= 75 ? "text-green-600" :
-                            result.authenticityScore >= 50 ? "text-yellow-600" :
-                            result.authenticityScore >= 25 ? "text-orange-600" :
+                            result.authenticityScore >= 70 ? "text-green-600" :
+                            result.authenticityScore >= 40 ? "text-yellow-600" :
                             "text-red-600"
                           )} data-testid="text-authenticity-score">
                             {result.authenticityScore}%
@@ -872,15 +887,13 @@ export default function ResumeAnalyzerModule() {
                         </div>
                       </div>
                       <Badge className={cn(
-                        result.authenticityScore >= 75 ? "bg-green-600" :
-                        result.authenticityScore >= 50 ? "bg-yellow-600" :
-                        result.authenticityScore >= 25 ? "bg-orange-600" :
+                        result.overallVerdict === "LIKELY_REAL" ? "bg-green-600" :
+                        result.overallVerdict === "SUSPICIOUS" ? "bg-yellow-600" :
                         "bg-red-600"
                       )}>
-                        {result.authenticityScore >= 75 ? "Verified" :
-                         result.authenticityScore >= 50 ? "Needs Verification" :
-                         result.authenticityScore >= 25 ? "High Risk" :
-                         "Likely Fraudulent"}
+                        {result.overallVerdict === "LIKELY_REAL" ? "Likely Real" :
+                         result.overallVerdict === "SUSPICIOUS" ? "Suspicious" :
+                         "Likely Fake"}
                       </Badge>
                     </div>
                     {result.fraudFlags && result.fraudFlags.length > 0 && (

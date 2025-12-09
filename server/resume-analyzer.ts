@@ -108,6 +108,8 @@ export interface MultiPassAnalysisResult {
   fitScore: number;
   logicScore: number;
   authenticityScore: number;
+  plausibilityScore: number;
+  overallVerdict: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   skillMatch: {
     matched: string[];
     missing: string[];
@@ -120,6 +122,9 @@ export interface MultiPassAnalysisResult {
     recommendation: string;
   };
   fraudFlags: FraudFlag[];
+  timelineNotes: string;
+  roleFitNotes: string;
+  certEducationNotes: string;
 }
 
 // Title hierarchy for promotion analysis
@@ -611,6 +616,8 @@ export interface FraudFlag {
 
 export interface Pass5Result {
   authenticityScore: number;
+  plausibilityScore: number;
+  overallVerdict: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   fraudFlags: FraudFlag[];
   timelineIssues: {
     impossibleOverlaps: Array<{ description: string; evidence: string }>;
@@ -634,6 +641,9 @@ export interface Pass5Result {
     unverifiableEducation: Array<{ institution: string; reason: string }>;
     suspiciousCertifications: Array<{ name: string; reason: string }>;
   };
+  timelineNotes: string;
+  roleFitNotes: string;
+  certEducationNotes: string;
   recommendation: "verified" | "needs_verification" | "high_risk" | "likely_fraudulent";
   summary: string;
 }
@@ -672,39 +682,97 @@ export async function pass5_authenticityAnalysis(
     };
   }
 
-  const prompt = `You are a fraud detection expert analyzing a resume for authenticity. Be EXTREMELY skeptical and thorough.
+  // System prompt for aggressive fraud detection
+  const systemPrompt = `You are an aggressive résumé fraud detector.
 
-RESUME TEXT:
-${resumeText}
+Your job is NOT to say whether a résumé is well-written or nicely formatted.
+Your ONLY job is to judge:
 
-EXTRACTED DATA:
-${JSON.stringify(extractedData, null, 2)}
+1) Is this résumé PLAUSIBLE based on:
+   - Career progression
+   - Timeline consistency
+   - Education realism
+   - Certification realism
+   - Role responsibility realism
+   - Achievement realism
 
-TIMELINE ANALYSIS (already computed):
-${JSON.stringify(timelineAnalysis, null, 2)}
+2) Does anything look FAKE, EXAGGERATED, or SUSPICIOUS?
 
-DETECTED ISSUES (pre-computed):
+You must:
+- Be skeptical, not generous.
+- Assume people exaggerate.
+- Look for conflicts, overlaps, impossible timelines, and inflated claims.
+
+Use these specific checks:
+
+A. Career Progression Logic
+- Does the path from Job A → Job B → Job C make sense?
+- Is there an unrealistic jump from unrelated work (e.g., fast food) to advanced specialist/manager roles in a very short time?
+- If a senior or specialist role is reached in less than 3 years, that is suspicious unless the prior roles clearly support it.
+
+B. Education Timeline
+- Do completion dates + implied age make sense?
+- Are they working full-time in a demanding job while also doing full-time accelerated degrees with no explanation?
+
+C. Role Responsibility Realism
+- Do the described responsibilities match what someone at that level would actually do?
+- Are they claiming executive-level impact in junior roles?
+
+D. Achievement Realism
+- Are metrics suspiciously round (exactly 200%, exactly 50 people, exactly $1M)?
+- Are achievements vague buzzwords or specific and verifiable?
+- Is every single bullet point a massive win with no normal work?
+
+E. Certification Realism
+- Do certifications fit the career path?
+- Are there unknown or unverifiable certification providers?
+
+Problems to look for:
+- Impossible or highly unlikely promotion speed
+- Job responsibilities far above the experience level
+- Education timelines that don't make sense
+- Overlapping full-time work and full-time school with no explanation
+- Certifications that don't fit the prior work history
+- Extremely inflated, buzzword-heavy achievement claims
+- Conflicting dates or gaps that are suspicious
+- Working 2+ full-time jobs simultaneously`;
+
+  const prompt = `${systemPrompt}
+
+PRE-COMPUTED ANALYSIS DATA:
 - Generic buzzword phrases found: ${genericPhraseCount}
 - Experience claim: ${claimedYears} years vs calculated from jobs: ${Math.round(calculatedYears * 10) / 10} years
 - Timeline overlaps detected: ${timelineAnalysis.timelineAnalysis.overlaps.length}
+- Promotion transitions: ${JSON.stringify(timelineAnalysis.timelineAnalysis.promotionTransitions)}
+- Gaps between jobs: ${JSON.stringify(timelineAnalysis.timelineAnalysis.gaps)}
 
-Analyze for FRAUD SIGNALS and return JSON:
+EXTRACTED STRUCTURED DATA:
+${JSON.stringify(extractedData, null, 2)}
+
+<<<RESUME_START>>>
+${resumeText}
+<<<RESUME_END>>>
+
+Return a JSON object with this exact structure:
 {
+  "format_score": 0-100,
+  "plausibility_score": 0-100,
+  "overall_verdict": "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE",
   "fraudFlags": [
     {
       "category": "timeline|company|credentials|content|consistency|ai_generated",
       "severity": "critical|high|medium|low",
-      "flag": "Brief description",
-      "evidence": "Specific evidence from resume",
+      "flag": "Brief description of the issue",
+      "evidence": "Specific evidence from the resume",
       "confidence": 0-100
     }
   ],
   "timelineIssues": {
     "impossibleOverlaps": [{ "description": "...", "evidence": "..." }],
-    "suspiciousProgression": [{ "description": "Junior to CEO in 2 years" }]
+    "suspiciousProgression": [{ "description": "e.g. Fast food to DOT compliance in 1 year" }]
   },
   "companyVerification": {
-    "suspiciousCompanies": [{ "name": "Company ABC", "reason": "No online presence, generic description" }],
+    "suspiciousCompanies": [{ "name": "Company Name", "reason": "Why suspicious" }],
     "genericDescriptions": 0,
     "verifiableCompanies": 0
   },
@@ -716,48 +784,22 @@ Analyze for FRAUD SIGNALS and return JSON:
     "buzzwordDensity": 0-100
   },
   "credentialIssues": {
-    "unverifiableEducation": [{ "institution": "...", "reason": "Unknown university" }],
+    "unverifiableEducation": [{ "institution": "...", "reason": "..." }],
     "suspiciousCertifications": [{ "name": "...", "reason": "..." }]
   },
-  "summary": "2-3 sentences explaining authenticity concerns"
+  "timeline_notes": "Notes about dates, overlaps, speed of progression",
+  "role_fit_notes": "Do responsibilities fit titles and prior history?",
+  "cert_education_notes": "Education + certification realism assessment",
+  "summary": "Short plain language summary for human review explaining authenticity concerns"
 }
 
-FRAUD DETECTION CRITERIA (be aggressive):
+SEVERITY GUIDELINES:
+- CRITICAL: Working 2+ full-time jobs simultaneously, impossible timelines, clear fabrication
+- HIGH: Unrealistic promotion speed (3+ levels in <18 months), major experience inflation, demanding degrees while working full-time with no explanation
+- MEDIUM: Round number metrics, buzzword-heavy claims, generic company names, minor timeline gaps followed by title jumps
+- LOW: Generic responsibilities, minor formatting issues, certifications from less-known providers
 
-TIMELINE FLAGS:
-- Working 2+ full-time jobs simultaneously = CRITICAL
-- 3+ level promotion in < 18 months = HIGH
-- Experience years claimed > sum of job durations = HIGH
-- Gaps followed by major title jumps = MEDIUM
-
-COMPANY FLAGS:
-- Company names that are generic (e.g., "Tech Solutions Inc", "Global Services LLC") = MEDIUM
-- Vague company descriptions with no specific products/services = MEDIUM
-- Pattern of companies with similar generic names = HIGH
-- No verifiable companies (no website, LinkedIn presence) = HIGH
-
-CONTENT FLAGS:
-- AI writing patterns: uniform sentence length, perfect grammar, no personality = HIGH
-- Heavy use of buzzwords without substance = MEDIUM
-- Round number metrics ("increased sales by 200%", "managed team of 50") = MEDIUM
-- Copy-paste style bullet points with no variation = MEDIUM
-- Generic responsibilities without specific achievements = LOW
-- No quantifiable achievements across entire resume = MEDIUM
-
-CREDENTIAL FLAGS:
-- Unknown/unverifiable universities = MEDIUM
-- Degree doesn't match career path (Art History → Senior Software Engineer) = LOW (unless explained)
-- Multiple degrees completed simultaneously = HIGH
-- Certifications from unknown providers = LOW
-
-AI GENERATED SIGNALS (score 0-100):
-- Uniform bullet point length and structure
-- Overly polished, no typos or casual language
-- Generic action verbs used repeatedly
-- Lack of specific project names, tools, or unique details
-- Every achievement sounds impressive but lacks specificity
-
-Return specific evidence for each flag. Be skeptical but fair.`;
+Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -771,46 +813,45 @@ Return specific evidence for each flag. Be skeptical but fair.`;
   
   const result = JSON.parse(content);
   
-  // Calculate authenticity score (100 = authentic, 0 = fraudulent)
-  let authenticityScore = 100;
+  // Use the plausibility_score from the aggressive detector as the base
+  // This score already reflects the skeptical analysis
+  let authenticityScore = result.plausibility_score || 50;
   
-  // Deduct for fraud flags
-  for (const flag of result.fraudFlags || []) {
-    if (flag.severity === "critical") authenticityScore -= 25;
-    else if (flag.severity === "high") authenticityScore -= 15;
-    else if (flag.severity === "medium") authenticityScore -= 8;
-    else if (flag.severity === "low") authenticityScore -= 3;
-  }
+  // Apply additional penalties based on our pre-computed checks
   
-  // Deduct for AI-generated content
-  const aiScore = result.contentAnalysis?.aiGeneratedScore || 0;
-  if (aiScore > 70) authenticityScore -= 20;
-  else if (aiScore > 50) authenticityScore -= 10;
-  
-  // Deduct for timeline issues from Pass 2
-  const majorConcerns = timelineAnalysis.concerns.filter(c => c.severity === "major_concern");
-  authenticityScore -= majorConcerns.length * 10;
-  
-  // Deduct for experience inflation
+  // Deduct for experience inflation (not caught by GPT)
   if (experienceInflation && experienceInflation.discrepancy > 2) {
-    authenticityScore -= 15;
+    authenticityScore -= 10;
   }
   
-  // Deduct for generic phrases
-  authenticityScore -= Math.min(15, genericPhraseCount * 2);
+  // Deduct for timeline issues from Pass 2 that may not be in GPT response
+  const majorConcerns = timelineAnalysis.concerns.filter(c => c.severity === "major_concern");
+  authenticityScore -= majorConcerns.length * 5;
   
-  // Floor at 0
-  authenticityScore = Math.max(0, authenticityScore);
+  // Deduct for high buzzword density
+  if (genericPhraseCount > 5) authenticityScore -= 10;
+  else if (genericPhraseCount > 3) authenticityScore -= 5;
   
-  // Determine recommendation
+  // Floor at 0, cap at 100
+  authenticityScore = Math.max(0, Math.min(100, authenticityScore));
+  
+  // Map overall_verdict to our recommendation system
   let recommendation: Pass5Result["recommendation"];
-  if (authenticityScore >= 75) recommendation = "verified";
-  else if (authenticityScore >= 50) recommendation = "needs_verification";
-  else if (authenticityScore >= 25) recommendation = "high_risk";
-  else recommendation = "likely_fraudulent";
+  const verdict = result.overall_verdict || "SUSPICIOUS";
+  if (verdict === "LIKELY_REAL" && authenticityScore >= 70) {
+    recommendation = "verified";
+  } else if (verdict === "LIKELY_REAL") {
+    recommendation = "needs_verification";
+  } else if (verdict === "SUSPICIOUS") {
+    recommendation = authenticityScore >= 40 ? "needs_verification" : "high_risk";
+  } else { // LIKELY_FAKE
+    recommendation = authenticityScore >= 25 ? "high_risk" : "likely_fraudulent";
+  }
   
   return {
     authenticityScore,
+    plausibilityScore: result.plausibility_score || authenticityScore,
+    overallVerdict: verdict as Pass5Result["overallVerdict"],
     fraudFlags: result.fraudFlags || [],
     timelineIssues: {
       impossibleOverlaps: result.timelineIssues?.impossibleOverlaps || [],
@@ -834,6 +875,9 @@ Return specific evidence for each flag. Be skeptical but fair.`;
       unverifiableEducation: [],
       suspiciousCertifications: []
     },
+    timelineNotes: result.timeline_notes || "",
+    roleFitNotes: result.role_fit_notes || "",
+    certEducationNotes: result.cert_education_notes || "",
     recommendation,
     summary: result.summary || "Analysis complete."
   };
@@ -911,6 +955,8 @@ export async function analyzeResumeMultiPass(
     fitScore: pass3.fitScore,
     logicScore: pass4.overallRiskScore,
     authenticityScore: pass5.authenticityScore,
+    plausibilityScore: pass5.plausibilityScore,
+    overallVerdict: pass5.overallVerdict,
     skillMatch: {
       matched: [...pass3.skillsAnalysis.matched_must_have, ...pass3.skillsAnalysis.matched_nice_to_have],
       missing: pass3.skillsAnalysis.missing_must_have,
@@ -927,6 +973,9 @@ export async function analyzeResumeMultiPass(
       ).map(f => ({ type: f.severity, message: f.flag, details: f.details })),
       recommendation: pass5.recommendation
     },
-    fraudFlags: pass5.fraudFlags
+    fraudFlags: pass5.fraudFlags,
+    timelineNotes: pass5.timelineNotes,
+    roleFitNotes: pass5.roleFitNotes,
+    certEducationNotes: pass5.certEducationNotes
   };
 }
