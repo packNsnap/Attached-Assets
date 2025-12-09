@@ -2665,5 +2665,155 @@ Respond in this exact JSON format:
     }
   });
 
+  // Get candidate references by candidate ID
+  app.get("/api/candidates/:id/references", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const candidateId = req.params.id;
+      
+      // Verify the candidate belongs to this user
+      const candidate = await storage.getCandidate(candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+      
+      const references = await storage.getCandidateReferencesByCandidateId(candidateId);
+      res.json(references);
+    } catch (error) {
+      console.error("Error fetching candidate references:", error);
+      res.status(500).json({ error: "Failed to fetch candidate references" });
+    }
+  });
+
+  // Update candidate reference status
+  app.patch("/api/candidate-references/:id/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const { status } = req.body;
+      const referenceId = req.params.id;
+      
+      if (!status || typeof status !== "string") {
+        res.status(400).json({ error: "Status is required and must be a string" });
+        return;
+      }
+      
+      const validStatuses = ["not_contacted", "email_generated", "emailed", "completed"];
+      if (!validStatuses.includes(status)) {
+        res.status(400).json({ error: `Status must be one of: ${validStatuses.join(", ")}` });
+        return;
+      }
+      
+      const updated = await storage.updateCandidateReferenceStatus(referenceId, status);
+      if (!updated) {
+        res.status(404).json({ error: "Reference not found" });
+        return;
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating candidate reference status:", error);
+      res.status(500).json({ error: "Failed to update reference status" });
+    }
+  });
+
+  // Generate reference check email using AI
+  app.post("/api/generate-reference-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { candidateId, candidateName, positionAppliedFor, referenceName, referenceEmail, relationshipToCandidate } = req.body;
+      
+      if (!candidateId || !candidateName || !positionAppliedFor || !referenceName || !referenceEmail || !relationshipToCandidate) {
+        res.status(400).json({ error: "All fields are required: candidateId, candidateName, positionAppliedFor, referenceName, referenceEmail, relationshipToCandidate" });
+        return;
+      }
+
+      // Verify candidate ownership before checking usage limits
+      const candidate = await storage.getCandidate(candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+
+      // Check AI usage limits
+      const canUse = await storage.checkCanUseAiAction(userId, candidateId, "reference_email");
+      if (!canUse.allowed) {
+        res.status(403).json({
+          error: "AI usage limit reached",
+          message: `You've reached your limit of ${canUse.limit} reference email generations for this candidate. Please upgrade your plan.`,
+          current: canUse.current,
+          limit: canUse.limit
+        });
+        return;
+      }
+
+      const prompt = `Generate a professional reference check email. The email should be polite, professional, and request specific information about the candidate's work history.
+
+Details:
+- Candidate Name: ${candidateName}
+- Position Applied For: ${positionAppliedFor}
+- Reference Name: ${referenceName}
+- Reference Email: ${referenceEmail}
+- Relationship to Candidate: ${relationshipToCandidate}
+
+Generate:
+1. A concise email subject line
+2. A professional email body that:
+   - Introduces the purpose (reference check for the candidate)
+   - Explains the position they're being considered for
+   - Asks about:
+     - How long and in what capacity they worked with the candidate
+     - The candidate's key strengths and areas for development
+     - Their reliability, teamwork, and communication skills
+     - Whether they would recommend hiring this candidate
+   - Thanks them for their time
+   - Includes a professional sign-off
+
+Return a JSON object with these exact fields:
+{
+  "emailSubject": "the subject line",
+  "emailBody": "the full email body with proper formatting"
+}`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "You are an HR professional helping to write reference check emails. Return only valid JSON without markdown formatting." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.7,
+      });
+
+      const content = response.choices[0]?.message?.content || "";
+      let parsed;
+      try {
+        // Remove any markdown code blocks if present
+        const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+        parsed = JSON.parse(cleanContent);
+      } catch {
+        res.status(500).json({ error: "Failed to parse AI response" });
+        return;
+      }
+
+      const { emailSubject, emailBody } = parsed;
+      
+      // Increment AI usage after successful generation - must succeed before returning response
+      await storage.incrementAiActionUsage(userId, candidateId, "reference_email");
+      
+      // Create mailto template
+      const encodedSubject = encodeURIComponent(emailSubject);
+      const encodedBody = encodeURIComponent(emailBody);
+      const mailtoTemplate = `mailto:${referenceEmail}?subject=${encodedSubject}&body=${encodedBody}`;
+
+      res.json({
+        emailSubject,
+        emailBody,
+        mailtoTemplate
+      });
+    } catch (error) {
+      console.error("Error generating reference email:", error);
+      res.status(500).json({ error: "Failed to generate reference email" });
+    }
+  });
+
   return httpServer;
 }

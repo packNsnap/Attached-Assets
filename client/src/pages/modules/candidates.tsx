@@ -30,7 +30,9 @@ import {
   MessageSquare,
   Archive,
   UserX,
-  UserCheck
+  UserCheck,
+  Copy,
+  Users
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
@@ -70,7 +72,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation, SkillsTestResponse, InterviewRecommendation } from "@shared/schema";
+import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation, SkillsTestResponse, InterviewRecommendation, CandidateReference } from "@shared/schema";
 
 interface ParsedInterviewQuestion {
   question: string;
@@ -217,8 +219,26 @@ export default function CandidatesModule() {
     enabled: !!selectedCandidate
   });
 
+  const { data: candidateReferences = [] } = useQuery({
+    queryKey: ["candidate-references", selectedCandidate?.id],
+    queryFn: async () => {
+      if (!selectedCandidate) return [];
+      const res = await fetch(`/api/candidates/${selectedCandidate.id}/references`);
+      if (!res.ok) throw new Error("Failed to fetch references");
+      return res.json() as Promise<CandidateReference[]>;
+    },
+    enabled: !!selectedCandidate
+  });
+
   const [viewTestResultsInvitation, setViewTestResultsInvitation] = useState<SkillsTestInvitation | null>(null);
   const [isRescoring, setIsRescoring] = useState(false);
+  const [generatingReferenceEmail, setGeneratingReferenceEmail] = useState<string | null>(null);
+  const [activeReferenceEmail, setActiveReferenceEmail] = useState<{
+    referenceId: string;
+    subject: string;
+    body: string;
+    mailto: string;
+  } | null>(null);
 
   const { data: testResponses = [], isLoading: isLoadingTestResponses } = useQuery({
     queryKey: ["test-responses", viewTestResultsInvitation?.id],
@@ -482,6 +502,96 @@ export default function CandidatesModule() {
       toast({ title: "Error", description: "Failed to update candidate status", variant: "destructive" });
     }
   });
+
+  const updateReferenceStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const res = await fetch(`/api/candidate-references/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      if (!res.ok) throw new Error("Failed to update reference status");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["candidate-references", selectedCandidate?.id] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update reference status", variant: "destructive" });
+    }
+  });
+
+  const handleGenerateReferenceEmail = async (reference: CandidateReference) => {
+    if (!selectedCandidate) return;
+    setGeneratingReferenceEmail(reference.id);
+    try {
+      const assignedJob = jobs.find(j => j.id === selectedCandidate.jobId);
+      const positionAppliedFor = assignedJob?.title || selectedCandidate.role || "the open position";
+      
+      const res = await fetch("/api/generate-reference-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateId: selectedCandidate.id,
+          candidateName: selectedCandidate.name,
+          positionAppliedFor,
+          referenceName: reference.referenceName,
+          referenceEmail: reference.referenceEmail,
+          relationshipToCandidate: reference.relationship || "Professional"
+        })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        if (res.status === 403 && errorData.error === "AI usage limit reached") {
+          toast({ title: "Usage Limit Reached", description: errorData.message, variant: "destructive" });
+          return;
+        }
+        throw new Error("Failed to generate email");
+      }
+      const data = await res.json();
+      
+      setActiveReferenceEmail({
+        referenceId: reference.id,
+        subject: data.emailSubject,
+        body: data.emailBody,
+        mailto: data.mailtoTemplate
+      });
+      
+      updateReferenceStatusMutation.mutate({ id: reference.id, status: "email_generated" });
+      toast({ title: "Email Generated", description: "Reference check email has been generated." });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to generate reference email", variant: "destructive" });
+    } finally {
+      setGeneratingReferenceEmail(null);
+    }
+  };
+
+  const handleCopyEmail = (subject: string, body: string) => {
+    const fullEmail = `Subject: ${subject}\n\n${body}`;
+    navigator.clipboard.writeText(fullEmail);
+    toast({ title: "Copied", description: "Email copied to clipboard." });
+  };
+
+  const getReferenceStatusColor = (status: string) => {
+    switch (status) {
+      case "not_contacted": return "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+      case "email_generated": return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
+      case "emailed": return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300";
+      case "completed": return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300";
+      default: return "bg-slate-100 text-slate-700";
+    }
+  };
+
+  const getReferenceStatusLabel = (status: string) => {
+    switch (status) {
+      case "not_contacted": return "Not Contacted";
+      case "email_generated": return "Email Generated";
+      case "emailed": return "Emailed";
+      case "completed": return "Completed";
+      default: return status;
+    }
+  };
 
   const filteredCandidates = candidates.filter(c => {
     const matchesSearch = searchQuery === "" || 
@@ -1198,6 +1308,117 @@ export default function CandidatesModule() {
                               <Tag className="h-3 w-3 mr-1" />
                               {tag}
                             </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {candidateReferences.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          References from Candidate
+                        </h4>
+                        <div className="space-y-3">
+                          {candidateReferences.map(ref => (
+                            <Card key={ref.id} className="p-3" data-testid={`reference-card-${ref.id}`}>
+                              <div className="space-y-2">
+                                <div className="flex items-start justify-between">
+                                  <div>
+                                    <p className="font-medium text-sm">{ref.referenceName}</p>
+                                    <p className="text-xs text-muted-foreground">{ref.referenceEmail}</p>
+                                    {ref.relationship && (
+                                      <p className="text-xs text-muted-foreground mt-1">
+                                        Relationship: {ref.relationship}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <Badge className={getReferenceStatusColor(ref.status || "not_contacted")} variant="secondary">
+                                    {getReferenceStatusLabel(ref.status || "not_contacted")}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  {ref.consentGiven === "true" && (
+                                    <Badge variant="outline" className="text-green-600 border-green-200">
+                                      <CheckCircle className="h-3 w-3 mr-1" />
+                                      Consent Given
+                                    </Badge>
+                                  )}
+                                  <Badge variant="outline" className="capitalize">
+                                    {ref.source === "candidate_link" ? "Candidate Link" : ref.source}
+                                  </Badge>
+                                </div>
+                                
+                                <div className="flex gap-2 mt-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleGenerateReferenceEmail(ref)}
+                                    disabled={generatingReferenceEmail === ref.id}
+                                    data-testid={`button-generate-email-${ref.id}`}
+                                  >
+                                    {generatingReferenceEmail === ref.id ? (
+                                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                    ) : (
+                                      <Mail className="h-3 w-3 mr-1" />
+                                    )}
+                                    Generate Email
+                                  </Button>
+                                  
+                                  {activeReferenceEmail?.referenceId === ref.id && (
+                                    <>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        asChild
+                                        onClick={() => {
+                                          updateReferenceStatusMutation.mutate({ id: ref.id, status: "emailed" });
+                                        }}
+                                        data-testid={`button-open-outlook-${ref.id}`}
+                                      >
+                                        <a href={activeReferenceEmail.mailto} target="_blank" rel="noopener noreferrer">
+                                          <ExternalLink className="h-3 w-3 mr-1" />
+                                          Open in Outlook
+                                        </a>
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleCopyEmail(activeReferenceEmail.subject, activeReferenceEmail.body)}
+                                        data-testid={`button-copy-email-${ref.id}`}
+                                      >
+                                        <Copy className="h-3 w-3 mr-1" />
+                                        Copy
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                                
+                                {activeReferenceEmail?.referenceId === ref.id && (
+                                  <div className="mt-3 p-3 bg-muted rounded-md space-y-2">
+                                    <p className="text-xs font-medium">Subject: {activeReferenceEmail.subject}</p>
+                                    <p className="text-xs whitespace-pre-wrap">{activeReferenceEmail.body}</p>
+                                  </div>
+                                )}
+                                
+                                {ref.status !== "completed" && activeReferenceEmail?.referenceId === ref.id && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full mt-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={() => updateReferenceStatusMutation.mutate({ id: ref.id, status: "completed" })}
+                                    data-testid={`button-mark-complete-${ref.id}`}
+                                  >
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Mark as Completed
+                                  </Button>
+                                )}
+                              </div>
+                            </Card>
                           ))}
                         </div>
                       </div>
