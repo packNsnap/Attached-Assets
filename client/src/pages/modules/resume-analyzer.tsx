@@ -180,11 +180,24 @@ type FraudFlag = {
   confidence: number;
 };
 
+type MismatchIssue = {
+  type: string;
+  description: string;
+  evidence: string;
+};
+
+type MismatchDetection = {
+  hasMismatch: boolean;
+  mismatchScore: number;
+  issues: MismatchIssue[];
+};
+
 type Pass5Result = {
   authenticityScore: number;
   plausibilityScore: number;
   tooPerfectScore: number;
   tooPerfectIndicators: string[];
+  mismatchDetection: MismatchDetection;
   overallVerdict: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   fraudFlags: FraudFlag[];
   timelineNotes: string;
@@ -201,6 +214,7 @@ type AnalysisResult = {
   plausibilityScore?: number;
   tooPerfectScore?: number;
   tooPerfectIndicators?: string[];
+  mismatchDetection?: MismatchDetection;
   overallVerdict?: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   skillMatch: SkillMatch;
   findings: {
@@ -975,6 +989,42 @@ export default function ResumeAnalyzerModule() {
                           ))}
                           {result.tooPerfectIndicators.length > 3 && (
                             <p className="text-xs text-muted-foreground">+{result.tooPerfectIndicators.length - 3} more indicators</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {result.mismatchDetection && result.mismatchDetection.hasMismatch && (
+                  <div className="p-4 rounded-lg border bg-red-50/50 border-red-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-red-100">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-red-800">Resume Mismatch Detected</p>
+                          <p className="text-xs text-red-600">Wrong names, inconsistent details, or template errors found</p>
+                        </div>
+                      </div>
+                      <Badge className="bg-red-600">
+                        {result.mismatchDetection.mismatchScore > 60 ? "Critical" : "Warning"}
+                      </Badge>
+                    </div>
+                    {result.mismatchDetection.issues.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-red-200">
+                        <div className="space-y-2">
+                          {result.mismatchDetection.issues.slice(0, 3).map((issue, i) => (
+                            <div key={i} className="text-xs bg-red-100 text-red-700 px-2 py-1.5 rounded">
+                              <span className="font-medium">[{issue.type}]</span> {issue.description}
+                              {issue.evidence && (
+                                <p className="text-red-600 mt-1 italic">"{issue.evidence}"</p>
+                              )}
+                            </div>
+                          ))}
+                          {result.mismatchDetection.issues.length > 3 && (
+                            <p className="text-xs text-red-600">+{result.mismatchDetection.issues.length - 3} more issues</p>
                           )}
                         </div>
                       </div>

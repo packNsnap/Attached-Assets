@@ -111,6 +111,11 @@ export interface MultiPassAnalysisResult {
   plausibilityScore: number;
   tooPerfectScore: number;
   tooPerfectIndicators: string[];
+  mismatchDetection: {
+    hasMismatch: boolean;
+    mismatchScore: number;
+    issues: Array<{ type: string; description: string; evidence: string }>;
+  };
   overallVerdict: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   skillMatch: {
     matched: string[];
@@ -645,6 +650,11 @@ export interface Pass5Result {
     unverifiableEducation: Array<{ institution: string; reason: string }>;
     suspiciousCertifications: Array<{ name: string; reason: string }>;
   };
+  mismatchDetection: {
+    hasMismatch: boolean;
+    mismatchScore: number;
+    issues: Array<{ type: string; description: string; evidence: string }>;
+  };
   timelineNotes: string;
   roleFitNotes: string;
   certEducationNotes: string;
@@ -739,7 +749,16 @@ Problems to look for:
 - Certifications that don't fit the prior work history
 - Extremely inflated, buzzword-heavy achievement claims
 - Conflicting dates or gaps that are suspicious
-- Working 2+ full-time jobs simultaneously`;
+- Working 2+ full-time jobs simultaneously
+
+F. Mismatch Detection (CRITICAL)
+- Are there multiple different names mentioned that could indicate a copy-paste from another resume?
+- Is the email address or contact info inconsistent with the name?
+- Are there references to "I" or first-person that use a different name?
+- Do cover letter fragments or objective statements mention a different person or company?
+- Are there leftover template placeholders like "[Your Name]", "[Company Name]", "Lorem ipsum"?
+- Does the resume reference a different job title in objectives vs actual experience?
+- Are there conflicting details (e.g., claims to be based in NYC but all jobs are in California with no relocation mentioned)?`;
 
   const prompt = `${systemPrompt}
 
@@ -793,6 +812,11 @@ Return a JSON object with this exact structure:
     "unverifiableEducation": [{ "institution": "...", "reason": "..." }],
     "suspiciousCertifications": [{ "name": "...", "reason": "..." }]
   },
+  "mismatchDetection": {
+    "hasMismatch": true/false,
+    "mismatchScore": 0-100,
+    "issues": [{ "type": "name|contact|location|objective|template", "description": "What was found", "evidence": "Exact text showing mismatch" }]
+  },
   "timeline_notes": "Notes about dates, overlaps, speed of progression",
   "role_fit_notes": "Do responsibilities fit titles and prior history?",
   "cert_education_notes": "Education + certification realism assessment",
@@ -813,10 +837,15 @@ Scoring:
 - 71-100: Over-optimized, likely heavily engineered or AI-generated
 
 SEVERITY GUIDELINES:
-- CRITICAL: Working 2+ full-time jobs simultaneously, impossible timelines, clear fabrication
-- HIGH: Unrealistic promotion speed (3+ levels in <18 months), major experience inflation, demanding degrees while working full-time with no explanation
+- CRITICAL: Working 2+ full-time jobs simultaneously, impossible timelines, clear fabrication, WRONG NAME detected (copy-paste from another resume)
+- HIGH: Unrealistic promotion speed (3+ levels in <18 months), major experience inflation, demanding degrees while working full-time with no explanation, template placeholders left in
 - MEDIUM: Round number metrics, buzzword-heavy claims, generic company names, minor timeline gaps followed by title jumps
 - LOW: Generic responsibilities, minor formatting issues, certifications from less-known providers
+
+MISMATCH DETECTION GUIDELINES:
+- mismatchScore 0-30: No significant mismatches, details are internally consistent
+- mismatchScore 31-60: Minor inconsistencies (e.g., location doesn't match job history)
+- mismatchScore 61-100: Major mismatches found (wrong name, template placeholders, conflicting personal details)
 
 Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
 
@@ -895,6 +924,11 @@ Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
     credentialIssues: result.credentialIssues || {
       unverifiableEducation: [],
       suspiciousCertifications: []
+    },
+    mismatchDetection: result.mismatchDetection || {
+      hasMismatch: false,
+      mismatchScore: 0,
+      issues: []
     },
     timelineNotes: result.timeline_notes || "",
     roleFitNotes: result.role_fit_notes || "",
@@ -979,6 +1013,7 @@ export async function analyzeResumeMultiPass(
     plausibilityScore: pass5.plausibilityScore,
     tooPerfectScore: pass5.tooPerfectScore,
     tooPerfectIndicators: pass5.tooPerfectIndicators,
+    mismatchDetection: pass5.mismatchDetection,
     overallVerdict: pass5.overallVerdict,
     skillMatch: {
       matched: [...pass3.skillsAnalysis.matched_must_have, ...pass3.skillsAnalysis.matched_nice_to_have],
