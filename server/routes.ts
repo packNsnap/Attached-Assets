@@ -1143,6 +1143,8 @@ export async function registerRoutes(
             findings: JSON.stringify(result.findings || []),
             summary: result.summary || "",
             authenticitySignals: result.authenticitySignals ? JSON.stringify(result.authenticitySignals) : null,
+            authenticityScore: result.authenticityScore ?? null,
+            fraudFlags: result.fraudFlags ? JSON.stringify(result.fraudFlags) : null,
             status: "completed"
           });
         } catch (saveError) {

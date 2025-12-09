@@ -202,6 +202,8 @@ export const resumeAnalysis = pgTable("resume_analysis", {
   findings: text("findings").notNull(),
   summary: text("summary").notNull(),
   authenticitySignals: text("authenticity_signals"),
+  authenticityScore: integer("authenticity_score"),
+  fraudFlags: text("fraud_flags"),
   status: text("status").notNull().default("completed"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });

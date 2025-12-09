@@ -104,8 +104,10 @@ export interface MultiPassAnalysisResult {
   pass2: Pass2Result;
   pass3: Pass3Result;
   pass4: Pass4Result;
+  pass5: Pass5Result;
   fitScore: number;
   logicScore: number;
+  authenticityScore: number;
   skillMatch: {
     matched: string[];
     missing: string[];
@@ -117,6 +119,7 @@ export interface MultiPassAnalysisResult {
     warnings: Array<{ type: string; message: string; details: string }>;
     recommendation: string;
   };
+  fraudFlags: FraudFlag[];
 }
 
 // Title hierarchy for promotion analysis
@@ -597,6 +600,245 @@ Base recommendedAction on:
   };
 }
 
+// ============ PASS 5: Enhanced Authenticity Detection ============
+export interface FraudFlag {
+  category: "timeline" | "company" | "credentials" | "content" | "consistency" | "ai_generated";
+  severity: "critical" | "high" | "medium" | "low";
+  flag: string;
+  evidence: string;
+  confidence: number;
+}
+
+export interface Pass5Result {
+  authenticityScore: number;
+  fraudFlags: FraudFlag[];
+  timelineIssues: {
+    impossibleOverlaps: Array<{ description: string; evidence: string }>;
+    experienceInflation: { claimed: number; calculated: number; discrepancy: number } | null;
+    suspiciousProgression: Array<{ description: string }>;
+  };
+  companyVerification: {
+    suspiciousCompanies: Array<{ name: string; reason: string }>;
+    genericDescriptions: number;
+    verifiableCompanies: number;
+  };
+  contentAnalysis: {
+    aiGeneratedScore: number;
+    templateMatchScore: number;
+    genericPhraseCount: number;
+    specificDetailsScore: number;
+    quantifiableAchievements: number;
+    buzzwordDensity: number;
+  };
+  credentialIssues: {
+    unverifiableEducation: Array<{ institution: string; reason: string }>;
+    suspiciousCertifications: Array<{ name: string; reason: string }>;
+  };
+  recommendation: "verified" | "needs_verification" | "high_risk" | "likely_fraudulent";
+  summary: string;
+}
+
+export async function pass5_authenticityAnalysis(
+  extractedData: Pass1Result,
+  timelineAnalysis: Pass2Result,
+  resumeText: string
+): Promise<Pass5Result> {
+  // Known generic/buzzword phrases that indicate low authenticity
+  const GENERIC_PHRASES = [
+    "results-driven", "proven track record", "leveraged", "spearheaded",
+    "synergy", "team player", "go-getter", "dynamic", "proactive",
+    "strategic thinker", "detail-oriented", "self-starter", "passionate",
+    "excellent communication skills", "fast-paced environment",
+    "think outside the box", "value-added", "best practices",
+    "stakeholder management", "cross-functional", "drive results"
+  ];
+
+  // Count generic phrases in resume
+  const lowerText = resumeText.toLowerCase();
+  const genericPhraseCount = GENERIC_PHRASES.filter(p => lowerText.includes(p.toLowerCase())).length;
+  
+  // Calculate experience discrepancy
+  let experienceInflation = null;
+  const claimedYears = extractedData.totalExperienceYears;
+  const calculatedYears = extractedData.jobs.reduce((sum, job) => {
+    return sum + (job.durationMonths ? job.durationMonths / 12 : 0);
+  }, 0);
+  const discrepancy = claimedYears - calculatedYears;
+  if (Math.abs(discrepancy) > 1) {
+    experienceInflation = {
+      claimed: claimedYears,
+      calculated: Math.round(calculatedYears * 10) / 10,
+      discrepancy: Math.round(discrepancy * 10) / 10
+    };
+  }
+
+  const prompt = `You are a fraud detection expert analyzing a resume for authenticity. Be EXTREMELY skeptical and thorough.
+
+RESUME TEXT:
+${resumeText}
+
+EXTRACTED DATA:
+${JSON.stringify(extractedData, null, 2)}
+
+TIMELINE ANALYSIS (already computed):
+${JSON.stringify(timelineAnalysis, null, 2)}
+
+DETECTED ISSUES (pre-computed):
+- Generic buzzword phrases found: ${genericPhraseCount}
+- Experience claim: ${claimedYears} years vs calculated from jobs: ${Math.round(calculatedYears * 10) / 10} years
+- Timeline overlaps detected: ${timelineAnalysis.timelineAnalysis.overlaps.length}
+
+Analyze for FRAUD SIGNALS and return JSON:
+{
+  "fraudFlags": [
+    {
+      "category": "timeline|company|credentials|content|consistency|ai_generated",
+      "severity": "critical|high|medium|low",
+      "flag": "Brief description",
+      "evidence": "Specific evidence from resume",
+      "confidence": 0-100
+    }
+  ],
+  "timelineIssues": {
+    "impossibleOverlaps": [{ "description": "...", "evidence": "..." }],
+    "suspiciousProgression": [{ "description": "Junior to CEO in 2 years" }]
+  },
+  "companyVerification": {
+    "suspiciousCompanies": [{ "name": "Company ABC", "reason": "No online presence, generic description" }],
+    "genericDescriptions": 0,
+    "verifiableCompanies": 0
+  },
+  "contentAnalysis": {
+    "aiGeneratedScore": 0-100,
+    "templateMatchScore": 0-100,
+    "specificDetailsScore": 0-100,
+    "quantifiableAchievements": 0,
+    "buzzwordDensity": 0-100
+  },
+  "credentialIssues": {
+    "unverifiableEducation": [{ "institution": "...", "reason": "Unknown university" }],
+    "suspiciousCertifications": [{ "name": "...", "reason": "..." }]
+  },
+  "summary": "2-3 sentences explaining authenticity concerns"
+}
+
+FRAUD DETECTION CRITERIA (be aggressive):
+
+TIMELINE FLAGS:
+- Working 2+ full-time jobs simultaneously = CRITICAL
+- 3+ level promotion in < 18 months = HIGH
+- Experience years claimed > sum of job durations = HIGH
+- Gaps followed by major title jumps = MEDIUM
+
+COMPANY FLAGS:
+- Company names that are generic (e.g., "Tech Solutions Inc", "Global Services LLC") = MEDIUM
+- Vague company descriptions with no specific products/services = MEDIUM
+- Pattern of companies with similar generic names = HIGH
+- No verifiable companies (no website, LinkedIn presence) = HIGH
+
+CONTENT FLAGS:
+- AI writing patterns: uniform sentence length, perfect grammar, no personality = HIGH
+- Heavy use of buzzwords without substance = MEDIUM
+- Round number metrics ("increased sales by 200%", "managed team of 50") = MEDIUM
+- Copy-paste style bullet points with no variation = MEDIUM
+- Generic responsibilities without specific achievements = LOW
+- No quantifiable achievements across entire resume = MEDIUM
+
+CREDENTIAL FLAGS:
+- Unknown/unverifiable universities = MEDIUM
+- Degree doesn't match career path (Art History → Senior Software Engineer) = LOW (unless explained)
+- Multiple degrees completed simultaneously = HIGH
+- Certifications from unknown providers = LOW
+
+AI GENERATED SIGNALS (score 0-100):
+- Uniform bullet point length and structure
+- Overly polished, no typos or casual language
+- Generic action verbs used repeatedly
+- Lack of specific project names, tools, or unique details
+- Every achievement sounds impressive but lacks specificity
+
+Return specific evidence for each flag. Be skeptical but fair.`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    temperature: 0.2,
+  });
+
+  const content = completion.choices[0]?.message?.content;
+  if (!content) throw new Error("No response from AI in Pass 5");
+  
+  const result = JSON.parse(content);
+  
+  // Calculate authenticity score (100 = authentic, 0 = fraudulent)
+  let authenticityScore = 100;
+  
+  // Deduct for fraud flags
+  for (const flag of result.fraudFlags || []) {
+    if (flag.severity === "critical") authenticityScore -= 25;
+    else if (flag.severity === "high") authenticityScore -= 15;
+    else if (flag.severity === "medium") authenticityScore -= 8;
+    else if (flag.severity === "low") authenticityScore -= 3;
+  }
+  
+  // Deduct for AI-generated content
+  const aiScore = result.contentAnalysis?.aiGeneratedScore || 0;
+  if (aiScore > 70) authenticityScore -= 20;
+  else if (aiScore > 50) authenticityScore -= 10;
+  
+  // Deduct for timeline issues from Pass 2
+  const majorConcerns = timelineAnalysis.concerns.filter(c => c.severity === "major_concern");
+  authenticityScore -= majorConcerns.length * 10;
+  
+  // Deduct for experience inflation
+  if (experienceInflation && experienceInflation.discrepancy > 2) {
+    authenticityScore -= 15;
+  }
+  
+  // Deduct for generic phrases
+  authenticityScore -= Math.min(15, genericPhraseCount * 2);
+  
+  // Floor at 0
+  authenticityScore = Math.max(0, authenticityScore);
+  
+  // Determine recommendation
+  let recommendation: Pass5Result["recommendation"];
+  if (authenticityScore >= 75) recommendation = "verified";
+  else if (authenticityScore >= 50) recommendation = "needs_verification";
+  else if (authenticityScore >= 25) recommendation = "high_risk";
+  else recommendation = "likely_fraudulent";
+  
+  return {
+    authenticityScore,
+    fraudFlags: result.fraudFlags || [],
+    timelineIssues: {
+      impossibleOverlaps: result.timelineIssues?.impossibleOverlaps || [],
+      experienceInflation,
+      suspiciousProgression: result.timelineIssues?.suspiciousProgression || []
+    },
+    companyVerification: result.companyVerification || {
+      suspiciousCompanies: [],
+      genericDescriptions: 0,
+      verifiableCompanies: extractedData.jobs.length
+    },
+    contentAnalysis: {
+      aiGeneratedScore: result.contentAnalysis?.aiGeneratedScore || 0,
+      templateMatchScore: result.contentAnalysis?.templateMatchScore || 0,
+      genericPhraseCount,
+      specificDetailsScore: result.contentAnalysis?.specificDetailsScore || 50,
+      quantifiableAchievements: result.contentAnalysis?.quantifiableAchievements || 0,
+      buzzwordDensity: result.contentAnalysis?.buzzwordDensity || 0
+    },
+    credentialIssues: result.credentialIssues || {
+      unverifiableEducation: [],
+      suspiciousCertifications: []
+    },
+    recommendation,
+    summary: result.summary || "Analysis complete."
+  };
+}
+
 // ============ MAIN ORCHESTRATOR ============
 export async function analyzeResumeMultiPass(
   resumeText: string,
@@ -616,6 +858,9 @@ export async function analyzeResumeMultiPass(
   
   // Pass 4: Narrative and recommendations
   const pass4 = await pass4_narrativeAndRecommendations(pass1, pass2, pass3, resumeText);
+  
+  // Pass 5: Enhanced Authenticity Detection
+  const pass5 = await pass5_authenticityAnalysis(pass1, pass2, resumeText);
   
   // Combine into legacy-compatible format while preserving new structure
   const findings: Array<{ type: "good" | "warning" | "risk"; message: string; details: string }> = [];
@@ -648,13 +893,24 @@ export async function analyzeResumeMultiPass(
     });
   }
   
+  // Add fraud flags from Pass 5 as findings
+  for (const flag of pass5.fraudFlags) {
+    findings.push({
+      type: flag.severity === "critical" || flag.severity === "high" ? "risk" : "warning",
+      message: `[Authenticity] ${flag.flag}`,
+      details: flag.evidence
+    });
+  }
+  
   return {
     pass1,
     pass2,
     pass3,
     pass4,
+    pass5,
     fitScore: pass3.fitScore,
     logicScore: pass4.overallRiskScore,
+    authenticityScore: pass5.authenticityScore,
     skillMatch: {
       matched: [...pass3.skillsAnalysis.matched_must_have, ...pass3.skillsAnalysis.matched_nice_to_have],
       missing: pass3.skillsAnalysis.missing_must_have,
@@ -669,7 +925,8 @@ export async function analyzeResumeMultiPass(
         f.flag.toLowerCase().includes("generic") ||
         f.flag.toLowerCase().includes("writing")
       ).map(f => ({ type: f.severity, message: f.flag, details: f.details })),
-      recommendation: pass4.nextSteps.join(" ")
-    }
+      recommendation: pass5.recommendation
+    },
+    fraudFlags: pass5.fraudFlags
   };
 }

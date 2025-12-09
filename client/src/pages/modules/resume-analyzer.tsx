@@ -172,9 +172,18 @@ type Pass4Result = {
   };
 };
 
+type FraudFlag = {
+  category: "timeline" | "company" | "credentials" | "content" | "consistency" | "ai_generated";
+  severity: "critical" | "high" | "medium" | "low";
+  flag: string;
+  evidence: string;
+  confidence: number;
+};
+
 type AnalysisResult = {
   fitScore: number;
   logicScore: number;
+  authenticityScore?: number;
   skillMatch: SkillMatch;
   findings: {
     type: "risk" | "warning" | "good";
@@ -184,6 +193,7 @@ type AnalysisResult = {
   summary: string;
   selectedJob?: Job;
   authenticitySignals?: AuthenticitySignals;
+  fraudFlags?: FraudFlag[];
   pass1?: Pass1Result;
   pass2?: Pass2Result;
   pass3?: Pass3Result;
@@ -829,6 +839,72 @@ export default function ResumeAnalyzerModule() {
                     </div>
                   </div>
                 </div>
+                
+                {result.authenticityScore !== undefined && (
+                  <div className={cn("p-4 rounded-lg border", 
+                    result.authenticityScore >= 75 ? "bg-green-50/50 border-green-200" :
+                    result.authenticityScore >= 50 ? "bg-yellow-50/50 border-yellow-200" :
+                    result.authenticityScore >= 25 ? "bg-orange-50/50 border-orange-200" :
+                    "bg-red-50/50 border-red-200"
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={cn("p-2 rounded-lg", 
+                          result.authenticityScore >= 75 ? "bg-green-100" :
+                          result.authenticityScore >= 50 ? "bg-yellow-100" :
+                          result.authenticityScore >= 25 ? "bg-orange-100" :
+                          "bg-red-100"
+                        )}>
+                          {result.authenticityScore >= 75 ? <CheckCircle className="h-5 w-5 text-green-600" /> :
+                           result.authenticityScore >= 50 ? <AlertTriangle className="h-5 w-5 text-yellow-600" /> :
+                           <XCircle className="h-5 w-5 text-red-600" />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Authenticity Score</p>
+                          <p className={cn("text-2xl font-bold",
+                            result.authenticityScore >= 75 ? "text-green-600" :
+                            result.authenticityScore >= 50 ? "text-yellow-600" :
+                            result.authenticityScore >= 25 ? "text-orange-600" :
+                            "text-red-600"
+                          )} data-testid="text-authenticity-score">
+                            {result.authenticityScore}%
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className={cn(
+                        result.authenticityScore >= 75 ? "bg-green-600" :
+                        result.authenticityScore >= 50 ? "bg-yellow-600" :
+                        result.authenticityScore >= 25 ? "bg-orange-600" :
+                        "bg-red-600"
+                      )}>
+                        {result.authenticityScore >= 75 ? "Verified" :
+                         result.authenticityScore >= 50 ? "Needs Verification" :
+                         result.authenticityScore >= 25 ? "High Risk" :
+                         "Likely Fraudulent"}
+                      </Badge>
+                    </div>
+                    {result.fraudFlags && result.fraudFlags.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-current/10">
+                        <p className="text-xs text-muted-foreground mb-2">Detected Issues ({result.fraudFlags.length})</p>
+                        <div className="space-y-1.5">
+                          {result.fraudFlags.slice(0, 3).map((flag, i) => (
+                            <div key={i} className={cn("text-xs px-2 py-1 rounded flex items-start gap-2",
+                              flag.severity === "critical" ? "bg-red-100 text-red-700" :
+                              flag.severity === "high" ? "bg-orange-100 text-orange-700" :
+                              flag.severity === "medium" ? "bg-yellow-100 text-yellow-700" :
+                              "bg-slate-100 text-slate-700"
+                            )}>
+                              <span className="font-medium">{flag.flag}</span>
+                            </div>
+                          ))}
+                          {result.fraudFlags.length > 3 && (
+                            <p className="text-xs text-muted-foreground">+{result.fraudFlags.length - 3} more issues</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 
                 {result.pass4 && (
                   <div className={cn("p-3 rounded-lg border", 
