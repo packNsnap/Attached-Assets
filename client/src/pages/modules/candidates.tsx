@@ -151,9 +151,9 @@ export default function CandidatesModule() {
   });
 
   const { data: candidates = [], isLoading } = useQuery({
-    queryKey: ["candidates"],
+    queryKey: ["candidates", { includeAll: true }],
     queryFn: async () => {
-      const res = await fetch("/api/candidates");
+      const res = await fetch("/api/candidates?includeAll=true");
       if (!res.ok) throw new Error("Failed to fetch candidates");
       return res.json() as Promise<Candidate[]>;
     },
@@ -282,7 +282,7 @@ export default function CandidatesModule() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "candidates" });
       queryClient.invalidateQueries({ queryKey: ["candidates-with-resumes"] });
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
       setAddDialogOpen(false);
@@ -309,7 +309,7 @@ export default function CandidatesModule() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "candidates" });
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
       if (selectedCandidate) setSelectedCandidate(data);
       toast({ title: "Stage Updated", description: `Candidate moved to ${data.stage}` });
@@ -330,7 +330,7 @@ export default function CandidatesModule() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "candidates" });
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
       if (selectedCandidate) setSelectedCandidate(data);
       toast({ title: "Position Updated", description: data.jobId ? "Candidate assigned to position" : "Candidate unassigned" });
@@ -448,7 +448,7 @@ export default function CandidatesModule() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "candidates" });
       queryClient.invalidateQueries({ queryKey: ["candidates-with-resumes"] });
       queryClient.invalidateQueries({ queryKey: ["candidate-documents", selectedCandidate?.id] });
       if (selectedCandidate) setSelectedCandidate(data.candidate);
@@ -473,7 +473,7 @@ export default function CandidatesModule() {
       return res.json();
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "candidates" });
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
       if (selectedCandidate) setSelectedCandidate(data);
       toast({ title: "Status Updated", description: "Candidate status has been updated." });
@@ -495,9 +495,11 @@ export default function CandidatesModule() {
     const candidateIsArchived = (c as any).isArchived || "false";
     let matchesStatus = true;
     if (statusFilter === "active") {
-      matchesStatus = candidateIsActive === "active" && candidateIsArchived === "false";
+      matchesStatus = candidateIsActive === "active" && candidateIsArchived === "false" && c.stage !== "Rejected";
     } else if (statusFilter === "deactivated") {
       matchesStatus = candidateIsActive === "deactivated" && candidateIsArchived === "false";
+    } else if (statusFilter === "rejected") {
+      matchesStatus = c.stage === "Rejected";
     } else if (statusFilter === "archived") {
       matchesStatus = candidateIsArchived === "true";
     }
@@ -732,6 +734,7 @@ export default function CandidatesModule() {
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="deactivated">Deactivated</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
                 <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>

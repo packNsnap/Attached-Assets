@@ -76,9 +76,9 @@ export interface IStorage {
   deleteJob(id: string, userId: string): Promise<boolean>;
   
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
-  getCandidates(userId: string): Promise<Candidate[]>;
+  getCandidates(userId: string, includeAll?: boolean): Promise<Candidate[]>;
   getCandidate(id: string, userId: string): Promise<Candidate | undefined>;
-  getCandidatesByJobId(jobId: string, userId: string): Promise<Candidate[]>;
+  getCandidatesByJobId(jobId: string, userId: string, includeAll?: boolean): Promise<Candidate[]>;
   updateCandidateStage(id: string, userId: string, stage: string): Promise<Candidate | undefined>;
   updateCandidateJobId(id: string, userId: string, jobId: string | null): Promise<Candidate | undefined>;
   updateCandidateStatus(id: string, userId: string, isActive: string, isArchived: string): Promise<Candidate | undefined>;
@@ -244,8 +244,16 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getCandidates(userId: string): Promise<Candidate[]> {
-    return await db.select().from(candidates).where(eq(candidates.userId, userId));
+  async getCandidates(userId: string, includeAll: boolean = false): Promise<Candidate[]> {
+    const allCandidates = await db.select().from(candidates).where(eq(candidates.userId, userId));
+    if (includeAll) {
+      return allCandidates;
+    }
+    return allCandidates.filter(c => 
+      c.isArchived !== "true" && 
+      c.stage !== "Rejected" && 
+      c.isActive !== "deactivated"
+    );
   }
 
   async getCandidate(id: string, userId: string): Promise<Candidate | undefined> {
@@ -262,8 +270,16 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getCandidatesByJobId(jobId: string, userId: string): Promise<Candidate[]> {
-    return await db.select().from(candidates).where(and(eq(candidates.jobId, jobId), eq(candidates.userId, userId)));
+  async getCandidatesByJobId(jobId: string, userId: string, includeAll: boolean = false): Promise<Candidate[]> {
+    const allCandidates = await db.select().from(candidates).where(and(eq(candidates.jobId, jobId), eq(candidates.userId, userId)));
+    if (includeAll) {
+      return allCandidates;
+    }
+    return allCandidates.filter(c => 
+      c.isArchived !== "true" && 
+      c.stage !== "Rejected" && 
+      c.isActive !== "deactivated"
+    );
   }
 
   async updateCandidateJobId(id: string, userId: string, jobId: string | null): Promise<Candidate | undefined> {
@@ -287,10 +303,15 @@ export class DatabaseStorage implements IStorage {
   async getJobsWithCandidateCounts(userId: string): Promise<(Job & { candidateCount: number })[]> {
     const allJobs = await db.select().from(jobs).where(eq(jobs.userId, userId)).orderBy(desc(jobs.createdAt));
     const allCandidates = await db.select().from(candidates).where(eq(candidates.userId, userId));
+    const activeCandidates = allCandidates.filter(c => 
+      c.isArchived !== "true" && 
+      c.stage !== "Rejected" && 
+      c.isActive !== "deactivated"
+    );
     
     return allJobs.map(job => ({
       ...job,
-      candidateCount: allCandidates.filter(c => c.jobId === job.id).length
+      candidateCount: activeCandidates.filter(c => c.jobId === job.id).length
     }));
   }
 

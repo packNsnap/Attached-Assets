@@ -372,7 +372,8 @@ export async function registerRoutes(
   app.get("/api/candidates", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const candidates = await storage.getCandidates(userId);
+      const includeAll = req.query.includeAll === "true";
+      const candidates = await storage.getCandidates(userId, includeAll);
       res.json(candidates);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch candidates" });
