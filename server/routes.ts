@@ -14,7 +14,8 @@ import {
   insertSkillsTestSchema,
   insertSkillsTestInvitationSchema,
   insertSkillsTestResponseSchema,
-  insertScheduledInterviewSchema
+  insertScheduledInterviewSchema,
+  insertReferenceRequestSchema
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -2354,27 +2355,56 @@ Respond in this exact JSON format:
         return;
       }
 
-      // For request_link mode, just generate the candidate link text
+      // For request_link mode, create a real reference request and generate text with actual URL
       if (mode === "request_link") {
         if (!candidateName || !positionAppliedFor) {
           res.status(400).json({ error: "Candidate name and position are required for request_link mode" });
           return;
         }
 
+        const userId = (req as any).user?.claims?.sub;
+        if (!userId) {
+          res.status(401).json({ error: "Authentication required" });
+          return;
+        }
+
+        // Generate a secure token for the reference submission link
+        const token = randomBytes(32).toString("hex");
+        
+        // Set expiration to 14 days from now
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 14);
+
+        // Create the reference request in the database
+        const referenceRequest = await storage.createReferenceRequest({
+          userId,
+          candidateId: candidateId || null,
+          candidateName,
+          positionAppliedFor,
+          token,
+          status: "pending",
+          expiresAt
+        });
+
+        // Build the actual submission URL
+        const host = req.headers.host || "localhost:5000";
+        const protocol = req.headers["x-forwarded-proto"] || "https";
+        const referenceSubmissionUrl = `${protocol}://${host}/reference/${token}`;
+
         const linkRequestText = `Dear ${candidateName},
 
-As part of our hiring process for the ${positionAppliedFor} position, we would like to conduct a professional reference check.
+As part of our hiring process for the ${positionAppliedFor} position, we would like to gather your professional references.
 
-Please click the link below to provide your reference details:
-[REFERENCE_SUBMISSION_LINK]
+Please use the link below to securely provide your reference details:
+${referenceSubmissionUrl}
 
-We need the following information:
-- Reference Name
-- Reference Email Address
-- Their Relationship to You (e.g., Direct Manager, Colleague)
+We will ask for:
+- Reference name
+- Reference email address
+- Their relationship to you
 - Confirmation that they agree to be contacted
 
-Thank you for your cooperation in completing this step of the hiring process.
+Thank you for taking a moment to complete this step in the hiring process.
 
 Best regards,
 [Your Company Name]`;
@@ -2385,7 +2415,9 @@ Best regards,
           emailBody: null,
           questions: null,
           mailtoTemplate: null,
-          candidateLinkRequestText: linkRequestText
+          candidateLinkRequestText: linkRequestText,
+          referenceRequestId: referenceRequest.id,
+          referenceSubmissionUrl
         });
         return;
       }
@@ -2512,6 +2544,112 @@ Respond in this exact JSON format:
     } catch (error) {
       console.error("Reference check generation error:", error);
       res.status(500).json({ error: "Failed to generate reference check" });
+    }
+  });
+
+  // Public endpoint to get reference request details by token (no auth required)
+  app.get("/api/reference/:token", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const referenceRequest = await storage.getReferenceRequestByToken(token);
+
+      if (!referenceRequest) {
+        res.status(404).json({ error: "Reference request not found" });
+        return;
+      }
+
+      // Check if expired
+      if (referenceRequest.expiresAt && new Date() > new Date(referenceRequest.expiresAt)) {
+        res.status(410).json({ error: "This reference request has expired" });
+        return;
+      }
+
+      // Check if already submitted
+      if (referenceRequest.status === "ready" || referenceRequest.status === "submitted") {
+        res.status(409).json({ error: "This reference request has already been submitted" });
+        return;
+      }
+
+      res.json({
+        candidateName: referenceRequest.candidateName,
+        positionAppliedFor: referenceRequest.positionAppliedFor,
+        status: referenceRequest.status
+      });
+    } catch (error) {
+      console.error("Error fetching reference request:", error);
+      res.status(500).json({ error: "Failed to fetch reference request" });
+    }
+  });
+
+  // Public endpoint to submit reference details (no auth required)
+  app.post("/api/reference/:token/submit", async (req, res) => {
+    try {
+      const { token } = req.params;
+      const { referenceName, referenceEmail, referenceRelationship, consentGiven } = req.body;
+
+      if (!referenceName || !referenceEmail || !referenceRelationship) {
+        res.status(400).json({ error: "Reference name, email, and relationship are required" });
+        return;
+      }
+
+      if (!consentGiven) {
+        res.status(400).json({ error: "Consent is required to proceed" });
+        return;
+      }
+
+      const referenceRequest = await storage.getReferenceRequestByToken(token);
+
+      if (!referenceRequest) {
+        res.status(404).json({ error: "Reference request not found" });
+        return;
+      }
+
+      // Check if expired
+      if (referenceRequest.expiresAt && new Date() > new Date(referenceRequest.expiresAt)) {
+        res.status(410).json({ error: "This reference request has expired" });
+        return;
+      }
+
+      // Check if already submitted
+      if (referenceRequest.status === "ready" || referenceRequest.status === "submitted") {
+        res.status(409).json({ error: "This reference request has already been submitted" });
+        return;
+      }
+
+      // Update the reference request with the submitted information
+      const updatedRequest = await storage.updateReferenceRequest(referenceRequest.id, {
+        referenceName,
+        referenceEmail,
+        referenceRelationship,
+        consentGiven: "true",
+        status: "ready",
+        submittedAt: new Date()
+      });
+
+      res.json({
+        success: true,
+        message: "Reference details submitted successfully. Thank you!"
+      });
+    } catch (error) {
+      console.error("Error submitting reference:", error);
+      res.status(500).json({ error: "Failed to submit reference" });
+    }
+  });
+
+  // Get reference requests for the current user
+  app.get("/api/reference-requests", isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user?.claims?.sub;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const requests = await storage.getReferenceRequestsByUserId(userId);
+      res.json(requests);
+    } catch (error) {
+      console.error("Error fetching reference requests:", error);
+      res.status(500).json({ error: "Failed to fetch reference requests" });
     }
   });
 

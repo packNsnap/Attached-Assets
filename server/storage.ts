@@ -32,6 +32,8 @@ import {
   type InsertAiActionUsage,
   type ScheduledInterview,
   type InsertScheduledInterview,
+  type ReferenceRequest,
+  type InsertReferenceRequest,
   type PlanType,
   PLAN_LIMITS,
   users,
@@ -49,7 +51,8 @@ import {
   subscriptions,
   usageTracking,
   aiActionUsage,
-  scheduledInterviews
+  scheduledInterviews,
+  referenceRequests
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql, desc, and, gte, lte, inArray } from "drizzle-orm";
@@ -183,6 +186,13 @@ export interface IStorage {
   markCandidateNotesAsViewed(candidateId: string, userId: string): Promise<Candidate | undefined>;
   getUnreadNotesCount(candidateId: string): Promise<number>;
   getCandidatesWithUnreadNotes(userId: string): Promise<{ candidateId: string; unreadCount: number }[]>;
+  
+  // Reference requests
+  createReferenceRequest(request: InsertReferenceRequest): Promise<ReferenceRequest>;
+  getReferenceRequestByToken(token: string): Promise<ReferenceRequest | undefined>;
+  getReferenceRequestsByUserId(userId: string): Promise<ReferenceRequest[]>;
+  getReferenceRequestsByCandidateId(candidateId: string): Promise<ReferenceRequest[]>;
+  updateReferenceRequest(id: string, data: { referenceName?: string; referenceEmail?: string; referenceRelationship?: string; consentGiven?: string; status?: string; submittedAt?: Date }): Promise<ReferenceRequest | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -827,6 +837,29 @@ export class DatabaseStorage implements IStorage {
     }
     
     return results;
+  }
+
+  async createReferenceRequest(request: InsertReferenceRequest): Promise<ReferenceRequest> {
+    const result = await db.insert(referenceRequests).values(request).returning();
+    return result[0];
+  }
+
+  async getReferenceRequestByToken(token: string): Promise<ReferenceRequest | undefined> {
+    const result = await db.select().from(referenceRequests).where(eq(referenceRequests.token, token)).limit(1);
+    return result[0];
+  }
+
+  async getReferenceRequestsByUserId(userId: string): Promise<ReferenceRequest[]> {
+    return await db.select().from(referenceRequests).where(eq(referenceRequests.userId, userId)).orderBy(desc(referenceRequests.createdAt));
+  }
+
+  async getReferenceRequestsByCandidateId(candidateId: string): Promise<ReferenceRequest[]> {
+    return await db.select().from(referenceRequests).where(eq(referenceRequests.candidateId, candidateId)).orderBy(desc(referenceRequests.createdAt));
+  }
+
+  async updateReferenceRequest(id: string, data: { referenceName?: string; referenceEmail?: string; referenceRelationship?: string; consentGiven?: string; status?: string; submittedAt?: Date }): Promise<ReferenceRequest | undefined> {
+    const result = await db.update(referenceRequests).set(data).where(eq(referenceRequests.id, id)).returning();
+    return result[0];
   }
 }
 

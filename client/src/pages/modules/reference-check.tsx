@@ -64,6 +64,8 @@ export default function ReferenceCheckModule() {
   const [result, setResult] = useState<GeneratedResult>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
+  const [isLoadingResume, setIsLoadingResume] = useState(false);
+  const [resumeAutoLoaded, setResumeAutoLoaded] = useState(false);
   const { toast } = useToast();
 
   const { data: candidates = [] } = useQuery<Candidate[]>({
@@ -83,12 +85,32 @@ export default function ReferenceCheckModule() {
     },
   });
 
-  const handleCandidateSelect = (candidateId: string) => {
+  const handleCandidateSelect = async (candidateId: string) => {
     setSelectedCandidateId(candidateId);
+    setResumeAutoLoaded(false);
     const candidate = candidates.find(c => c.id === candidateId);
     if (candidate) {
       form.setValue("candidateName", candidate.name);
       form.setValue("position", candidate.role);
+      
+      setIsLoadingResume(true);
+      try {
+        const response = await fetch(`/api/candidates/${candidateId}/documents`, {
+          credentials: "include"
+        });
+        if (response.ok) {
+          const documents = await response.json();
+          const resumeDoc = documents.find((doc: any) => doc.documentType === "resume" && doc.resumeText);
+          if (resumeDoc?.resumeText) {
+            form.setValue("resumeText", resumeDoc.resumeText);
+            setResumeAutoLoaded(true);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load resume:", error);
+      } finally {
+        setIsLoadingResume(false);
+      }
     }
   };
 
@@ -330,7 +352,26 @@ export default function ReferenceCheckModule() {
                       name="resumeText"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Resume Text</FormLabel>
+                          <div className="flex items-center justify-between">
+                            <FormLabel>Resume Text</FormLabel>
+                            {isLoadingResume && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                Loading resume...
+                              </span>
+                            )}
+                            {resumeAutoLoaded && !isLoadingResume && (
+                              <Badge variant="secondary" className="text-xs">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Auto-loaded from profile
+                              </Badge>
+                            )}
+                          </div>
+                          {resumeAutoLoaded && (
+                            <p className="text-xs text-muted-foreground">
+                              This field is prefilled with the resume saved in the candidate's profile. Review or edit the text below, or paste a different resume to override.
+                            </p>
+                          )}
                           <FormControl>
                             <Textarea 
                               placeholder="Paste the candidate's resume text here. The AI will identify potential references from their work history..."
