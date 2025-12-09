@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, Trash2, CheckCircle2, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, Copy, Mail, Clock, Eye, FileText, ExternalLink, ChevronRight, RotateCcw, ClipboardList, RefreshCw, AlertCircle } from "lucide-react";
+import { Loader2, Trash2, CheckCircle2, BrainCircuit, Inbox, ArrowRight, User, Briefcase, Send, Copy, Mail, Clock, Eye, FileText, ExternalLink, ChevronRight, RotateCcw, ClipboardList, RefreshCw, AlertCircle, Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import type { SkillsTestRecommendation, SkillsTest, SkillsTestInvitation, SkillsTestResponse } from "@shared/schema";
@@ -391,7 +391,24 @@ export default function SkillsTestModule() {
         description="Create and send skill assessments to candidates. Tests are AI-generated based on the job requirements."
         icon={module.icon}
         gradient={module.color}
-      />
+      >
+        <Button 
+          onClick={() => {
+            setSelectedRecommendation(null);
+            setGeneratedTest(null);
+            setGeneratedInvitation(null);
+            setCandidateEmail("");
+            setPendingJobDescription("");
+            form.reset();
+            setWorkflowStep("configure");
+            setWorkflowOpen(true);
+          }}
+          data-testid="btn-create-test"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Create Test
+        </Button>
+      </PageHeader>
 
       {/* Status Cards */}
       <div className="grid gap-4 md:grid-cols-4">
