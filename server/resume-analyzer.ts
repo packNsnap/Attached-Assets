@@ -132,6 +132,13 @@ export interface MultiPassAnalysisResult {
   timelineNotes: string;
   roleFitNotes: string;
   certEducationNotes: string;
+  // Final recommendation after considering all red flags
+  overallRecommendation: {
+    action: "proceed_to_interview" | "skills_test_first" | "phone_screen" | "reject" | "needs_review";
+    reason: string;
+    wasOverridden: boolean;
+    originalAction: string;
+  };
 }
 
 // Title hierarchy for promotion analysis
@@ -1050,6 +1057,67 @@ export async function analyzeResumeMultiPass(
     });
   }
   
+  // Calculate final recommendation with critical issue overrides
+  const originalAction = pass4.recommendedAction;
+  let finalAction: typeof originalAction = originalAction;
+  let overrideReason = "";
+  let wasOverridden = false;
+  
+  // Critical override conditions - any of these should block interview recommendation
+  const criticalIssues: string[] = [];
+  
+  // 1. Name mismatch is a critical blocker
+  if (pass5.mismatchDetection.hasMismatch) {
+    const nameMismatchIssue = pass5.mismatchDetection.issues.find(i => i.type === "name");
+    if (nameMismatchIssue) {
+      criticalIssues.push(`Resume name does not match selected candidate`);
+    } else if (pass5.mismatchDetection.issues.length > 0) {
+      criticalIssues.push(`Resume mismatch detected: ${pass5.mismatchDetection.issues.map(i => i.description).join(", ")}`);
+    }
+  }
+  
+  // 2. Low plausibility score (below 60% is suspicious)
+  if (pass5.plausibilityScore < 60) {
+    criticalIssues.push(`Low plausibility score (${pass5.plausibilityScore}%) - resume may contain false or exaggerated claims`);
+  }
+  
+  // 3. Very high "too perfect" score (above 70% is suspicious)
+  if (pass5.tooPerfectScore > 70) {
+    criticalIssues.push(`Resume appears over-optimized (${pass5.tooPerfectScore}%) - may be heavily AI-generated or fabricated`);
+  }
+  
+  // 4. Overall verdict is LIKELY_FAKE
+  if (pass5.overallVerdict === "LIKELY_FAKE") {
+    criticalIssues.push(`Resume authenticity analysis indicates likely fake or heavily fabricated content`);
+  }
+  
+  // 5. Any critical fraud flags
+  const criticalFraudFlags = pass5.fraudFlags.filter(f => f.severity === "critical");
+  if (criticalFraudFlags.length > 0) {
+    criticalIssues.push(`Critical authenticity issues: ${criticalFraudFlags.map(f => f.flag).join(", ")}`);
+  }
+  
+  // If there are critical issues, override to reject
+  if (criticalIssues.length > 0) {
+    finalAction = "reject";
+    wasOverridden = true;
+    overrideReason = criticalIssues.join("; ");
+  }
+  
+  // Even for non-critical, if verdict is SUSPICIOUS and original was proceed_to_interview, downgrade
+  if (!wasOverridden && pass5.overallVerdict === "SUSPICIOUS" && originalAction === "proceed_to_interview") {
+    finalAction = "needs_review";
+    wasOverridden = true;
+    overrideReason = "Resume flagged as suspicious - manual review recommended before proceeding";
+  }
+  
+  const overallRecommendation = {
+    action: finalAction,
+    reason: wasOverridden ? overrideReason : `Based on fit score of ${pass3.fitScore}% and overall analysis`,
+    wasOverridden,
+    originalAction
+  };
+  
   return {
     pass1,
     pass2,
@@ -1083,6 +1151,7 @@ export async function analyzeResumeMultiPass(
     fraudFlags: pass5.fraudFlags,
     timelineNotes: pass5.timelineNotes,
     roleFitNotes: pass5.roleFitNotes,
-    certEducationNotes: pass5.certEducationNotes
+    certEducationNotes: pass5.certEducationNotes,
+    overallRecommendation
   };
 }

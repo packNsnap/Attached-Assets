@@ -234,6 +234,12 @@ type AnalysisResult = {
   pass3?: Pass3Result;
   pass4?: Pass4Result;
   pass5?: Pass5Result;
+  overallRecommendation?: {
+    action: "proceed_to_interview" | "skills_test_first" | "phone_screen" | "reject" | "needs_review";
+    reason: string;
+    wasOverridden: boolean;
+    originalAction: string;
+  };
 } | null;
 
 export default function ResumeAnalyzerModule() {
@@ -466,10 +472,14 @@ export default function ResumeAnalyzerModule() {
       'proceed_to_interview': { text: 'Proceed to Interview', color: '#16a34a' },
       'skills_test_first': { text: 'Skills Test First', color: '#2563eb' },
       'phone_screen': { text: 'Phone Screen', color: '#ca8a04' },
-      'reject': { text: 'Reject', color: '#dc2626' },
+      'reject': { text: 'Do Not Recommend', color: '#dc2626' },
       'needs_review': { text: 'Needs Manual Review', color: '#ca8a04' },
     };
-    const rec = analysis.pass4 ? recommendationMap[analysis.pass4.recommendedAction] : null;
+    // Use overallRecommendation if available, otherwise fall back to pass4.recommendedAction
+    const recAction = analysis.overallRecommendation?.action || analysis.pass4?.recommendedAction;
+    const rec = recAction ? recommendationMap[recAction] : null;
+    const wasOverridden = analysis.overallRecommendation?.wasOverridden || false;
+    const overrideReason = analysis.overallRecommendation?.reason || '';
 
     return `<!DOCTYPE html>
 <html>
@@ -575,8 +585,63 @@ export default function ResumeAnalyzerModule() {
 
   ${rec ? `
   <div class="recommendation" style="background: ${rec.color}10; border: 1px solid ${rec.color}40;">
-    <span class="recommendation-icon">📋</span>
-    <span class="recommendation-text" style="color: ${rec.color}">Recommendation: ${rec.text}</span>
+    <span class="recommendation-icon">${recAction === 'reject' ? '🚫' : recAction === 'proceed_to_interview' ? '✅' : '📋'}</span>
+    <span class="recommendation-text" style="color: ${rec.color}">Final Recommendation: ${rec.text}</span>
+  </div>
+  ${wasOverridden ? `
+  <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px; margin-bottom: 24px;">
+    <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>⚠️ Recommendation Override:</strong> ${overrideReason}</p>
+  </div>
+  ` : ''}
+  ` : ''}
+
+  <!-- Authenticity Assessment Section -->
+  ${(analysis.plausibilityScore !== undefined || analysis.tooPerfectScore !== undefined || analysis.mismatchDetection?.hasMismatch) ? `
+  <div class="section">
+    <h2 class="section-title authenticity">Resume Authenticity Assessment</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px;">
+      ${analysis.plausibilityScore !== undefined ? `
+      <div class="auth-item" style="background: ${analysis.plausibilityScore < 60 ? '#fef2f2' : analysis.plausibilityScore < 80 ? '#fffbeb' : '#ecfdf5'}; border: 1px solid ${analysis.plausibilityScore < 60 ? '#fca5a5' : analysis.plausibilityScore < 80 ? '#fde68a' : '#a7f3d0'};">
+        <div class="auth-label">Plausibility Score</div>
+        <div class="auth-value" style="color: ${analysis.plausibilityScore < 60 ? '#dc2626' : analysis.plausibilityScore < 80 ? '#ca8a04' : '#16a34a'}">${analysis.plausibilityScore}%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${analysis.plausibilityScore}%; background: ${analysis.plausibilityScore < 60 ? '#dc2626' : analysis.plausibilityScore < 80 ? '#ca8a04' : '#16a34a'}"></div></div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${analysis.plausibilityScore < 60 ? 'Suspicious' : analysis.plausibilityScore < 80 ? 'Some Concerns' : 'Appears Genuine'}</div>
+      </div>
+      ` : ''}
+      ${analysis.tooPerfectScore !== undefined ? `
+      <div class="auth-item" style="background: ${analysis.tooPerfectScore > 70 ? '#fef2f2' : analysis.tooPerfectScore > 50 ? '#fffbeb' : '#ecfdf5'}; border: 1px solid ${analysis.tooPerfectScore > 70 ? '#fca5a5' : analysis.tooPerfectScore > 50 ? '#fde68a' : '#a7f3d0'};">
+        <div class="auth-label">Too Perfect Score</div>
+        <div class="auth-value" style="color: ${analysis.tooPerfectScore > 70 ? '#dc2626' : analysis.tooPerfectScore > 50 ? '#ca8a04' : '#16a34a'}">${analysis.tooPerfectScore}%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: ${analysis.tooPerfectScore}%; background: ${analysis.tooPerfectScore > 70 ? '#dc2626' : analysis.tooPerfectScore > 50 ? '#ca8a04' : '#16a34a'}"></div></div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">${analysis.tooPerfectScore > 70 ? 'Very Polished / Suspicious' : analysis.tooPerfectScore > 50 ? 'Somewhat Polished' : 'Natural'}</div>
+      </div>
+      ` : ''}
+    </div>
+    ${analysis.tooPerfectIndicators && analysis.tooPerfectIndicators.length > 0 ? `
+    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+      <p style="font-size: 12px; font-weight: 600; color: #92400e; margin-bottom: 8px;">Over-Optimization Indicators:</p>
+      <ul style="margin: 0; padding-left: 16px; font-size: 12px; color: #78350f;">
+        ${analysis.tooPerfectIndicators.map((i: string) => `<li>${i}</li>`).join('')}
+      </ul>
+    </div>
+    ` : ''}
+    ${analysis.mismatchDetection?.hasMismatch ? `
+    <div style="background: #fef2f2; border: 2px solid #dc2626; border-radius: 8px; padding: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="font-size: 20px;">🚨</span>
+        <span style="font-weight: 600; color: #b91c1c; font-size: 16px;">Resume Mismatch Detected</span>
+        <span style="background: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;">${analysis.mismatchDetection.mismatchScore > 60 ? 'CRITICAL' : 'WARNING'}</span>
+      </div>
+      <div style="space-y: 8px;">
+        ${analysis.mismatchDetection.issues.map((issue: { type: string; description: string; evidence: string }) => `
+          <div style="background: #fecaca; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>[${issue.type}]</strong> ${issue.description}</p>
+            ${issue.evidence ? `<p style="font-size: 12px; color: #991b1b; margin-top: 4px; font-style: italic;">"${issue.evidence}"</p>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+    ` : ''}
   </div>
   ` : ''}
 
@@ -1032,28 +1097,33 @@ export default function ResumeAnalyzerModule() {
                   </div>
                 )}
                 
-                {result.pass4 && (
+                {(result.overallRecommendation || result.pass4) && (
                   <div className={cn("p-3 rounded-lg border", 
-                    result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-50/50 border-green-200" :
-                    result.pass4.recommendedAction === "reject" ? "bg-red-50/50 border-red-200" :
+                    (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" ? "bg-green-50/50 border-green-200" :
+                    (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" ? "bg-red-50/50 border-red-200" :
                     "bg-yellow-50/50 border-yellow-200"
                   )}>
                     <div className="flex items-center gap-2">
                       <Flag className="h-4 w-4" />
-                      <span className="text-sm font-medium">Recommendation:</span>
+                      <span className="text-sm font-medium">Final Recommendation:</span>
                       <Badge className={cn(
-                        result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-600" :
-                        result.pass4.recommendedAction === "reject" ? "bg-red-600" :
-                        result.pass4.recommendedAction === "skills_test_first" ? "bg-blue-600" :
+                        (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" ? "bg-green-600" :
+                        (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" ? "bg-red-600" :
+                        (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" ? "bg-blue-600" :
                         "bg-yellow-600"
                       )}>
-                        {result.pass4.recommendedAction === "proceed_to_interview" && "Proceed to Interview"}
-                        {result.pass4.recommendedAction === "reject" && "Reject"}
-                        {result.pass4.recommendedAction === "skills_test_first" && "Skills Test First"}
-                        {result.pass4.recommendedAction === "phone_screen" && "Phone Screen"}
-                        {result.pass4.recommendedAction === "needs_review" && "Needs Manual Review"}
+                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" && "Proceed to Interview"}
+                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" && "Do Not Recommend"}
+                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" && "Skills Test First"}
+                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "phone_screen" && "Phone Screen"}
+                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "needs_review" && "Needs Manual Review"}
                       </Badge>
                     </div>
+                    {result.overallRecommendation?.wasOverridden && (
+                      <div className="mt-2 text-xs text-red-600 bg-red-50 p-2 rounded">
+                        <strong>Override reason:</strong> {result.overallRecommendation.reason}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1117,19 +1187,19 @@ export default function ResumeAnalyzerModule() {
                   <AlertTriangle className="h-3.5 w-3.5" />
                   <span>Risk: {result.logicScore}%</span>
                 </div>
-                {result.pass4 && (
+                {(result.overallRecommendation || result.pass4) && (
                   <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ml-auto",
-                    result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-600 text-white" :
-                    result.pass4.recommendedAction === "reject" ? "bg-red-600 text-white" :
-                    result.pass4.recommendedAction === "skills_test_first" ? "bg-blue-600 text-white" :
+                    (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" ? "bg-green-600 text-white" :
+                    (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" ? "bg-red-600 text-white" :
+                    (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" ? "bg-blue-600 text-white" :
                     "bg-yellow-600 text-white"
                   )}>
                     <Flag className="h-3.5 w-3.5" />
-                    {result.pass4.recommendedAction === "proceed_to_interview" && "Proceed to Interview"}
-                    {result.pass4.recommendedAction === "reject" && "Reject"}
-                    {result.pass4.recommendedAction === "skills_test_first" && "Skills Test First"}
-                    {result.pass4.recommendedAction === "phone_screen" && "Phone Screen"}
-                    {result.pass4.recommendedAction === "needs_review" && "Needs Review"}
+                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" && "Proceed to Interview"}
+                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" && "Do Not Recommend"}
+                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" && "Skills Test First"}
+                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "phone_screen" && "Phone Screen"}
+                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "needs_review" && "Needs Review"}
                   </div>
                 )}
               </div>
@@ -1147,17 +1217,33 @@ export default function ResumeAnalyzerModule() {
 
                 <div className="flex-1 overflow-y-auto min-h-0 p-6">
                   <TabsContent value="overview" className="mt-0 space-y-4">
-                    {result.pass4 && (
+                    {(result.overallRecommendation || result.pass4) && (
                       <div className={cn("p-4 rounded-lg border",
-                        result.pass4.recommendedAction === "proceed_to_interview" ? "bg-green-50/50 border-green-200" :
-                        result.pass4.recommendedAction === "reject" ? "bg-red-50/50 border-red-200" :
+                        (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" ? "bg-green-50/50 border-green-200" :
+                        (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" ? "bg-red-50/50 border-red-200" :
                         "bg-yellow-50/50 border-yellow-200"
                       )}>
                         <div className="flex items-center gap-2 mb-3">
                           <Flag className="h-4 w-4" />
-                          <span className="font-medium">Recommended Action</span>
+                          <span className="font-medium">Final Recommendation</span>
+                          <Badge className={cn(
+                            (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" ? "bg-green-600" :
+                            (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" ? "bg-red-600" :
+                            "bg-yellow-600"
+                          )}>
+                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" && "Proceed to Interview"}
+                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" && "Do Not Recommend"}
+                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" && "Skills Test First"}
+                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "phone_screen" && "Phone Screen"}
+                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "needs_review" && "Needs Review"}
+                          </Badge>
                         </div>
-                        {result.pass4.nextSteps.length > 0 && (
+                        {result.overallRecommendation?.wasOverridden && (
+                          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                            <strong>Why not recommended:</strong> {result.overallRecommendation.reason}
+                          </div>
+                        )}
+                        {result.pass4?.nextSteps && result.pass4.nextSteps.length > 0 && (
                           <div className="space-y-2">
                             <p className="text-xs font-medium text-muted-foreground">Next Steps:</p>
                             <ul className="text-sm space-y-1">
