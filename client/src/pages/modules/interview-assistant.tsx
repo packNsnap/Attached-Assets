@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, ChevronDown, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch, Eye, StickyNote, Calendar, Clock, MapPin, Video, Phone, Building, Plus, X, CalendarDays } from "lucide-react";
+import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, ChevronDown, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch, Eye, StickyNote, Calendar, Clock, MapPin, Video, Phone, Building, Plus, X, CalendarDays, Trash2, Sparkles } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import type { InterviewRecommendation, ScheduledInterview, Candidate } from "@shared/schema";
@@ -298,6 +298,52 @@ export default function InterviewAssistantModule() {
     }
   };
 
+  const generateQuestionsOnly = async (rec: InterviewRecommendation) => {
+    setIsGenerating(true);
+    setLoadingRecommendationId(rec.id);
+    
+    try {
+      const response = await fetch("/api/generate-interview-questions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateId: rec.candidateId,
+          candidateName: rec.candidateName,
+          jobTitle: rec.jobTitle,
+          testScore: rec.testScore,
+          strengths: rec.strengths,
+          weaknesses: rec.weaknesses,
+          recommendationId: rec.id,
+          generateOnly: true,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate interview questions");
+      }
+
+      const result = await response.json();
+      
+      // Refresh the recommendations list to show updated questions
+      queryClient.invalidateQueries({ queryKey: ["/api/interview-recommendations"] });
+      
+      toast({
+        title: "Questions Generated",
+        description: `Generated ${result.questions?.length || 0} personalized questions for ${rec.candidateName}.`,
+      });
+    } catch (error) {
+      console.error("Failed to generate interview questions:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate AI questions. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+      setLoadingRecommendationId(null);
+    }
+  };
+
   const startFromRecommendation = async (rec: InterviewRecommendation) => {
     setIsGenerating(true);
     setLoadingRecommendationId(rec.id);
@@ -529,45 +575,78 @@ export default function InterviewAssistantModule() {
                           </ul>
                         </div>
                       </div>
-                      <div className="flex gap-2 ml-4">
-                        {rec.status === "pending" && (
+                      <div className="flex flex-col gap-2 ml-4">
+                        <div className="flex gap-2">
+                          {rec.status === "pending" && rec.recommendedQuestions.length === 0 && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              data-testid={`button-generate-questions-${rec.id}`}
+                              onClick={() => generateQuestionsOnly(rec)}
+                              disabled={isGenerating}
+                            >
+                              {isGenerating && loadingRecommendationId === rec.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="mr-2 h-4 w-4" />
+                                  Generate Questions
+                                </>
+                              )}
+                            </Button>
+                          )}
+                          {rec.status === "pending" && rec.recommendedQuestions.length > 0 && (
+                            <Button
+                              size="sm"
+                              data-testid={`button-start-interview-${rec.id}`}
+                              onClick={() => startFromRecommendation(rec)}
+                              disabled={isGenerating}
+                            >
+                              {isGenerating && loadingRecommendationId === rec.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Preparing...
+                                </>
+                              ) : (
+                                <>
+                                  <ArrowRight className="mr-2 h-4 w-4" />
+                                  Start Interview
+                                </>
+                              )}
+                            </Button>
+                          )}
+                          {rec.status === "interview_started" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              data-testid={`button-continue-interview-${rec.id}`}
+                              onClick={() => startFromRecommendation(rec)}
+                              disabled={isGenerating}
+                            >
+                              {isGenerating && loadingRecommendationId === rec.id ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  Loading...
+                                </>
+                              ) : (
+                                "Continue"
+                              )}
+                            </Button>
+                          )}
                           <Button
                             size="sm"
-                            data-testid={`button-start-interview-${rec.id}`}
-                            onClick={() => startFromRecommendation(rec)}
-                            disabled={isGenerating}
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => deleteRecommendation.mutate(rec.id)}
+                            disabled={deleteRecommendation.isPending}
+                            data-testid={`button-delete-rec-${rec.id}`}
                           >
-                            {isGenerating && loadingRecommendationId === rec.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Preparing...
-                              </>
-                            ) : (
-                              <>
-                                <ArrowRight className="mr-2 h-4 w-4" />
-                                Start Interview
-                              </>
-                            )}
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        )}
-                        {rec.status === "interview_started" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            data-testid={`button-continue-interview-${rec.id}`}
-                            onClick={() => startFromRecommendation(rec)}
-                            disabled={isGenerating}
-                          >
-                            {isGenerating && loadingRecommendationId === rec.id ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Loading...
-                              </>
-                            ) : (
-                              "Continue"
-                            )}
-                          </Button>
-                        )}
+                        </div>
                       </div>
                     </div>
                     )}
