@@ -1113,20 +1113,21 @@ export default function CandidatesModule() {
                         
                         return (
                           <Card key={analysis.id} className="p-4 space-y-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
                                 {index === 0 && (
                                   <Badge variant="secondary">Latest Analysis</Badge>
                                 )}
                               </div>
                               <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-6 w-6"
+                                variant="destructive" 
+                                size="sm" 
+                                className="shrink-0"
                                 onClick={() => deleteAnalysisMutation.mutate(analysis.id)}
                                 data-testid={`button-delete-analysis-${analysis.id}`}
                               >
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
                               </Button>
                             </div>
                             
@@ -1207,24 +1208,24 @@ export default function CandidatesModule() {
 
                             <div className="space-y-2">
                               <p className="text-xs font-medium text-muted-foreground">Skills Match</p>
-                              <div className="flex flex-wrap gap-1">
+                              <div className="flex flex-wrap gap-1.5">
                                 {analysis.matchedSkills.map((skill, i) => (
                                   <Badge key={i} variant="default" className="text-xs bg-green-100 text-green-800 hover:bg-green-100">
-                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    <CheckCircle className="h-3 w-3 mr-1 shrink-0" />
                                     {skill}
                                   </Badge>
                                 ))}
                                 {analysis.missingSkills.map((skill, i) => (
                                   <Badge key={i} variant="destructive" className="text-xs">
-                                    <XCircle className="h-3 w-3 mr-1" />
+                                    <XCircle className="h-3 w-3 mr-1 shrink-0" />
                                     {skill}
                                   </Badge>
                                 ))}
                               </div>
                               {analysis.extraSkills.length > 0 && (
-                                <div className="mt-1">
+                                <div className="mt-2">
                                   <p className="text-xs text-muted-foreground mb-1">Extra skills:</p>
-                                  <div className="flex flex-wrap gap-1">
+                                  <div className="flex flex-wrap gap-1.5">
                                     {analysis.extraSkills.map((skill, i) => (
                                       <Badge key={i} variant="secondary" className="text-xs">
                                         {skill}
