@@ -200,6 +200,7 @@ export interface IStorage {
   // Candidate references (stored on candidate profile)
   createCandidateReference(reference: InsertCandidateReference): Promise<CandidateReference>;
   getCandidateReferencesByCandidateId(candidateId: string): Promise<CandidateReference[]>;
+  updateCandidateReferenceStatus(id: string, status: string): Promise<CandidateReference | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -876,6 +877,11 @@ export class DatabaseStorage implements IStorage {
 
   async getCandidateReferencesByCandidateId(candidateId: string): Promise<CandidateReference[]> {
     return await db.select().from(candidateReferences).where(eq(candidateReferences.candidateId, candidateId)).orderBy(desc(candidateReferences.createdAt));
+  }
+
+  async updateCandidateReferenceStatus(id: string, status: string): Promise<CandidateReference | undefined> {
+    const result = await db.update(candidateReferences).set({ status }).where(eq(candidateReferences.id, id)).returning();
+    return result[0];
   }
 }
 

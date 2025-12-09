@@ -408,6 +408,7 @@ export const candidateReferences = pgTable("candidate_references", {
   relationship: text("relationship"),
   consentGiven: text("consent_given").default("false"),
   source: text("source").default("candidate_link"),
+  status: text("status").default("not_contacted"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 

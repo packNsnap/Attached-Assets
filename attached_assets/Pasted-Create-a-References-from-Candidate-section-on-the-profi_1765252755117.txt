@@ -1,0 +1,187 @@
+Create a “References from Candidate” section on the profile
+
+On the Candidate Profile page, add a new block/tab:
+
+Title: References from Candidate
+Subtitle: References submitted via link or manual entry.
+
+For each reference, show something like:
+
+Name
+
+Email
+
+Relationship
+
+Consent (Yes/No)
+
+Source (Link / Manual)
+
+Status (Not Contacted / Email Generated / Emailed / Completed)
+
+And actions:
+
+Generate Reference Email (uses AI)
+
+Open in Outlook
+
+Copy Email
+
+2. Make sure references are actually stored
+
+If you followed my last message, you should have a table like:
+
+candidate_references
+--------------------
+id                SERIAL PRIMARY KEY
+candidate_id      INTEGER NOT NULL
+reference_name    TEXT NOT NULL
+reference_email   TEXT NOT NULL
+relationship      TEXT
+consent_given     BOOLEAN DEFAULT FALSE
+source            TEXT DEFAULT 'candidate_link' -- or 'manual'
+status            TEXT DEFAULT 'not_contacted'
+created_at        TIMESTAMP DEFAULT now()
+
+
+When the candidate submits their reference via the link, you’re already inserting into this table.
+
+Now you just need:
+
+// GET /candidates/:id/references
+app.get('/candidates/:id/references', async (req, res) => {
+  const candidateId = req.params.id;
+  const refs = await db.candidate_references.find({ candidate_id: candidateId });
+  res.json(refs);
+});
+
+3. Frontend: show “References from Candidate”
+
+In your candidate profile component:
+
+const [references, setReferences] = useState([]);
+
+useEffect(() => {
+  fetch(`/candidates/${candidateId}/references`)
+    .then(res => res.json())
+    .then(setReferences);
+}, [candidateId]);
+
+
+Render:
+
+<section>
+  <h3>References from Candidate</h3>
+
+  {references.length === 0 && (
+    <p>No references submitted yet.</p>
+  )}
+
+  {references.map(ref => (
+    <div key={ref.id} className="reference-card">
+      <div>
+        <strong>{ref.reference_name}</strong> ({ref.relationship || 'Relationship not provided'})
+      </div>
+      <div>{ref.reference_email}</div>
+      <div>
+        Consent: {ref.consent_given ? 'Yes' : 'No'} • Source: {ref.source} • Status: {ref.status}
+      </div>
+      <div className="actions">
+        <button onClick={() => handleGenerateReferenceEmail(ref)}>Generate Reference Email</button>
+      </div>
+    </div>
+  ))}
+</section>
+
+4. Hook it into your AI + Outlook buttons
+a) Prompt for generating the reference email
+
+Add a new mode for your Replit prompt:
+
+mode = "from_reference_record"
+
+Inputs:
+- candidateName
+- positionAppliedFor
+- referenceName
+- referenceEmail
+- relationshipToCandidate
+
+Task:
+Generate a professional reference-check email with:
+- Subject line
+- Email body
+- Basic characteristic questions
+
+Return JSON:
+{
+  "emailSubject": "...",
+  "emailBody": "...",
+  "mailtoTemplate": "mailto:...?"
+}
+
+b) Frontend handler
+async function handleGenerateReferenceEmail(ref) {
+  const response = await fetch('/api/generate-reference-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      mode: 'from_reference_record',
+      candidateName,
+      positionAppliedFor,
+      referenceName: ref.reference_name,
+      referenceEmail: ref.reference_email,
+      relationshipToCandidate: ref.relationship
+    })
+  });
+
+  const data = await response.json();
+
+  // Save somewhere in state for the right-hand preview panel
+  setActiveReferenceEmail({
+    referenceId: ref.id,
+    subject: data.emailSubject,
+    body: data.emailBody,
+    mailtoTemplate: data.mailtoTemplate
+  });
+
+  // Optionally update status to "email_generated"
+  await fetch(`/candidate-references/${ref.id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'email_generated' })
+  });
+}
+
+c) Outlook button for that specific reference
+
+Once activeReferenceEmail is set:
+
+<a href={activeReferenceEmail.mailtoTemplate}>
+  <button type="button">Open in Outlook</button>
+</a>
+
+<button
+  type="button"
+  onClick={() => navigator.clipboard.writeText(activeReferenceEmail.body)}
+>
+  Copy Email
+</button>
+
+5. What you end up with
+
+Request Link tab: generates link + email text to send to candidate.
+
+Candidate fills the form → candidate_references table.
+
+Candidate Profile – References from Candidate section:
+
+Shows each submitted reference.
+
+One click → generate tailored reference email.
+
+One click → open Outlook with prefilled email to that reference.
+
+One click → copy the email body.
+
+This is the missing piece you’re complaining about: the references no longer “disappear”; they live in a visible, actionable section on the candidate’s profile that your team can work from.
