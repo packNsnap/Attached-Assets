@@ -1510,7 +1510,7 @@ export default function ResumeAnalyzerModule() {
                         </div>
                       </div>
                     )}
-                    {result.fitScore >= 70 && result.selectedJob && (
+                    {result.selectedJob && (
                       <div className="pt-4 border-t">
                         <Button
                           onClick={() => {
