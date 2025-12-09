@@ -27,8 +27,9 @@ import bcrypt from "bcryptjs";
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const upload = multer({ storage: multer.memoryStorage() });
 
-// In-memory resume storage (resumeId -> resumeText)
+// In-memory resume storage
 const resumeStore = new Map<string, string>();
+const fileBufferStore = new Map<string, { buffer: Buffer; originalName: string; mimeType: string }>();
 
 export async function registerRoutes(
   httpServer: Server,
@@ -983,11 +984,16 @@ export async function registerRoutes(
         return;
       }
 
-      // Store resume text in memory with candidateId as key
+      // Store resume text and file buffer in memory
       resumeStore.set(candidateId, resumeText);
+      const mimeType = fileExt === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      fileBufferStore.set(candidateId, { buffer: file.buffer, originalName: fileName, mimeType });
 
+      // Use API endpoint for resume URL instead of filename
+      const resumeUrl = `/api/resume/${candidateId}/download`;
+      
       const candidate = await storage.updateCandidate(candidateId, userId, { 
-        resumeUrl: fileName
+        resumeUrl: resumeUrl
       });
 
       if (!candidate) {
@@ -1000,7 +1006,7 @@ export async function registerRoutes(
         candidateId,
         fileName: fileName,
         fileType: fileExt || "unknown",
-        fileUrl: fileName,
+        fileUrl: resumeUrl,
         documentType: "Resume",
         resumeText: resumeText
       });
@@ -1030,6 +1036,42 @@ export async function registerRoutes(
       res.json({ candidateId: candidate.id, resumeUrl: candidate.resumeUrl, resumeText });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch resume" });
+    }
+  });
+
+  app.get("/api/resume/:candidateId/download", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const candidate = await storage.getCandidate(req.params.candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+      
+      // Try to get file from memory first
+      const fileData = fileBufferStore.get(req.params.candidateId);
+      if (fileData) {
+        res.setHeader("Content-Type", fileData.mimeType);
+        res.setHeader("Content-Disposition", `attachment; filename="${fileData.originalName}"`);
+        res.send(fileData.buffer);
+        return;
+      }
+      
+      // If not in memory, try to get from documents
+      const documents = await storage.getCandidateDocuments(req.params.candidateId);
+      const resumeDoc = documents.find(d => d.documentType === "Resume");
+      if (!resumeDoc) {
+        res.status(404).json({ error: "Resume file not found" });
+        return;
+      }
+      
+      // Return resume text as a download (as plain text since we don't have the original file)
+      res.setHeader("Content-Type", "text/plain");
+      res.setHeader("Content-Disposition", `attachment; filename="${resumeDoc.fileName}"`);
+      res.send(resumeDoc.resumeText);
+    } catch (error) {
+      console.error("Resume download error:", error);
+      res.status(500).json({ error: "Failed to download resume" });
     }
   });
 

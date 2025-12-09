@@ -869,7 +869,7 @@ export default function SkillsTestModule() {
                           <Input
                             readOnly
                             value={generatedInvitation.testLink}
-                            className="pr-20 text-sm bg-white font-mono"
+                            className="pr-20 text-sm bg-muted font-mono"
                             onClick={(e) => (e.target as HTMLInputElement).select()}
                             data-testid="input-test-link"
                           />
