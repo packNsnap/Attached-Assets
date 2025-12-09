@@ -2,6 +2,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { storage } from "./storage";
+import bcrypt from "bcryptjs";
 
 const app = express();
 const httpServer = createServer(app);
@@ -62,7 +64,40 @@ app.use((req, res, next) => {
   next();
 });
 
+async function createAdminUser() {
+  const adminEmail = "admin@resumelogik.com";
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  
+  if (!adminPassword) {
+    log("ADMIN_PASSWORD not set - skipping admin user creation", "admin");
+    return;
+  }
+  
+  try {
+    // Check if admin already exists
+    const existingAdmin = await storage.getUserByEmail(adminEmail);
+    if (existingAdmin) {
+      log("Admin user already exists", "admin");
+      return;
+    }
+    
+    // Create admin user with hashed password
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    await storage.upsertUser({
+      email: adminEmail,
+      password: hashedPassword,
+      firstName: "Admin",
+      lastName: "User",
+    });
+    
+    log("Admin user created successfully: " + adminEmail, "admin");
+  } catch (error) {
+    log("Failed to create admin user: " + (error instanceof Error ? error.message : "Unknown error"), "admin");
+  }
+}
+
 (async () => {
+  await createAdminUser();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
