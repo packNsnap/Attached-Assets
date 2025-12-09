@@ -183,6 +183,8 @@ type FraudFlag = {
 type Pass5Result = {
   authenticityScore: number;
   plausibilityScore: number;
+  tooPerfectScore: number;
+  tooPerfectIndicators: string[];
   overallVerdict: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   fraudFlags: FraudFlag[];
   timelineNotes: string;
@@ -197,6 +199,8 @@ type AnalysisResult = {
   logicScore: number;
   authenticityScore?: number;
   plausibilityScore?: number;
+  tooPerfectScore?: number;
+  tooPerfectIndicators?: string[];
   overallVerdict?: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   skillMatch: SkillMatch;
   findings: {
@@ -912,6 +916,65 @@ export default function ResumeAnalyzerModule() {
                           ))}
                           {result.fraudFlags.length > 3 && (
                             <p className="text-xs text-muted-foreground">+{result.fraudFlags.length - 3} more issues</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {result.tooPerfectScore !== undefined && result.tooPerfectScore > 30 && (
+                  <div className={cn("p-4 rounded-lg border", 
+                    result.tooPerfectScore > 80 ? "bg-red-50/50 border-red-200" :
+                    result.tooPerfectScore > 60 ? "bg-orange-50/50 border-orange-200" :
+                    "bg-yellow-50/50 border-yellow-200"
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={cn("p-2 rounded-lg", 
+                          result.tooPerfectScore > 80 ? "bg-red-100" :
+                          result.tooPerfectScore > 60 ? "bg-orange-100" :
+                          "bg-yellow-100"
+                        )}>
+                          <Sparkles className={cn("h-5 w-5",
+                            result.tooPerfectScore > 80 ? "text-red-600" :
+                            result.tooPerfectScore > 60 ? "text-orange-600" :
+                            "text-yellow-600"
+                          )} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">Too Perfect Score</p>
+                          <p className={cn("text-2xl font-bold",
+                            result.tooPerfectScore > 80 ? "text-red-600" :
+                            result.tooPerfectScore > 60 ? "text-orange-600" :
+                            "text-yellow-600"
+                          )} data-testid="text-too-perfect-score">
+                            {result.tooPerfectScore}%
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className={cn(
+                        result.tooPerfectScore > 80 ? "bg-red-600" :
+                        result.tooPerfectScore > 60 ? "bg-orange-600" :
+                        "bg-yellow-600"
+                      )}>
+                        {result.tooPerfectScore > 80 ? "Suspiciously Optimized" :
+                         result.tooPerfectScore > 60 ? "Very Polished" :
+                         "Slightly Polished"}
+                      </Badge>
+                    </div>
+                    {result.tooPerfectIndicators && result.tooPerfectIndicators.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-current/10">
+                        <p className="text-xs text-muted-foreground mb-2">Why it looks over-optimized:</p>
+                        <div className="space-y-1">
+                          {result.tooPerfectIndicators.slice(0, 3).map((indicator, i) => (
+                            <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <span className="text-yellow-600 mt-0.5">•</span>
+                              {indicator}
+                            </p>
+                          ))}
+                          {result.tooPerfectIndicators.length > 3 && (
+                            <p className="text-xs text-muted-foreground">+{result.tooPerfectIndicators.length - 3} more indicators</p>
                           )}
                         </div>
                       </div>

@@ -109,6 +109,8 @@ export interface MultiPassAnalysisResult {
   logicScore: number;
   authenticityScore: number;
   plausibilityScore: number;
+  tooPerfectScore: number;
+  tooPerfectIndicators: string[];
   overallVerdict: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   skillMatch: {
     matched: string[];
@@ -617,6 +619,8 @@ export interface FraudFlag {
 export interface Pass5Result {
   authenticityScore: number;
   plausibilityScore: number;
+  tooPerfectScore: number;
+  tooPerfectIndicators: string[];
   overallVerdict: "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE";
   fraudFlags: FraudFlag[];
   timelineIssues: {
@@ -757,6 +761,8 @@ Return a JSON object with this exact structure:
 {
   "format_score": 0-100,
   "plausibility_score": 0-100,
+  "too_perfect_score": 0-100,
+  "too_perfect_indicators": ["string explaining why"],
   "overall_verdict": "LIKELY_REAL" | "SUSPICIOUS" | "LIKELY_FAKE",
   "fraudFlags": [
     {
@@ -792,6 +798,19 @@ Return a JSON object with this exact structure:
   "cert_education_notes": "Education + certification realism assessment",
   "summary": "Short plain language summary for human review explaining authenticity concerns"
 }
+
+TOO PERFECT SCORE GUIDELINES (0-100):
+A résumé is "too perfect" when:
+- Language is heavily buzzword-driven and formulaic
+- Every role shows significant wins with no neutral or weak periods
+- Career progression is perfectly linear with constant promotions
+- Achievements are generic, with metrics but little concrete context
+- Style and sentence structure are extremely uniform throughout
+
+Scoring:
+- 0-30: Normal human variation (typos, varied writing, some weak bullets)
+- 31-70: Very polished, possibly AI-assisted (too clean, buzzword-heavy)
+- 71-100: Over-optimized, likely heavily engineered or AI-generated
 
 SEVERITY GUIDELINES:
 - CRITICAL: Working 2+ full-time jobs simultaneously, impossible timelines, clear fabrication
@@ -851,6 +870,8 @@ Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
   return {
     authenticityScore,
     plausibilityScore: result.plausibility_score || authenticityScore,
+    tooPerfectScore: result.too_perfect_score || 0,
+    tooPerfectIndicators: result.too_perfect_indicators || [],
     overallVerdict: verdict as Pass5Result["overallVerdict"],
     fraudFlags: result.fraudFlags || [],
     timelineIssues: {
@@ -956,6 +977,8 @@ export async function analyzeResumeMultiPass(
     logicScore: pass4.overallRiskScore,
     authenticityScore: pass5.authenticityScore,
     plausibilityScore: pass5.plausibilityScore,
+    tooPerfectScore: pass5.tooPerfectScore,
+    tooPerfectIndicators: pass5.tooPerfectIndicators,
     overallVerdict: pass5.overallVerdict,
     skillMatch: {
       matched: [...pass3.skillsAnalysis.matched_must_have, ...pass3.skillsAnalysis.matched_nice_to_have],
