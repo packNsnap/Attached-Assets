@@ -81,6 +81,7 @@ export interface IStorage {
   getCandidatesByJobId(jobId: string, userId: string): Promise<Candidate[]>;
   updateCandidateStage(id: string, userId: string, stage: string): Promise<Candidate | undefined>;
   updateCandidateJobId(id: string, userId: string, jobId: string | null): Promise<Candidate | undefined>;
+  updateCandidateStatus(id: string, userId: string, isActive: string, isArchived: string): Promise<Candidate | undefined>;
   
   getJobsWithCandidateCounts(userId: string): Promise<(Job & { candidateCount: number })[]>;
   
@@ -269,6 +270,15 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .update(candidates)
       .set({ jobId })
+      .where(and(eq(candidates.id, id), eq(candidates.userId, userId)))
+      .returning();
+    return result[0];
+  }
+
+  async updateCandidateStatus(id: string, userId: string, isActive: string, isArchived: string): Promise<Candidate | undefined> {
+    const result = await db
+      .update(candidates)
+      .set({ isActive, isArchived })
       .where(and(eq(candidates.id, id), eq(candidates.userId, userId)))
       .returning();
     return result[0];

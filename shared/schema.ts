@@ -76,6 +76,8 @@ export const candidates = pgTable("candidates", {
   source: text("source"),
   lastTestScore: integer("last_test_score"),
   notesLastViewedAt: timestamp("notes_last_viewed_at"),
+  isActive: text("is_active").notNull().default("active"),
+  isArchived: text("is_archived").notNull().default("false"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 

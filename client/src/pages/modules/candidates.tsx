@@ -458,6 +458,27 @@ export default function CandidatesModule() {
     }
   });
 
+  const updateCandidateStatusMutation = useMutation({
+    mutationFn: async ({ id, isActive, isArchived }: { id: string; isActive: string; isArchived: string }) => {
+      const res = await fetch(`/api/candidates/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive, isArchived })
+      });
+      if (!res.ok) throw new Error("Failed to update candidate status");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
+      if (selectedCandidate) setSelectedCandidate(data);
+      toast({ title: "Status Updated", description: "Candidate status has been updated." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update candidate status", variant: "destructive" });
+    }
+  });
+
   const filteredCandidates = candidates.filter(c => {
     const matchesSearch = searchQuery === "" || 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

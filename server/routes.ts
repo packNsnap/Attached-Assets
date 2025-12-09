@@ -480,6 +480,25 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/candidates/:id/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { isActive, isArchived } = req.body;
+      if (!isActive || !isArchived) {
+        res.status(400).json({ error: "isActive and isArchived are required" });
+        return;
+      }
+      const candidate = await storage.updateCandidateStatus(req.params.id, userId, isActive, isArchived);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+      res.json(candidate);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update candidate status" });
+    }
+  });
+
   app.get("/api/jobs/:id/candidates", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
