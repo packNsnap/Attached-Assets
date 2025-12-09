@@ -3,10 +3,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, UserCheck, Copy, Mail, FileText, Link, ExternalLink, CheckCircle2, User, Building } from "lucide-react";
+import { Loader2, UserCheck, Copy, Mail, FileText, Link, ExternalLink, CheckCircle2, User, Building, Clock, AlertCircle, ClipboardList } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
-import type { Candidate } from "@shared/schema";
+import type { Candidate, ReferenceRequest } from "@shared/schema";
+import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -62,7 +63,7 @@ type GeneratedResult = {
 } | null;
 
 export default function ReferenceCheckModule() {
-  const [mode, setMode] = useState<"from_form" | "from_resume" | "request_link">("from_form");
+  const [mode, setMode] = useState<"from_form" | "from_resume" | "request_link" | "requests">("from_form");
   const [result, setResult] = useState<GeneratedResult>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
@@ -72,6 +73,11 @@ export default function ReferenceCheckModule() {
 
   const { data: candidates = [] } = useQuery<Candidate[]>({
     queryKey: ["/api/candidates"],
+  });
+
+  const { data: referenceRequests = [], isLoading: isLoadingRequests } = useQuery<ReferenceRequest[]>({
+    queryKey: ["/api/reference-requests"],
+    enabled: mode === "requests",
   });
 
   const form = useForm<FormValues>({
@@ -194,7 +200,7 @@ export default function ReferenceCheckModule() {
       />
 
       <Tabs value={mode} onValueChange={(v) => { setMode(v as typeof mode); setResult(null); }} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[500px]">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[650px]">
           <TabsTrigger value="from_form" data-testid="tab-from-form">
             <User className="h-4 w-4 mr-2" />
             Manual Entry
@@ -207,9 +213,115 @@ export default function ReferenceCheckModule() {
             <Link className="h-4 w-4 mr-2" />
             Request Link
           </TabsTrigger>
+          <TabsTrigger value="requests" data-testid="tab-requests">
+            <ClipboardList className="h-4 w-4 mr-2" />
+            Requests
+          </TabsTrigger>
         </TabsList>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        {mode === "requests" ? (
+          <div className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reference Requests</CardTitle>
+                <CardDescription>
+                  View all reference requests you've sent to candidates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingRequests ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : referenceRequests.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <ClipboardList className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                    <p className="text-muted-foreground">No reference requests yet</p>
+                    <p className="text-sm text-muted-foreground/70 mt-1">
+                      Use the "Request Link" tab to send reference requests to candidates
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {referenceRequests.map((request) => (
+                      <Card key={request.id} className="bg-muted/20" data-testid={`card-reference-request-${request.id}`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold" data-testid={`text-candidate-name-${request.id}`}>
+                                  {request.candidateName}
+                                </h4>
+                                {request.status === "pending" && (
+                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Pending
+                                  </Badge>
+                                )}
+                                {request.status === "submitted" && (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Submitted
+                                  </Badge>
+                                )}
+                                {request.status === "expired" && (
+                                  <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Expired
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{request.positionAppliedFor}</p>
+                              {request.candidateEmail && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Mail className="h-3 w-3" />
+                                  {request.candidateEmail}
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right text-xs text-muted-foreground">
+                              <div>Sent: {request.createdAt ? format(new Date(request.createdAt), "MMM d, yyyy") : "N/A"}</div>
+                              {request.expiresAt && (
+                                <div>Expires: {format(new Date(request.expiresAt), "MMM d, yyyy")}</div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {request.status === "submitted" && request.referenceName && (
+                            <div className="mt-4 pt-4 border-t">
+                              <p className="text-xs font-medium text-muted-foreground mb-2">Submitted Reference:</p>
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm font-medium">{request.referenceName}</span>
+                                </div>
+                                {request.referenceEmail && (
+                                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <Mail className="h-3 w-3" />
+                                    {request.referenceEmail}
+                                  </div>
+                                )}
+                                {request.referenceRelationship && (
+                                  <Badge variant="outline" className="text-xs">{request.referenceRelationship}</Badge>
+                                )}
+                              </div>
+                              {request.submittedAt && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                  Submitted on {format(new Date(request.submittedAt), "MMM d, yyyy 'at' h:mm a")}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle>
@@ -592,6 +704,7 @@ export default function ReferenceCheckModule() {
             )}
           </div>
         </div>
+        )}
       </Tabs>
     </div>
   );
