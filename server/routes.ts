@@ -24,13 +24,20 @@ import multer from "multer";
 import * as mammoth from "mammoth";
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import bcrypt from "bcryptjs";
+import * as fs from "fs";
+import * as path from "path";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const upload = multer({ storage: multer.memoryStorage() });
 
-// In-memory resume storage
+// Persistent file storage directory
+const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// In-memory resume storage (for text only - files are persisted to disk)
 const resumeStore = new Map<string, string>();
-const fileBufferStore = new Map<string, { buffer: Buffer; originalName: string; mimeType: string }>();
 
 export async function registerRoutes(
   httpServer: Server,
@@ -1020,26 +1027,30 @@ export async function registerRoutes(
       const fileName = file.originalname;
       const fileExt = fileName.split(".").pop()?.toLowerCase();
 
-      if (fileExt === "pdf") {
-        resumeText = await extractTextFromPdf(file.buffer);
-      } else if (fileExt === "docx" || fileExt === "doc") {
-        resumeText = await extractTextFromDocx(file.buffer);
-      } else {
-        res.status(400).json({ error: "Only PDF and DOCX files are supported" });
+      if (fileExt !== "pdf") {
+        res.status(400).json({ error: "Only PDF files are supported. Please convert your document to PDF before uploading." });
         return;
       }
+      
+      resumeText = await extractTextFromPdf(file.buffer);
 
       if (!resumeText.trim()) {
         res.status(400).json({ error: "Could not extract text from file" });
         return;
       }
 
-      // Store resume text and file buffer in memory
+      // Store resume text in memory for quick access
       resumeStore.set(candidateId, resumeText);
-      const mimeType = fileExt === "pdf" ? "application/pdf" : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-      fileBufferStore.set(candidateId, { buffer: file.buffer, originalName: fileName, mimeType });
 
-      // Use API endpoint for resume URL instead of filename
+      // Generate unique filename with original extension and save to disk
+      const uniqueId = randomBytes(8).toString("hex");
+      const safeFileName = `${candidateId}_${uniqueId}.${fileExt}`;
+      const filePath = path.join(UPLOADS_DIR, safeFileName);
+      
+      // Save the original file buffer to disk
+      fs.writeFileSync(filePath, file.buffer);
+
+      // Use API endpoint for resume URL
       const resumeUrl = `/api/resume/${candidateId}/download`;
       
       const candidate = await storage.updateCandidate(candidateId, userId, { 
@@ -1047,16 +1058,20 @@ export async function registerRoutes(
       });
 
       if (!candidate) {
+        // Clean up the saved file if candidate update fails
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
         res.status(404).json({ error: "Candidate not found" });
         return;
       }
 
-      // Also save to the documents table for persistence
+      // Save to the documents table with relative file path for persistence
       await storage.createCandidateDocument({
         candidateId,
         fileName: fileName,
         fileType: fileExt || "unknown",
-        fileUrl: resumeUrl,
+        fileUrl: safeFileName,  // Store only the filename (relative to uploads dir)
         documentType: "Resume",
         resumeText: resumeText
       });
@@ -1098,16 +1113,7 @@ export async function registerRoutes(
         return;
       }
       
-      // Try to get file from memory first
-      const fileData = fileBufferStore.get(req.params.candidateId);
-      if (fileData) {
-        res.setHeader("Content-Type", fileData.mimeType);
-        res.setHeader("Content-Disposition", `attachment; filename="${fileData.originalName}"`);
-        res.send(fileData.buffer);
-        return;
-      }
-      
-      // If not in memory, try to get from documents
+      // Get document from database which contains the file path
       const documents = await storage.getCandidateDocuments(req.params.candidateId);
       const resumeDoc = documents.find(d => d.documentType === "Resume");
       if (!resumeDoc) {
@@ -1115,8 +1121,35 @@ export async function registerRoutes(
         return;
       }
       
-      // Return resume text as a download (as plain text since we don't have the original file)
-      // Use .txt extension since we only have the extracted text, not the original file
+      // Safely resolve file path - only allow files within UPLOADS_DIR
+      const storedPath = resumeDoc.fileUrl;
+      if (storedPath) {
+        // Handle both relative filenames and legacy absolute paths
+        let resolvedPath: string;
+        if (path.isAbsolute(storedPath)) {
+          // Legacy absolute path - validate it's within uploads dir
+          resolvedPath = path.normalize(storedPath);
+        } else {
+          // Relative filename - resolve against uploads dir
+          resolvedPath = path.join(UPLOADS_DIR, path.basename(storedPath));
+        }
+        
+        // Security check: ensure resolved path is within UPLOADS_DIR
+        const normalizedUploads = path.normalize(UPLOADS_DIR);
+        if (resolvedPath.startsWith(normalizedUploads) && fs.existsSync(resolvedPath)) {
+          const fileBuffer = fs.readFileSync(resolvedPath);
+          const mimeType = resumeDoc.fileType === "pdf" ? "application/pdf" : 
+                          (resumeDoc.fileType === "docx" || resumeDoc.fileType === "doc") ? 
+                          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : 
+                          "application/octet-stream";
+          res.setHeader("Content-Type", mimeType);
+          res.setHeader("Content-Disposition", `attachment; filename="${resumeDoc.fileName}"`);
+          res.send(fileBuffer);
+          return;
+        }
+      }
+      
+      // Fallback: return resume text as plain text file
       const baseName = resumeDoc.fileName.replace(/\.[^/.]+$/, "") || "resume";
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       res.setHeader("Content-Disposition", `attachment; filename="${baseName}.txt"`);
