@@ -248,8 +248,31 @@ export default function ResumeAnalyzerModule() {
       htmlContent: string;
       fileName: string;
       jobTitle: string;
+      jobId?: string;
+      analysis: NonNullable<AnalysisResult>;
     }) => {
-      const res = await fetch(`/api/candidates/${data.candidateId}/save-analysis-report`, {
+      // First, save the structured analysis data
+      const analysisRes = await fetch("/api/resume-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          candidateId: data.candidateId,
+          jobId: data.jobId || null,
+          jobTitle: data.jobTitle,
+          fitScore: data.analysis.fitScore,
+          logicScore: data.analysis.logicScore,
+          matchedSkills: data.analysis.skillMatch.matched,
+          missingSkills: data.analysis.skillMatch.missing,
+          extraSkills: data.analysis.skillMatch.extra,
+          findings: JSON.stringify(data.analysis.findings),
+          summary: data.analysis.summary,
+          authenticitySignals: data.analysis.authenticitySignals ? JSON.stringify(data.analysis.authenticitySignals) : null,
+        }),
+      });
+      if (!analysisRes.ok) throw new Error("Failed to save analysis data");
+
+      // Then, save the HTML document
+      const docRes = await fetch(`/api/candidates/${data.candidateId}/save-analysis-report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -258,21 +281,22 @@ export default function ResumeAnalyzerModule() {
           jobTitle: data.jobTitle,
         }),
       });
-      if (!res.ok) throw new Error("Failed to save report");
-      return res.json();
+      if (!docRes.ok) throw new Error("Failed to save report document");
+      return docRes.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["candidate-documents", selectedCandidateId] });
+      queryClient.invalidateQueries({ queryKey: ["resume-analysis", selectedCandidateId] });
       toast({
-        title: "Report Saved",
-        description: "Analysis report has been saved to the candidate's documents.",
+        title: "Analysis Saved",
+        description: "Resume analysis has been saved to the candidate's profile and documents.",
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to save report to candidate documents.",
+        description: "Failed to save analysis to candidate.",
       });
     },
   });
@@ -1375,6 +1399,8 @@ export default function ResumeAnalyzerModule() {
                         htmlContent,
                         fileName: `Resume_Analysis_${candidateName.replace(/\s+/g, '_')}`,
                         jobTitle,
+                        jobId: result.selectedJob?.id,
+                        analysis: result,
                       });
                     }
                   }}

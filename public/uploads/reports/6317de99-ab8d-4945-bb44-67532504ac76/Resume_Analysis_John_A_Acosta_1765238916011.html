@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Resume Analysis Report - John A Acosta</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; color: #1f2937; padding: 40px; max-width: 900px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb; }
+    .header h1 { font-size: 28px; color: #111827; margin-bottom: 8px; }
+    .header .subtitle { color: #6b7280; font-size: 14px; }
+    .meta { display: flex; justify-content: space-between; margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px; }
+    .meta-item { text-align: center; }
+    .meta-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: 14px; font-weight: 600; color: #111827; margin-top: 4px; }
+    .scores { display: flex; gap: 24px; margin-bottom: 32px; }
+    .score-card { flex: 1; padding: 20px; border-radius: 12px; text-align: center; }
+    .score-card.fit { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #a7f3d0; }
+    .score-card.risk { background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); border: 1px solid #fca5a5; }
+    .score-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .score-value { font-size: 36px; font-weight: 700; }
+    .score-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-top: 8px; }
+    .recommendation { padding: 16px 24px; border-radius: 8px; margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
+    .recommendation-icon { font-size: 20px; }
+    .recommendation-text { font-weight: 600; }
+    .section { margin-bottom: 32px; }
+    .section-title { font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ''; width: 4px; height: 20px; border-radius: 2px; }
+    .section-title.skills::before { background: #3b82f6; }
+    .section-title.timeline::before { background: #8b5cf6; }
+    .section-title.flags::before { background: #f59e0b; }
+    .section-title.authenticity::before { background: #ec4899; }
+    .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .skills-box { padding: 12px; border-radius: 8px; }
+    .skills-box.matched { background: #ecfdf5; border: 1px solid #a7f3d0; }
+    .skills-box.missing { background: #fef2f2; border: 1px solid #fca5a5; }
+    .skills-box.extra { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .skills-box-title { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .skill-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; }
+    .skill-tag.matched { background: #d1fae5; color: #047857; }
+    .skill-tag.missing { background: #fecaca; color: #b91c1c; }
+    .skill-tag.extra { background: #dbeafe; color: #1d4ed8; }
+    .finding { display: flex; gap: 12px; padding: 12px; border-radius: 8px; margin-bottom: 8px; }
+    .finding.risk { background: #fef2f2; border-left: 3px solid #dc2626; }
+    .finding.warning { background: #fffbeb; border-left: 3px solid #f59e0b; }
+    .finding.good { background: #ecfdf5; border-left: 3px solid #16a34a; }
+    .finding-icon { font-size: 16px; }
+    .finding-content { flex: 1; }
+    .finding-message { font-weight: 500; font-size: 14px; }
+    .finding-details { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .authenticity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .auth-item { padding: 12px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; }
+    .auth-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .auth-value { font-size: 20px; font-weight: 600; }
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; }
+    .summary { padding: 20px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 32px; }
+    .summary p { font-size: 14px; color: #374151; }
+    .footer { text-align: center; padding-top: 24px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
+    .print-btn { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+    .print-btn:hover { background: #2563eb; }
+    @media print { .print-btn { display: none; } body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Resume Analysis Report</h1>
+    <p class="subtitle">Generated by Resume Logik AI</p>
+  </div>
+
+  <div class="meta">
+    <div class="meta-item">
+      <div class="meta-label">Candidate</div>
+      <div class="meta-value">John A Acosta</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Position</div>
+      <div class="meta-value">3D printer tech</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Date</div>
+      <div class="meta-value">December 8, 2025</div>
+    </div>
+  </div>
+
+  <div class="scores">
+    <div class="score-card fit">
+      <div class="score-label">Fit Score</div>
+      <div class="score-value" style="color: #16a34a">80%</div>
+      <span class="score-badge" style="background: #16a34a20; color: #16a34a">
+        Good Fit
+      </span>
+    </div>
+    <div class="score-card risk">
+      <div class="score-label">Risk Score</div>
+      <div class="score-value" style="color: #ca8a04">41%</div>
+      <span class="score-badge" style="background: #ca8a0420; color: #ca8a04">
+        Medium Risk
+      </span>
+    </div>
+  </div>
+
+  
+  <div class="recommendation" style="background: #16a34a10; border: 1px solid #16a34a40;">
+    <span class="recommendation-icon">📋</span>
+    <span class="recommendation-text" style="color: #16a34a">Recommendation: Proceed to Interview</span>
+  </div>
+  
+
+  
+  <div class="summary">
+    <p>John Acosta is a skilled 3D Printing & CNC Production Specialist with over 3.5 years of experience in the technology industry. His expertise spans operating and maintaining FDM and resin 3D printers, CNC laser engraving, and CNC production. John has demonstrated proficiency in managing full production pipelines, optimizing slicer profiles, and ensuring safety compliance. Despite a significant job overlap and an employment gap, his consistent job tenure and relevant skills make him a strong candidate for roles requiring technical precision and problem-solving capabilities.</p>
+  </div>
+  
+
+  <div class="section">
+    <h2 class="section-title skills">Skills Match</h2>
+    <div class="skills-grid">
+      <div class="skills-box matched">
+        <div class="skills-box-title">Matched Skills (5)</div>
+        <span class="skill-tag matched">FDM & Resin 3D Printing</span><span class="skill-tag matched">Cura</span><span class="skill-tag matched">PrusaSlicer</span><span class="skill-tag matched">Fusion 360</span><span class="skill-tag matched">Blender</span>
+      </div>
+      <div class="skills-box missing">
+        <div class="skills-box-title">Missing Skills (0)</div>
+        
+      </div>
+      <div class="skills-box extra">
+        <div class="skills-box-title">Extra Skills (2)</div>
+        <span class="skill-tag extra">CNC Laser Engraving/Cutting</span><span class="skill-tag extra">Python</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2 class="section-title flags">Findings</h2>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">Significant Job Overlap</div>
+          <div class="finding-details">There is a 47-month overlap between the roles of CNC Laser Operator and 3D Printing & CNC Production Specialist. This is a significant overlap that may require further explanation to understand how these roles were managed concurrently.</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">Extended Employment Gap</div>
+          <div class="finding-details">There is a 12-month gap between the roles of Manufacturing & Maker Support and CNC Laser Operator. This extended gap could indicate a period of unemployment or personal time off, which may need clarification.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Normal Promotion Speed</div>
+          <div class="finding-details">The transition from CNC Laser Operator to 3D Printing & CNC Production Specialist took 59 months, which is a reasonable timeframe for career progression and does not raise any concerns.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Average Tenure</div>
+          <div class="finding-details">The average tenure across roles is 39 months, which is above the threshold of concern and suggests stability in employment.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Stable Job Count</div>
+          <div class="finding-details">With 3 jobs over 3.5 years, there is no indication of job hopping, as the number of roles is within a reasonable range for the timeframe analyzed.</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">Significant Job Overlap</div>
+          <div class="finding-details">There is a 47-month overlap between the roles of CNC Laser Operator and 3D Printing & CNC Production Specialist, which requires further explanation to understand how these roles were managed concurrently.</div>
+        </div>
+      </div>
+    
+      <div class="finding warning">
+        <span class="finding-icon">⚠️</span>
+        <div class="finding-content">
+          <div class="finding-message">Extended Employment Gap</div>
+          <div class="finding-details">A 12-month gap exists between the roles of Manufacturing & Maker Support and CNC Laser Operator, indicating a period of unemployment or personal time off that may need clarification.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Strong Skills Match</div>
+          <div class="finding-details">John matches all the must-have skills and possesses additional bonus skills such as CNC Laser Engraving/Cutting and Python, which enhance his fit for technology roles.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Industry Alignment</div>
+          <div class="finding-details">John's experience aligns well with the technology industry, which is the target industry for the role.</div>
+        </div>
+      </div>
+    
+  </div>
+  
+
+  
+  <div class="section">
+    <h2 class="section-title authenticity">Authenticity Signals</h2>
+    <div class="authenticity-grid">
+      <div class="auth-item">
+        <div class="auth-label">Generic Writing Score</div>
+        <div class="auth-value" style="color: #16a34a">20%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 20%; background: #16a34a"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Specificity Score</div>
+        <div class="auth-value" style="color: #16a34a">75%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 75%; background: #16a34a"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Fluff Ratio</div>
+        <div class="auth-value" style="color: #ca8a04">60%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 60%; background: #ca8a04"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">AI-Style Likelihood</div>
+        <div class="auth-value" style="color: #16a34a">30%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 30%; background: #16a34a"></div></div>
+      </div>
+    </div>
+    
+    <div style="margin-top: 16px; padding: 12px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px;">
+      <p style="font-size: 13px; color: #7c3aed;"><strong>Recommendation:</strong> Clarify the management of overlapping roles during the interview. Discuss the reason for the 12-month employment gap.</p>
+    </div>
+    
+  </div>
+  
+
+  <div class="footer">
+    <p>This report was generated automatically by Resume Logik AI analysis.</p>
+    <p style="margin-top: 4px;">This is an internal consistency analysis only and is not a background check or verification of claims.</p>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</body>
+</html>
