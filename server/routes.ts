@@ -1106,8 +1106,9 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/analyze-resume", async (req, res) => {
+  app.post("/api/analyze-resume", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { resumeText, jobDescription, jobSkills, jobTitle, jobLevel, candidateId, jobId } = req.body;
       
       if (!resumeText) {
@@ -1122,7 +1123,7 @@ export async function registerRoutes(
       let expectedCandidateName: string | null = null;
       if (candidateId) {
         try {
-          const candidate = await storage.getCandidate(candidateId);
+          const candidate = await storage.getCandidate(candidateId, userId);
           if (candidate) {
             expectedCandidateName = candidate.name;
           }
