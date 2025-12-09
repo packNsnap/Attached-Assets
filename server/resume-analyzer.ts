@@ -665,7 +665,8 @@ export interface Pass5Result {
 export async function pass5_authenticityAnalysis(
   extractedData: Pass1Result,
   timelineAnalysis: Pass2Result,
-  resumeText: string
+  resumeText: string,
+  expectedCandidateName?: string | null
 ): Promise<Pass5Result> {
   // Known generic/buzzword phrases that indicate low authenticity
   const GENERIC_PHRASES = [
@@ -896,6 +897,47 @@ Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
     recommendation = authenticityScore >= 25 ? "high_risk" : "likely_fraudulent";
   }
   
+  // Build mismatch detection result
+  let mismatchDetection = result.mismatchDetection || {
+    hasMismatch: false,
+    mismatchScore: 0,
+    issues: []
+  };
+
+  // Check for name mismatch against expected candidate name
+  if (expectedCandidateName) {
+    const resumeLines = resumeText.split('\n').filter(l => l.trim());
+    const potentialName = resumeLines[0]?.trim() || '';
+    
+    // Normalize names for comparison
+    const normalizedExpected = expectedCandidateName.toLowerCase().trim();
+    const normalizedResume = potentialName.toLowerCase().trim();
+    
+    // Check if names match (partial match for flexibility)
+    const expectedParts = normalizedExpected.split(/\s+/).filter(p => p.length > 1);
+    const resumeParts = normalizedResume.split(/\s+/).filter(p => p.length > 1);
+    
+    // Check if at least one significant part of the expected name appears in the resume name
+    const hasMatch = expectedParts.some(part => 
+      resumeParts.some(rp => rp.includes(part) || part.includes(rp))
+    );
+    
+    if (!hasMatch && potentialName.length > 0 && expectedParts.length > 0) {
+      mismatchDetection = {
+        hasMismatch: true,
+        mismatchScore: 100,
+        issues: [
+          ...mismatchDetection.issues,
+          {
+            type: "name",
+            description: `Resume name "${potentialName}" does not match selected candidate "${expectedCandidateName}"`,
+            evidence: `Expected: ${expectedCandidateName}, Found in resume: ${potentialName}`
+          }
+        ]
+      };
+    }
+  }
+
   return {
     authenticityScore,
     plausibilityScore: result.plausibility_score || authenticityScore,
@@ -925,11 +967,7 @@ Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
       unverifiableEducation: [],
       suspiciousCertifications: []
     },
-    mismatchDetection: result.mismatchDetection || {
-      hasMismatch: false,
-      mismatchScore: 0,
-      issues: []
-    },
+    mismatchDetection,
     timelineNotes: result.timeline_notes || "",
     roleFitNotes: result.role_fit_notes || "",
     certEducationNotes: result.cert_education_notes || "",
@@ -944,7 +982,8 @@ export async function analyzeResumeMultiPass(
   jobDescription: string,
   jobSkills: string[],
   jobTitle: string,
-  jobLevel: string
+  jobLevel: string,
+  expectedCandidateName?: string | null
 ): Promise<MultiPassAnalysisResult> {
   // Pass 1: Extract structured data
   const pass1 = await pass1_extractStructuredData(resumeText);
@@ -959,7 +998,7 @@ export async function analyzeResumeMultiPass(
   const pass4 = await pass4_narrativeAndRecommendations(pass1, pass2, pass3, resumeText);
   
   // Pass 5: Enhanced Authenticity Detection
-  const pass5 = await pass5_authenticityAnalysis(pass1, pass2, resumeText);
+  const pass5 = await pass5_authenticityAnalysis(pass1, pass2, resumeText, expectedCandidateName);
   
   // Combine into legacy-compatible format while preserving new structure
   const findings: Array<{ type: "good" | "warning" | "risk"; message: string; details: string }> = [];

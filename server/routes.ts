@@ -1118,6 +1118,19 @@ export async function registerRoutes(
       const skillsList = jobSkills || [];
       const jobContext = jobDescription || `Job: ${jobTitle || "Unknown"}, Level: ${jobLevel || "Unknown"}, Skills: ${skillsList.join(", ")}`;
 
+      // Get candidate name if candidateId is provided for name mismatch detection
+      let expectedCandidateName: string | null = null;
+      if (candidateId) {
+        try {
+          const candidate = await storage.getCandidate(candidateId);
+          if (candidate) {
+            expectedCandidateName = candidate.name;
+          }
+        } catch (err) {
+          console.error("Failed to fetch candidate for name check:", err);
+        }
+      }
+
       // Import and use the multi-pass analyzer
       const { analyzeResumeMultiPass } = await import("./resume-analyzer");
       
@@ -1126,7 +1139,8 @@ export async function registerRoutes(
         jobContext,
         skillsList,
         jobTitle || "Unknown",
-        jobLevel || "Unknown"
+        jobLevel || "Unknown",
+        expectedCandidateName
       );
       
       if (candidateId) {
