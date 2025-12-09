@@ -636,6 +636,19 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/interview-recommendations/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteInterviewRecommendation(req.params.id);
+      if (!deleted) {
+        res.status(404).json({ error: "Interview recommendation not found" });
+        return;
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete interview recommendation" });
+    }
+  });
+
   // Complete an interview - saves scores, notes, and updates candidate stage
   app.post("/api/complete-interview", isAuthenticated, async (req: any, res) => {
     try {
@@ -702,7 +715,12 @@ export async function registerRoutes(
   app.post("/api/scheduled-interviews", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const interviewData = insertScheduledInterviewSchema.parse(req.body);
+      // Convert ISO string to Date object before validation
+      const bodyWithDate = {
+        ...req.body,
+        scheduledDate: req.body.scheduledDate ? new Date(req.body.scheduledDate) : undefined,
+      };
+      const interviewData = insertScheduledInterviewSchema.parse(bodyWithDate);
       interviewData.userId = userId;
       const interview = await storage.createScheduledInterview(interviewData);
       res.json(interview);

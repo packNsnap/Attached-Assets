@@ -184,6 +184,20 @@ export default function InterviewAssistantModule() {
     },
   });
 
+  const deleteRecommendation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await apiRequest("DELETE", `/api/interview-recommendations/${id}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/interview-recommendations"] });
+      toast({ title: "Removed", description: "Candidate removed from interview queue." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to remove candidate.", variant: "destructive" });
+    },
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
