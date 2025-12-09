@@ -245,37 +245,34 @@ export default function ResumeAnalyzerModule() {
   const saveReportMutation = useMutation({
     mutationFn: async (data: {
       candidateId: string;
-      jobId?: string;
-      jobTitle?: string;
-      fitScore: number;
-      logicScore: number;
-      matchedSkills: string[];
-      missingSkills: string[];
-      extraSkills: string[];
-      findings: string;
-      summary: string;
-      authenticitySignals?: string;
+      htmlContent: string;
+      fileName: string;
+      jobTitle: string;
     }) => {
-      const res = await fetch("/api/resume-analysis", {
+      const res = await fetch(`/api/candidates/${data.candidateId}/save-analysis-report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          htmlContent: data.htmlContent,
+          fileName: data.fileName,
+          jobTitle: data.jobTitle,
+        }),
       });
       if (!res.ok) throw new Error("Failed to save report");
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["resume-analysis", selectedCandidateId] });
+      queryClient.invalidateQueries({ queryKey: ["candidate-documents", selectedCandidateId] });
       toast({
         title: "Report Saved",
-        description: "Analysis has been saved to the candidate's file.",
+        description: "Analysis report has been saved to the candidate's documents.",
       });
     },
     onError: () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to save report to candidate file.",
+        description: "Failed to save report to candidate documents.",
       });
     },
   });
@@ -1369,18 +1366,15 @@ export default function ResumeAnalyzerModule() {
                   disabled={!selectedCandidateId || saveReportMutation.isPending}
                   onClick={() => {
                     if (selectedCandidateId && result) {
+                      const candidate = candidates.find(c => c.id === selectedCandidateId);
+                      const jobTitle = result.selectedJob?.title || "Job Position";
+                      const candidateName = candidate?.name || "Unknown Candidate";
+                      const htmlContent = generateReportHtml(result, candidateName, jobTitle);
                       saveReportMutation.mutate({
                         candidateId: selectedCandidateId,
-                        jobId: result.selectedJob?.id,
-                        jobTitle: result.selectedJob?.title,
-                        fitScore: result.fitScore,
-                        logicScore: result.logicScore,
-                        matchedSkills: result.skillMatch.matched,
-                        missingSkills: result.skillMatch.missing,
-                        extraSkills: result.skillMatch.extra,
-                        findings: JSON.stringify(result.findings),
-                        summary: result.summary,
-                        authenticitySignals: result.authenticitySignals ? JSON.stringify(result.authenticitySignals) : undefined,
+                        htmlContent,
+                        fileName: `Resume_Analysis_${candidateName.replace(/\s+/g, '_')}`,
+                        jobTitle,
                       });
                     }
                   }}

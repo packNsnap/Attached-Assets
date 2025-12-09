@@ -860,6 +860,56 @@ export async function registerRoutes(
     }
   });
 
+  // Save analysis report as HTML document to candidate's documents
+  app.post("/api/candidates/:id/save-analysis-report", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const candidateId = req.params.id;
+      const { htmlContent, fileName, jobTitle } = req.body;
+
+      if (!htmlContent || !fileName) {
+        res.status(400).json({ error: "htmlContent and fileName are required" });
+        return;
+      }
+
+      // Verify candidate belongs to user
+      const candidate = await storage.getCandidate(candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const safeFileName = fileName.replace(/[^a-zA-Z0-9-_]/g, '_');
+      const fullFileName = `${safeFileName}_${timestamp}.html`;
+      const filePath = `public/uploads/reports/${candidateId}`;
+      const fullPath = `${filePath}/${fullFileName}`;
+
+      // Create directory if it doesn't exist
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      await fs.mkdir(filePath, { recursive: true });
+      
+      // Write the HTML file
+      await fs.writeFile(fullPath, htmlContent, 'utf-8');
+
+      // Create document record
+      const document = await storage.createCandidateDocument({
+        candidateId,
+        fileName: `Resume Analysis - ${jobTitle || 'Report'}.html`,
+        fileType: "text/html",
+        fileUrl: `/uploads/reports/${candidateId}/${fullFileName}`,
+        documentType: "resume_analysis_report",
+      });
+
+      res.json(document);
+    } catch (error) {
+      console.error("Failed to save analysis report:", error);
+      res.status(500).json({ error: "Failed to save analysis report" });
+    }
+  });
+
   app.delete("/api/candidates/:id/resume-analyses/:analysisId", async (req, res) => {
     try {
       const deleted = await storage.deleteResumeAnalysis(req.params.analysisId, req.params.id);
