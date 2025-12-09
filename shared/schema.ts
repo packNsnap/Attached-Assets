@@ -400,3 +400,22 @@ export const insertReferenceRequestSchema = createInsertSchema(referenceRequests
 export type InsertReferenceRequest = z.infer<typeof insertReferenceRequestSchema>;
 export type ReferenceRequest = typeof referenceRequests.$inferSelect;
 
+export const candidateReferences = pgTable("candidate_references", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidateId: varchar("candidate_id").notNull(),
+  referenceName: text("reference_name").notNull(),
+  referenceEmail: text("reference_email").notNull(),
+  relationship: text("relationship"),
+  consentGiven: text("consent_given").default("false"),
+  source: text("source").default("candidate_link"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertCandidateReferenceSchema = createInsertSchema(candidateReferences).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCandidateReference = z.infer<typeof insertCandidateReferenceSchema>;
+export type CandidateReference = typeof candidateReferences.$inferSelect;
+

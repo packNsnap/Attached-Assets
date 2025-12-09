@@ -1,0 +1,185 @@
+Route the submitted reference into the candidate’s profile
+
+Add an “Open in Outlook” button for the Request Link email
+
+I’ll assume a simple Node/Express + SQL-ish setup, but you can translate this to whatever stack you’re using.
+
+1. Route the submitted reference into the candidate’s profile
+a) Data model
+
+Add a reference_requests table (or collection) that ties the link token → candidate:
+
+-- reference_requests
+id                SERIAL PRIMARY KEY
+candidate_id      INTEGER NOT NULL
+token             TEXT UNIQUE NOT NULL
+status            TEXT DEFAULT 'pending' -- pending | submitted
+reference_name    TEXT
+reference_email   TEXT
+relationship      TEXT
+consent_given     BOOLEAN DEFAULT FALSE
+created_at        TIMESTAMP DEFAULT now()
+submitted_at      TIMESTAMP
+
+
+In your candidates table, keep a simple JSON column for references or use a separate candidate_references table. Example with a separate table:
+
+-- candidate_references
+id                SERIAL PRIMARY KEY
+candidate_id      INTEGER NOT NULL
+reference_name    TEXT NOT NULL
+reference_email   TEXT NOT NULL
+relationship      TEXT
+consent_given     BOOLEAN DEFAULT FALSE
+source            TEXT DEFAULT 'candidate_link'
+created_at        TIMESTAMP DEFAULT now()
+
+b) When you generate the link
+
+When the recruiter clicks Generate Link Request:
+
+// pseudo-code
+const refReq = await db.reference_requests.insert({
+  candidate_id: candidateId,
+  status: 'pending'
+});
+
+const token = uuidv4(); // or a signed JWT
+await db.reference_requests.update(refReq.id, { token });
+
+const referenceSubmissionUrl = `https://your-app.com/reference/${token}`;
+
+
+You pass referenceSubmissionUrl into the AI (or just into your UI) so it can be embedded in the email text.
+
+c) Candidate-facing submission route
+
+GET – render the form when they click the link:
+
+app.get('/reference/:token', async (req, res) => {
+  const token = req.params.token;
+  const refReq = await db.reference_requests.findOne({ token });
+
+  if (!refReq || refReq.status === 'submitted') {
+    return res.status(404).send('This reference link is invalid or already used.');
+  }
+
+  // You can show candidate name/position if you want:
+  const candidate = await db.candidates.findOne({ id: refReq.candidate_id });
+
+  res.render('reference-form', {
+    candidateName: candidate.name,
+    position: candidate.position_applied_for,
+    token
+  });
+});
+
+
+POST – when the reference info is submitted, save it directly to the candidate’s profile:
+
+app.post('/reference/:token', async (req, res) => {
+  const token = req.params.token;
+  const refReq = await db.reference_requests.findOne({ token });
+
+  if (!refReq || refReq.status === 'submitted') {
+    return res.status(400).send('Invalid or already used reference link.');
+  }
+
+  const { referenceName, referenceEmail, relationship, consent } = req.body;
+
+  // 1) Store reference on the candidate
+  await db.candidate_references.insert({
+    candidate_id: refReq.candidate_id,
+    reference_name: referenceName,
+    reference_email: referenceEmail,
+    relationship,
+    consent_given: consent === 'on' || consent === true
+  });
+
+  // 2) Mark the request as submitted & store details there as well (optional)
+  await db.reference_requests.update(refReq.id, {
+    status: 'submitted',
+    reference_name: referenceName,
+    reference_email: referenceEmail,
+    relationship,
+    consent_given: consent === 'on' || consent === true,
+    submitted_at: new Date()
+  });
+
+  res.send('Thank you! Your reference has been submitted.');
+});
+
+
+Now, on the candidate profile screen, you can simply query:
+
+const references = await db.candidate_references.find({ candidate_id: candidateId });
+
+
+…and show them in a list with a “Send reference questions” button next to each.
+
+2. “Open in Outlook” button for the Request Link email
+
+You already have the right-hand panel showing the text. You want a button that opens Outlook (or the default mail client) with that text preloaded.
+
+Use a mailto: URL.
+
+a) Build the mailto URL
+
+You know:
+
+candidateEmail (email you’re sending the link TO)
+
+candidateLinkRequestText (the text currently shown in the right-hand panel)
+
+A subject string
+
+const subject = `Reference details for ${candidateName} – ${positionAppliedFor}`;
+const body = candidateLinkRequestText; // includes the link
+
+const mailtoUrl =
+  `mailto:${encodeURIComponent(candidateEmail)}` +
+  `?subject=${encodeURIComponent(subject)}` +
+  `&body=${encodeURIComponent(body)}`;
+
+b) Frontend button
+
+In React/JSX:
+
+<a href={mailtoUrl}>
+  <button type="button" className="btn btn-outline">
+    Open in Outlook
+  </button>
+</a>
+
+
+On desktop, this opens the default mail client. If Outlook is installed / default, it will open there; in browser, users with Outlook Web will get that.
+
+Keep your Copy button too – that just copies candidateLinkRequestText to the clipboard.
+
+How it all fits together
+
+Recruiter selects candidate in Offer status.
+
+Clicks Generate Link Request.
+
+Backend:
+
+Creates reference_requests row.
+
+Creates referenceSubmissionUrl.
+
+AI (or your own template) generates candidateLinkRequestText including that URL.
+
+UI shows:
+
+Right panel with the email text.
+
+Copy button.
+
+Open in Outlook button using mailtoUrl.
+
+Candidate clicks the link, fills reference form.
+
+POST route stores reference into candidate_references linked to candidate_id.
+
+On candidate profile, those references are ready for you to trigger reference question emails.

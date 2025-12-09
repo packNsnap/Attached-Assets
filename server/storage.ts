@@ -34,6 +34,8 @@ import {
   type InsertScheduledInterview,
   type ReferenceRequest,
   type InsertReferenceRequest,
+  type CandidateReference,
+  type InsertCandidateReference,
   type PlanType,
   PLAN_LIMITS,
   users,
@@ -52,7 +54,8 @@ import {
   usageTracking,
   aiActionUsage,
   scheduledInterviews,
-  referenceRequests
+  referenceRequests,
+  candidateReferences
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql, desc, and, gte, lte, inArray } from "drizzle-orm";
@@ -193,6 +196,10 @@ export interface IStorage {
   getReferenceRequestsByUserId(userId: string): Promise<ReferenceRequest[]>;
   getReferenceRequestsByCandidateId(candidateId: string): Promise<ReferenceRequest[]>;
   updateReferenceRequest(id: string, data: { referenceName?: string; referenceEmail?: string; referenceRelationship?: string; consentGiven?: string; status?: string; submittedAt?: Date }): Promise<ReferenceRequest | undefined>;
+  
+  // Candidate references (stored on candidate profile)
+  createCandidateReference(reference: InsertCandidateReference): Promise<CandidateReference>;
+  getCandidateReferencesByCandidateId(candidateId: string): Promise<CandidateReference[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -860,6 +867,15 @@ export class DatabaseStorage implements IStorage {
   async updateReferenceRequest(id: string, data: { referenceName?: string; referenceEmail?: string; referenceRelationship?: string; consentGiven?: string; status?: string; submittedAt?: Date }): Promise<ReferenceRequest | undefined> {
     const result = await db.update(referenceRequests).set(data).where(eq(referenceRequests.id, id)).returning();
     return result[0];
+  }
+
+  async createCandidateReference(reference: InsertCandidateReference): Promise<CandidateReference> {
+    const result = await db.insert(candidateReferences).values(reference).returning();
+    return result[0];
+  }
+
+  async getCandidateReferencesByCandidateId(candidateId: string): Promise<CandidateReference[]> {
+    return await db.select().from(candidateReferences).where(eq(candidateReferences.candidateId, candidateId)).orderBy(desc(candidateReferences.createdAt));
   }
 }
 
