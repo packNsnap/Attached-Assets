@@ -2334,5 +2334,186 @@ Respond in this exact JSON format:
     }
   });
 
+  // AI-Powered Reference Check Generator
+  app.post("/api/generate-reference-check", async (req, res) => {
+    try {
+      const { 
+        mode, 
+        candidateName, 
+        positionAppliedFor, 
+        referenceName, 
+        referenceEmail, 
+        relationshipToCandidate, 
+        emailTemplate,
+        resumeText,
+        candidateId 
+      } = req.body;
+
+      if (!mode || !["from_resume", "from_form", "request_link"].includes(mode)) {
+        res.status(400).json({ error: "Invalid mode. Must be 'from_resume', 'from_form', or 'request_link'" });
+        return;
+      }
+
+      // For request_link mode, just generate the candidate link text
+      if (mode === "request_link") {
+        if (!candidateName || !positionAppliedFor) {
+          res.status(400).json({ error: "Candidate name and position are required for request_link mode" });
+          return;
+        }
+
+        const linkRequestText = `Dear ${candidateName},
+
+As part of our hiring process for the ${positionAppliedFor} position, we would like to conduct a professional reference check.
+
+Please click the link below to provide your reference details:
+[REFERENCE_SUBMISSION_LINK]
+
+We need the following information:
+- Reference Name
+- Reference Email Address
+- Their Relationship to You (e.g., Direct Manager, Colleague)
+- Confirmation that they agree to be contacted
+
+Thank you for your cooperation in completing this step of the hiring process.
+
+Best regards,
+[Your Company Name]`;
+
+        res.json({
+          selectedReference: null,
+          emailSubject: null,
+          emailBody: null,
+          questions: null,
+          mailtoTemplate: null,
+          candidateLinkRequestText: linkRequestText
+        });
+        return;
+      }
+
+      // For from_form mode, validate required fields
+      if (mode === "from_form") {
+        if (!candidateName || !positionAppliedFor || !referenceName || !referenceEmail || !relationshipToCandidate) {
+          res.status(400).json({ error: "All form fields are required for from_form mode" });
+          return;
+        }
+      }
+
+      // For from_resume mode, try to get resume text from candidate
+      let actualResumeText = resumeText;
+      if (mode === "from_resume" && !resumeText && candidateId) {
+        actualResumeText = resumeStore.get(candidateId) || null;
+      }
+
+      if (mode === "from_resume" && !actualResumeText) {
+        res.status(400).json({ error: "Resume text is required for from_resume mode" });
+        return;
+      }
+
+      const prompt = `You are the Reference Check Generator for a hiring workflow app.
+
+INPUTS:
+- Mode: ${mode}
+- Candidate Name: ${candidateName || "Unknown"}
+- Position Applied For: ${positionAppliedFor || "Unknown"}
+${mode === "from_form" ? `- Reference Name: ${referenceName}
+- Reference Email: ${referenceEmail}
+- Relationship to Candidate: ${relationshipToCandidate}
+- Email Template Style: ${emailTemplate || "formal"}` : ""}
+${mode === "from_resume" && actualResumeText ? `
+RESUME TEXT:
+${actualResumeText}
+` : ""}
+
+YOUR TASKS:
+
+${mode === "from_resume" ? `
+Since mode is "from_resume":
+1. Scan the resume for likely references: supervisors, managers, team leads, or colleagues mentioned.
+2. Pick the single most appropriate reference based on seniority and relevance.
+3. Fill in any available details (name, title, company, potential relationship).
+4. If no clear reference is found, make a reasonable recommendation about who to contact.
+` : ""}
+
+${mode === "from_form" ? `
+Since mode is "from_form":
+1. Use the exact reference details provided above.
+2. Do not invent new names or details.
+` : ""}
+
+Generate a professional reference request email with:
+1. Clear subject line appropriate for ${emailTemplate || "formal"} style
+2. Short intro explaining why the reference is being contacted
+3. Mention of the candidate and the role they applied for
+4. A list of 5-7 characteristic reference check questions such as:
+   - How long have you known/worked with the candidate?
+   - How would you describe their work ethic and reliability?
+   - What are their main professional strengths?
+   - Can you describe their communication and collaboration style?
+   - What areas could they improve upon?
+   - How did they handle challenges or pressure?
+   - Would you recommend them for this type of role?
+
+Make the email appropriate for:
+- Sending via external email clients like Outlook or Gmail
+- Simple copy-and-paste usage
+
+Respond in this exact JSON format:
+{
+  "selectedReference": {
+    "name": "${mode === "from_form" ? referenceName : "Extracted name or null"}",
+    "email": "${mode === "from_form" ? referenceEmail : "Extracted email or null"}",
+    "relationship": "${mode === "from_form" ? relationshipToCandidate : "Inferred relationship"}",
+    "title": "Job title if known or null",
+    "company": "Company if known or null"
+  },
+  "emailSubject": "The email subject line",
+  "emailBody": "The complete email body text",
+  "questions": [
+    "Question 1",
+    "Question 2",
+    "..."
+  ]
+}`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+      });
+
+      const content = completion.choices[0]?.message?.content;
+      if (!content) {
+        throw new Error("No response from AI");
+      }
+
+      let result;
+      try {
+        result = JSON.parse(content);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", parseError);
+        throw new Error("Invalid AI response format");
+      }
+
+      // Build the mailto template
+      const targetEmail = mode === "from_form" ? referenceEmail : result.selectedReference?.email || "";
+      const mailtoTemplate = targetEmail && result.emailSubject && result.emailBody
+        ? `mailto:${encodeURIComponent(targetEmail)}?subject=${encodeURIComponent(result.emailSubject)}&body=${encodeURIComponent(result.emailBody)}`
+        : null;
+
+      res.json({
+        selectedReference: result.selectedReference || null,
+        emailSubject: result.emailSubject || null,
+        emailBody: result.emailBody || null,
+        questions: result.questions || [],
+        mailtoTemplate,
+        candidateLinkRequestText: null
+      });
+    } catch (error) {
+      console.error("Reference check generation error:", error);
+      res.status(500).json({ error: "Failed to generate reference check" });
+    }
+  });
+
   return httpServer;
 }
