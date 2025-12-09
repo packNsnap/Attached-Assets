@@ -16,7 +16,9 @@ import {
   UserCircle,
   FileText,
   ClipboardCheck,
-  Users
+  Users,
+  UserCheck,
+  Clock
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
@@ -59,7 +61,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { Candidate, Job, ResumeAnalysis, SkillsTestRecommendation, InterviewRecommendation, SkillsTestInvitation } from "@shared/schema";
+import type { Candidate, Job, ResumeAnalysis, SkillsTestRecommendation, InterviewRecommendation, SkillsTestInvitation, ReferenceRequest } from "@shared/schema";
 import {
   Tooltip,
   TooltipContent,
@@ -118,10 +120,30 @@ export default function HiringPipelineModule() {
     refetchInterval: 5000,
   });
 
+  const { data: referenceRequests = [] } = useQuery({
+    queryKey: ["reference-requests"],
+    queryFn: async () => {
+      const res = await fetch("/api/reference-requests");
+      if (!res.ok) throw new Error("Failed to fetch reference requests");
+      return res.json() as Promise<ReferenceRequest[]>;
+    },
+    refetchInterval: 5000,
+  });
+
   const unreadNotesMap = unreadNotesData.reduce((acc, item) => {
     acc[item.candidateId] = item.unreadCount;
     return acc;
   }, {} as Record<string, number>);
+
+  const referenceRequestsMap = referenceRequests.reduce((acc, req) => {
+    const existing = acc[req.candidateId];
+    if (!existing) {
+      acc[req.candidateId] = req;
+    } else if (req.status === "submitted" && existing.status !== "submitted") {
+      acc[req.candidateId] = req;
+    }
+    return acc;
+  }, {} as Record<string, ReferenceRequest>);
 
   const [assessmentsMap, setAssessmentsMap] = useState<Record<string, CandidateAssessments>>({});
 
@@ -438,6 +460,45 @@ export default function HiringPipelineModule() {
                                 </Tooltip>
                               )}
                             </div>
+                          </TooltipProvider>
+                        )}
+                        
+                        {referenceRequestsMap[candidate.id] && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate("/reference-check");
+                                  }}
+                                  className={cn(
+                                    "flex items-center gap-1 text-[10px] px-2 py-1 rounded border transition-colors",
+                                    referenceRequestsMap[candidate.id].status === "submitted"
+                                      ? "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300 border-teal-200 dark:border-teal-800 hover:bg-teal-200 dark:hover:bg-teal-900/50"
+                                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-900/50"
+                                  )}
+                                  data-testid={`badge-reference-${candidate.id}`}
+                                >
+                                  {referenceRequestsMap[candidate.id].status === "submitted" ? (
+                                    <>
+                                      <UserCheck className="h-3 w-3" />
+                                      Received
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Clock className="h-3 w-3" />
+                                      Pending
+                                    </>
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  Reference: {referenceRequestsMap[candidate.id].status === "submitted" ? "Received" : "Pending"}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
                           </TooltipProvider>
                         )}
                         
