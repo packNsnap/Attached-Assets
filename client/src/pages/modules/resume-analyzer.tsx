@@ -242,6 +242,44 @@ export default function ResumeAnalyzerModule() {
     },
   });
 
+  const saveReportMutation = useMutation({
+    mutationFn: async (data: {
+      candidateId: string;
+      jobId?: string;
+      jobTitle?: string;
+      fitScore: number;
+      logicScore: number;
+      matchedSkills: string[];
+      missingSkills: string[];
+      extraSkills: string[];
+      findings: string;
+      summary: string;
+      authenticitySignals?: string;
+    }) => {
+      const res = await fetch("/api/resume-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to save report");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["resume-analysis", selectedCandidateId] });
+      toast({
+        title: "Report Saved",
+        description: "Analysis has been saved to the candidate's file.",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save report to candidate file.",
+      });
+    },
+  });
+
   const { data: jobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
   });
@@ -1328,20 +1366,38 @@ export default function ResumeAnalyzerModule() {
                 <Button 
                   variant="outline" 
                   size="sm"
-                  disabled={!selectedCandidateId}
+                  disabled={!selectedCandidateId || saveReportMutation.isPending}
                   onClick={() => {
-                    if (selectedCandidateId) {
-                      toast({
-                        title: "Report Saved",
-                        description: "Analysis has been saved to the candidate's file.",
+                    if (selectedCandidateId && result) {
+                      saveReportMutation.mutate({
+                        candidateId: selectedCandidateId,
+                        jobId: result.selectedJob?.id,
+                        jobTitle: result.selectedJob?.title,
+                        fitScore: result.fitScore,
+                        logicScore: result.logicScore,
+                        matchedSkills: result.skillMatch.matched,
+                        missingSkills: result.skillMatch.missing,
+                        extraSkills: result.skillMatch.extra,
+                        findings: JSON.stringify(result.findings),
+                        summary: result.summary,
+                        authenticitySignals: result.authenticitySignals ? JSON.stringify(result.authenticitySignals) : undefined,
                       });
                     }
                   }}
                   className="gap-2"
                   data-testid="button-save-candidate"
                 >
-                  <Save className="h-4 w-4" />
-                  Save to Candidate
+                  {saveReportMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save to Candidate
+                    </>
+                  )}
                 </Button>
                 <Button 
                   variant="outline"

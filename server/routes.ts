@@ -845,6 +845,21 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/resume-analysis", isAuthenticated, async (req: any, res) => {
+    try {
+      const analysisData = insertResumeAnalysisSchema.parse(req.body);
+      const analysis = await storage.createResumeAnalysis(analysisData);
+      res.json(analysis);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: error.errors });
+      } else {
+        console.error("Failed to save resume analysis:", error);
+        res.status(500).json({ error: "Failed to save resume analysis" });
+      }
+    }
+  });
+
   app.delete("/api/candidates/:id/resume-analyses/:analysisId", async (req, res) => {
     try {
       const deleted = await storage.deleteResumeAnalysis(req.params.analysisId, req.params.id);
