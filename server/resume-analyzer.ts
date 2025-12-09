@@ -642,6 +642,7 @@ export interface Pass5Result {
     aiGeneratedScore: number;
     templateMatchScore: number;
     genericPhraseCount: number;
+    hyphenatedWordCount: number;
     specificDetailsScore: number;
     quantifiableAchievements: number;
     buzzwordDensity: number;
@@ -675,12 +676,19 @@ export async function pass5_authenticityAnalysis(
     "strategic thinker", "detail-oriented", "self-starter", "passionate",
     "excellent communication skills", "fast-paced environment",
     "think outside the box", "value-added", "best practices",
-    "stakeholder management", "cross-functional", "drive results"
+    "stakeholder management", "cross-functional", "drive results",
+    "deadline-driven", "data-driven", "goal-oriented", "solutions-oriented",
+    "customer-focused", "action-oriented", "forward-thinking"
   ];
 
   // Count generic phrases in resume
   const lowerText = resumeText.toLowerCase();
   const genericPhraseCount = GENERIC_PHRASES.filter(p => lowerText.includes(p.toLowerCase())).length;
+  
+  // Detect excessive hyphenated compound words (ChatGPT signature pattern)
+  const hyphenatedWordsPattern = /\b\w+-\w+\b/g;
+  const hyphenatedMatches = resumeText.match(hyphenatedWordsPattern) || [];
+  const hyphenatedWordCount = hyphenatedMatches.length;
   
   // Calculate experience discrepancy
   let experienceInflation = null;
@@ -765,6 +773,7 @@ F. Mismatch Detection (CRITICAL)
 
 PRE-COMPUTED ANALYSIS DATA:
 - Generic buzzword phrases found: ${genericPhraseCount}
+- Hyphenated compound words found: ${hyphenatedWordCount} (ChatGPT often uses excessive hyphenated phrases like "deadline-driven", "results-oriented", "customer-focused")
 - Experience claim: ${claimedYears} years vs calculated from jobs: ${Math.round(calculatedYears * 10) / 10} years
 - Timeline overlaps detected: ${timelineAnalysis.timelineAnalysis.overlaps.length}
 - Promotion transitions: ${JSON.stringify(timelineAnalysis.timelineAnalysis.promotionTransitions)}
@@ -959,6 +968,7 @@ Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
       aiGeneratedScore: result.contentAnalysis?.aiGeneratedScore || 0,
       templateMatchScore: result.contentAnalysis?.templateMatchScore || 0,
       genericPhraseCount,
+      hyphenatedWordCount,
       specificDetailsScore: result.contentAnalysis?.specificDetailsScore || 50,
       quantifiableAchievements: result.contentAnalysis?.quantifiableAchievements || 0,
       buzzwordDensity: result.contentAnalysis?.buzzwordDensity || 0
