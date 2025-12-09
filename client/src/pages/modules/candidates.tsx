@@ -132,7 +132,6 @@ export default function CandidatesModule() {
   });
 
   const [newNote, setNewNote] = useState({ content: "", authorName: "", noteType: "general" });
-  const [newDocument, setNewDocument] = useState({ fileName: "", fileUrl: "", fileType: "", documentType: "resume" });
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isUploadingResume, setIsUploadingResume] = useState(false);
   const markedNotesViewedRef = useRef<Set<string>>(new Set());
@@ -371,27 +370,6 @@ export default function CandidatesModule() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to delete note", variant: "destructive" });
-    }
-  });
-
-  const createDocumentMutation = useMutation({
-    mutationFn: async (data: typeof newDocument) => {
-      if (!selectedCandidate) throw new Error("No candidate selected");
-      const res = await fetch(`/api/candidates/${selectedCandidate.id}/documents`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-      if (!res.ok) throw new Error("Failed to add document");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["candidate-documents", selectedCandidate?.id] });
-      setNewDocument({ fileName: "", fileUrl: "", fileType: "", documentType: "resume" });
-      toast({ title: "Document Added", description: "Document has been linked to candidate profile." });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to add document", variant: "destructive" });
     }
   });
 
@@ -1462,50 +1440,6 @@ export default function CandidatesModule() {
                         data-testid="button-upload-resume"
                       >
                         <Plus className="h-4 w-4 mr-1" /> {uploadResumeMutation.isPending ? "Uploading..." : "Upload Resume"}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
-                    <h4 className="text-sm font-medium">Add Document Link</h4>
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <Input 
-                          placeholder="File name"
-                          value={newDocument.fileName}
-                          onChange={e => setNewDocument(p => ({ ...p, fileName: e.target.value }))}
-                          data-testid="input-doc-name"
-                        />
-                        <Select value={newDocument.documentType} onValueChange={v => setNewDocument(p => ({ ...p, documentType: v }))}>
-                          <SelectTrigger data-testid="select-doc-type">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {DOCUMENT_TYPES.map(t => (
-                              <SelectItem key={t} value={t}>{t.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <Input 
-                        placeholder="File URL (e.g., Google Drive, Dropbox link)"
-                        value={newDocument.fileUrl}
-                        onChange={e => setNewDocument(p => ({ ...p, fileUrl: e.target.value }))}
-                        data-testid="input-doc-url"
-                      />
-                      <Input 
-                        placeholder="File type (e.g., pdf, docx)"
-                        value={newDocument.fileType}
-                        onChange={e => setNewDocument(p => ({ ...p, fileType: e.target.value }))}
-                        data-testid="input-doc-filetype"
-                      />
-                      <Button 
-                        size="sm" 
-                        onClick={() => createDocumentMutation.mutate(newDocument)}
-                        disabled={!newDocument.fileName || !newDocument.fileUrl || !newDocument.fileType || createDocumentMutation.isPending}
-                        data-testid="button-add-document"
-                      >
-                        <Plus className="h-4 w-4 mr-1" /> Add Document
                       </Button>
                     </div>
                   </div>
