@@ -373,50 +373,39 @@ export const insertScheduledInterviewSchema = createInsertSchema(scheduledInterv
 export type InsertScheduledInterview = z.infer<typeof insertScheduledInterviewSchema>;
 export type ScheduledInterview = typeof scheduledInterviews.$inferSelect;
 
-export const referenceRequests = pgTable("reference_requests", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull(),
-  candidateId: varchar("candidate_id"),
-  candidateName: text("candidate_name").notNull(),
-  candidateEmail: text("candidate_email"),
-  positionAppliedFor: text("position_applied_for").notNull(),
-  token: text("token").notNull().unique(),
-  status: text("status").notNull().default("pending"),
-  referenceName: text("reference_name"),
-  referenceEmail: text("reference_email"),
-  referenceRelationship: text("reference_relationship"),
-  consentGiven: text("consent_given").default("false"),
-  submittedAt: timestamp("submitted_at"),
-  expiresAt: timestamp("expires_at"),
-  createdAt: timestamp("created_at").notNull().default(sql`now()`),
-});
-
-export const insertReferenceRequestSchema = createInsertSchema(referenceRequests).omit({
-  id: true,
-  createdAt: true,
-  submittedAt: true,
-});
-
-export type InsertReferenceRequest = z.infer<typeof insertReferenceRequestSchema>;
-export type ReferenceRequest = typeof referenceRequests.$inferSelect;
-
-export const candidateReferences = pgTable("candidate_references", {
+export const referenceLinks = pgTable("reference_links", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   candidateId: varchar("candidate_id").notNull(),
-  referenceName: text("reference_name").notNull(),
-  referenceEmail: text("reference_email").notNull(),
-  relationship: text("relationship"),
-  consentGiven: text("consent_given").default("false"),
-  source: text("source").default("candidate_link"),
-  status: text("status").default("not_contacted"),
+  candidateName: text("candidate_name").notNull(),
+  token: text("token").notNull().unique(),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
-export const insertCandidateReferenceSchema = createInsertSchema(candidateReferences).omit({
+export const insertReferenceLinkSchema = createInsertSchema(referenceLinks).omit({
   id: true,
   createdAt: true,
 });
 
-export type InsertCandidateReference = z.infer<typeof insertCandidateReferenceSchema>;
-export type CandidateReference = typeof candidateReferences.$inferSelect;
+export type InsertReferenceLink = z.infer<typeof insertReferenceLinkSchema>;
+export type ReferenceLink = typeof referenceLinks.$inferSelect;
+
+export const references = pgTable("candidate_refs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidateId: varchar("candidate_id").notNull(),
+  source: text("source").notNull().default("manual"),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  relationship: text("relationship"),
+  status: text("status").notNull().default("pending_contact"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  emailSentAt: timestamp("email_sent_at"),
+});
+
+export const insertReferenceSchema = createInsertSchema(references).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertReference = z.infer<typeof insertReferenceSchema>;
+export type Reference = typeof references.$inferSelect;
 

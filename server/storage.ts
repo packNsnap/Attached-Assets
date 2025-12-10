@@ -32,10 +32,10 @@ import {
   type InsertAiActionUsage,
   type ScheduledInterview,
   type InsertScheduledInterview,
-  type ReferenceRequest,
-  type InsertReferenceRequest,
-  type CandidateReference,
-  type InsertCandidateReference,
+  type Reference,
+  type InsertReference,
+  type ReferenceLink,
+  type InsertReferenceLink,
   type PlanType,
   PLAN_LIMITS,
   users,
@@ -54,8 +54,8 @@ import {
   usageTracking,
   aiActionUsage,
   scheduledInterviews,
-  referenceRequests,
-  candidateReferences
+  references,
+  referenceLinks
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql, desc, and, gte, lte, inArray } from "drizzle-orm";
@@ -191,17 +191,16 @@ export interface IStorage {
   getUnreadNotesCount(candidateId: string): Promise<number>;
   getCandidatesWithUnreadNotes(userId: string): Promise<{ candidateId: string; unreadCount: number }[]>;
   
-  // Reference requests
-  createReferenceRequest(request: InsertReferenceRequest): Promise<ReferenceRequest>;
-  getReferenceRequestByToken(token: string): Promise<ReferenceRequest | undefined>;
-  getReferenceRequestsByUserId(userId: string): Promise<ReferenceRequest[]>;
-  getReferenceRequestsByCandidateId(candidateId: string): Promise<ReferenceRequest[]>;
-  updateReferenceRequest(id: string, data: { referenceName?: string; referenceEmail?: string; referenceRelationship?: string; consentGiven?: string; status?: string; submittedAt?: Date }): Promise<ReferenceRequest | undefined>;
+  // Reference links (for candidate submission)
+  createReferenceLink(link: InsertReferenceLink): Promise<ReferenceLink>;
+  getReferenceLinkByToken(token: string): Promise<ReferenceLink | undefined>;
+  getReferenceLinksByCandidateId(candidateId: string): Promise<ReferenceLink[]>;
   
-  // Candidate references (stored on candidate profile)
-  createCandidateReference(reference: InsertCandidateReference): Promise<CandidateReference>;
-  getCandidateReferencesByCandidateId(candidateId: string): Promise<CandidateReference[]>;
-  updateCandidateReferenceStatus(id: string, status: string): Promise<CandidateReference | undefined>;
+  // References (contacts to check)
+  createReference(ref: InsertReference): Promise<Reference>;
+  getReferencesByCandidateId(candidateId: string): Promise<Reference[]>;
+  updateReference(id: string, data: Partial<InsertReference>): Promise<Reference | undefined>;
+  markReferenceEmailSent(id: string): Promise<Reference | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -853,40 +852,39 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
-  async createReferenceRequest(request: InsertReferenceRequest): Promise<ReferenceRequest> {
-    const result = await db.insert(referenceRequests).values(request).returning();
+  async createReferenceLink(link: InsertReferenceLink): Promise<ReferenceLink> {
+    const result = await db.insert(referenceLinks).values(link).returning();
     return result[0];
   }
 
-  async getReferenceRequestByToken(token: string): Promise<ReferenceRequest | undefined> {
-    const result = await db.select().from(referenceRequests).where(eq(referenceRequests.token, token)).limit(1);
+  async getReferenceLinkByToken(token: string): Promise<ReferenceLink | undefined> {
+    const result = await db.select().from(referenceLinks).where(eq(referenceLinks.token, token)).limit(1);
     return result[0];
   }
 
-  async getReferenceRequestsByUserId(userId: string): Promise<ReferenceRequest[]> {
-    return await db.select().from(referenceRequests).where(eq(referenceRequests.userId, userId)).orderBy(desc(referenceRequests.createdAt));
+  async getReferenceLinksByCandidateId(candidateId: string): Promise<ReferenceLink[]> {
+    return await db.select().from(referenceLinks).where(eq(referenceLinks.candidateId, candidateId)).orderBy(desc(referenceLinks.createdAt));
   }
 
-  async getReferenceRequestsByCandidateId(candidateId: string): Promise<ReferenceRequest[]> {
-    return await db.select().from(referenceRequests).where(eq(referenceRequests.candidateId, candidateId)).orderBy(desc(referenceRequests.createdAt));
-  }
-
-  async updateReferenceRequest(id: string, data: { referenceName?: string; referenceEmail?: string; referenceRelationship?: string; consentGiven?: string; status?: string; submittedAt?: Date }): Promise<ReferenceRequest | undefined> {
-    const result = await db.update(referenceRequests).set(data).where(eq(referenceRequests.id, id)).returning();
+  async createReference(ref: InsertReference): Promise<Reference> {
+    const result = await db.insert(references).values(ref).returning();
     return result[0];
   }
 
-  async createCandidateReference(reference: InsertCandidateReference): Promise<CandidateReference> {
-    const result = await db.insert(candidateReferences).values(reference).returning();
+  async getReferencesByCandidateId(candidateId: string): Promise<Reference[]> {
+    return await db.select().from(references).where(eq(references.candidateId, candidateId)).orderBy(desc(references.createdAt));
+  }
+
+  async updateReference(id: string, data: Partial<InsertReference>): Promise<Reference | undefined> {
+    const result = await db.update(references).set(data).where(eq(references.id, id)).returning();
     return result[0];
   }
 
-  async getCandidateReferencesByCandidateId(candidateId: string): Promise<CandidateReference[]> {
-    return await db.select().from(candidateReferences).where(eq(candidateReferences.candidateId, candidateId)).orderBy(desc(candidateReferences.createdAt));
-  }
-
-  async updateCandidateReferenceStatus(id: string, status: string): Promise<CandidateReference | undefined> {
-    const result = await db.update(candidateReferences).set({ status }).where(eq(candidateReferences.id, id)).returning();
+  async markReferenceEmailSent(id: string): Promise<Reference | undefined> {
+    const result = await db.update(references).set({ 
+      status: "email_sent", 
+      emailSentAt: new Date() 
+    }).where(eq(references.id, id)).returning();
     return result[0];
   }
 }
