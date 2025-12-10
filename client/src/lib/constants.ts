@@ -55,7 +55,8 @@ export const MODULES = [
     color: "from-blue-500 to-cyan-500",
     bgColor: "bg-gradient-to-br from-blue-500 to-cyan-500",
     lightBg: "bg-blue-100 dark:bg-blue-900/30",
-    textColor: "text-blue-600 dark:text-blue-400"
+    textColor: "text-blue-600 dark:text-blue-400",
+    featured: true
   },
   {
     title: "Resume Logic",
@@ -76,7 +77,8 @@ export const MODULES = [
     color: "from-green-500 to-emerald-500",
     bgColor: "bg-gradient-to-br from-green-500 to-emerald-500",
     lightBg: "bg-green-100 dark:bg-green-900/30",
-    textColor: "text-green-600 dark:text-green-400"
+    textColor: "text-green-600 dark:text-green-400",
+    featured: true
   },
   {
     title: "Interviews",
@@ -86,7 +88,8 @@ export const MODULES = [
     color: "from-orange-500 to-amber-500",
     bgColor: "bg-gradient-to-br from-orange-500 to-amber-500",
     lightBg: "bg-orange-100 dark:bg-orange-900/30",
-    textColor: "text-orange-600 dark:text-orange-400"
+    textColor: "text-orange-600 dark:text-orange-400",
+    featured: true
   },
   {
     title: "Reference Check",
@@ -96,7 +99,8 @@ export const MODULES = [
     color: "from-teal-500 to-cyan-500",
     bgColor: "bg-gradient-to-br from-teal-500 to-cyan-500",
     lightBg: "bg-teal-100 dark:bg-teal-900/30",
-    textColor: "text-teal-600 dark:text-teal-400"
+    textColor: "text-teal-600 dark:text-teal-400",
+    featured: true
   },
   {
     title: "Onboarding",
@@ -106,7 +110,8 @@ export const MODULES = [
     color: "from-lime-500 to-green-500",
     bgColor: "bg-gradient-to-br from-lime-500 to-green-500",
     lightBg: "bg-lime-100 dark:bg-lime-900/30",
-    textColor: "text-lime-600 dark:text-lime-400"
+    textColor: "text-lime-600 dark:text-lime-400",
+    featured: true
   },
   {
     title: "Policies & Docs",
@@ -116,7 +121,8 @@ export const MODULES = [
     color: "from-yellow-500 to-orange-500",
     bgColor: "bg-gradient-to-br from-yellow-500 to-orange-500",
     lightBg: "bg-yellow-100 dark:bg-yellow-900/30",
-    textColor: "text-yellow-600 dark:text-yellow-400"
+    textColor: "text-yellow-600 dark:text-yellow-400",
+    featured: true
   },
   {
     title: "Performance",
@@ -126,7 +132,8 @@ export const MODULES = [
     color: "from-fuchsia-500 to-purple-500",
     bgColor: "bg-gradient-to-br from-fuchsia-500 to-purple-500",
     lightBg: "bg-fuchsia-100 dark:bg-fuchsia-900/30",
-    textColor: "text-fuchsia-600 dark:text-fuchsia-400"
+    textColor: "text-fuchsia-600 dark:text-fuchsia-400",
+    featured: true
   },
   {
     title: "Analytics",
