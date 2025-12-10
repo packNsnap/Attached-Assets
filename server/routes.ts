@@ -31,6 +31,30 @@ import * as fs from "fs";
 import * as path from "path";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+const MODEL_MAP: Record<string, string> = {
+  "resume_analysis": "gpt-4o",
+  "ai_detection": "gpt-4o",
+  "job_description": "gpt-4o-mini",
+  "skills_test": "gpt-4o-mini",
+  "interview_questions": "gpt-4o-mini",
+  "onboarding_plan": "gpt-4o-mini",
+  "policy_generation": "gpt-4o-mini",
+  "performance_goals": "gpt-4o-mini",
+  "reference_check": "gpt-4o-mini",
+  "default": "gpt-4o-mini",
+};
+
+type ChatCompletionParams = Parameters<typeof openai.chat.completions.create>[0];
+
+export async function callAI(
+  purpose: string = "default",
+  params: Omit<ChatCompletionParams, "model">
+) {
+  const model = MODEL_MAP[purpose] || MODEL_MAP["default"];
+  return openai.chat.completions.create({ model, ...params });
+}
+
 const upload = multer({ storage: multer.memoryStorage() });
 
 const { Pool } = pg;
@@ -1357,8 +1381,7 @@ Respond with JSON in this exact format:
   ]
 }`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const completion = await callAI("skills_test", {
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
         temperature: 0.8,
@@ -1503,8 +1526,7 @@ Format your response as JSON:
 
 Be specific and practical - these should reflect what real companies actually include in their postings.`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const completion = await callAI("job_description", {
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
         temperature: 0.7,
@@ -1549,8 +1571,7 @@ Format your response as JSON with exactly this structure:
 
 Make the description professional but engaging. Use bullet points for responsibilities and requirements.`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const completion = await callAI("job_description", {
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
         temperature: 0.7,
@@ -1896,8 +1917,7 @@ If the candidate chose a poor or incorrect answer: score 0-20
 
 Respond with ONLY a number between 0 and 100.`;
 
-                    const result = await openai.chat.completions.create({
-                      model: "gpt-4o",
+                    const result = await callAI("skills_test", {
                       messages: [{ role: "user", content: mcGradingPrompt }],
                       max_tokens: 10,
                       temperature: 0.1,
@@ -1940,8 +1960,7 @@ Detailed, specific, and well-reasoned answers should receive high scores (70-100
 
 Respond with ONLY a number between 0 and 100.`;
 
-                  const result = await openai.chat.completions.create({
-                    model: "gpt-4o",
+                  const result = await callAI("skills_test", {
                     messages: [{ role: "user", content: gradingPrompt }],
                     max_tokens: 10,
                     temperature: 0.1,
@@ -2090,8 +2109,7 @@ If the candidate chose a poor or incorrect answer: score 0-20
 
 Respond with ONLY a number between 0 and 100.`;
 
-                const result = await openai.chat.completions.create({
-                  model: "gpt-4o",
+                const result = await callAI("skills_test", {
                   messages: [{ role: "user", content: mcGradingPrompt }],
                   max_tokens: 10,
                   temperature: 0.1,
@@ -2133,8 +2151,7 @@ Detailed, specific, and well-reasoned answers should receive high scores (70-100
 
 Respond with ONLY a number between 0 and 100.`;
 
-              const result = await openai.chat.completions.create({
-                model: "gpt-4o",
+              const result = await callAI("skills_test", {
                 messages: [{ role: "user", content: gradingPrompt }],
                 max_tokens: 10,
                 temperature: 0.1,
@@ -2335,8 +2352,7 @@ Respond in this exact JSON format:
   "overallGuidance": "Brief guidance for the interviewer about this candidate..."
 }`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const completion = await callAI("interview_questions", {
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
         temperature: 0.7,
@@ -2593,8 +2609,7 @@ Respond in this exact JSON format:
   ]
 }`;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const completion = await callAI("reference_check", {
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
         temperature: 0.7,
@@ -2938,8 +2953,7 @@ Return a JSON object with these exact fields:
   "emailBody": "the full email body with proper formatting"
 }`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const response = await callAI("reference_check", {
         messages: [
           { role: "system", content: "You are an HR professional helping to write reference check emails. Return only valid JSON without markdown formatting." },
           { role: "user", content: prompt }
@@ -3051,8 +3065,7 @@ Generate realistic, role-appropriate tasks. Include 2-4 weeks of tasks depending
 
 Make sure all emails reference the employee by name (${employee_name}) and their role (${role}).`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const response = await callAI("onboarding_plan", {
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -3330,8 +3343,7 @@ IMPORTANT: Include state-specific considerations for ${state || "applicable stat
 Include 3-5 compliance notes highlighting key legal or regulatory considerations, especially any ${state || "state"}-specific requirements.
 List the reference sources used in the sources array.`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
+      const response = await callAI("policy_generation", {
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -3475,8 +3487,7 @@ Return your response as a JSON object with this exact structure:
 
 Generate 3-5 diverse goals covering different aspects of the role.`;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
+      const response = await callAI("performance_goals", {
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
