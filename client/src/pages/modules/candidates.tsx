@@ -72,7 +72,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation, SkillsTestResponse, InterviewRecommendation, CandidateReference } from "@shared/schema";
+import type { Candidate, Job, CandidateNote, CandidateDocument, ResumeAnalysis, SkillsTestInvitation, SkillsTestResponse, InterviewRecommendation, Reference } from "@shared/schema";
 
 interface ParsedInterviewQuestion {
   question: string;
@@ -225,7 +225,7 @@ export default function CandidatesModule() {
       if (!selectedCandidate) return [];
       const res = await fetch(`/api/candidates/${selectedCandidate.id}/references`);
       if (!res.ok) throw new Error("Failed to fetch references");
-      return res.json() as Promise<CandidateReference[]>;
+      return res.json() as Promise<Reference[]>;
     },
     enabled: !!selectedCandidate
   });
@@ -505,7 +505,7 @@ export default function CandidatesModule() {
 
   const updateReferenceStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const res = await fetch(`/api/candidate-references/${id}/status`, {
+      const res = await fetch(`/api/references/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status })
@@ -521,45 +521,32 @@ export default function CandidatesModule() {
     }
   });
 
-  const handleGenerateReferenceEmail = async (reference: CandidateReference) => {
+  const handleGenerateReferenceEmail = async (reference: Reference) => {
     if (!selectedCandidate) return;
     setGeneratingReferenceEmail(reference.id);
     try {
-      const assignedJob = jobs.find(j => j.id === selectedCandidate.jobId);
-      const positionAppliedFor = assignedJob?.title || selectedCandidate.role || "the open position";
-      
-      const res = await fetch("/api/generate-reference-email", {
+      const res = await fetch(`/api/references/${reference.id}/generate-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          candidateId: selectedCandidate.id,
           candidateName: selectedCandidate.name,
-          positionAppliedFor,
-          referenceName: reference.referenceName,
-          referenceEmail: reference.referenceEmail,
-          relationshipToCandidate: reference.relationship || "Professional"
+          candidateRole: selectedCandidate.role
         })
       });
       
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        if (res.status === 403 && errorData.error === "AI usage limit reached") {
-          toast({ title: "Usage Limit Reached", description: errorData.message, variant: "destructive" });
-          return;
-        }
-        throw new Error("Failed to generate email");
+        throw new Error(errorData.error || "Failed to generate email");
       }
       const data = await res.json();
       
-      setActiveReferenceEmail({
-        referenceId: reference.id,
-        subject: data.emailSubject,
-        body: data.emailBody,
-        mailto: data.mailtoTemplate
-      });
-      
-      updateReferenceStatusMutation.mutate({ id: reference.id, status: "email_generated" });
-      toast({ title: "Email Generated", description: "Reference check email has been generated." });
+      if (data.mailto) {
+        window.open(data.mailto, "_blank");
+        updateReferenceStatusMutation.mutate({ id: reference.id, status: "emailed" });
+        toast({ title: "Email Opened", description: "Your email client has been opened with the reference request." });
+      } else {
+        throw new Error("No mailto link returned");
+      }
     } catch (error) {
       toast({ title: "Error", description: "Failed to generate reference email", variant: "destructive" });
     } finally {
@@ -1328,28 +1315,22 @@ export default function CandidatesModule() {
                               <div className="space-y-2">
                                 <div className="flex items-start justify-between">
                                   <div>
-                                    <p className="font-medium text-sm">{ref.referenceName}</p>
-                                    <p className="text-xs text-muted-foreground">{ref.referenceEmail}</p>
+                                    <p className="font-medium text-sm">{ref.name}</p>
+                                    <p className="text-xs text-muted-foreground">{ref.email}</p>
                                     {ref.relationship && (
                                       <p className="text-xs text-muted-foreground mt-1">
                                         Relationship: {ref.relationship}
                                       </p>
                                     )}
                                   </div>
-                                  <Badge className={getReferenceStatusColor(ref.status || "not_contacted")} variant="secondary">
-                                    {getReferenceStatusLabel(ref.status || "not_contacted")}
+                                  <Badge className={getReferenceStatusColor(ref.status || "pending_contact")} variant="secondary">
+                                    {ref.status === "email_sent" ? "Contacted" : "Pending"}
                                   </Badge>
                                 </div>
                                 
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  {ref.consentGiven === "true" && (
-                                    <Badge variant="outline" className="text-green-600 border-green-200">
-                                      <CheckCircle className="h-3 w-3 mr-1" />
-                                      Consent Given
-                                    </Badge>
-                                  )}
                                   <Badge variant="outline" className="capitalize">
-                                    {ref.source === "candidate_link" ? "Candidate Link" : ref.source}
+                                    {ref.source === "candidate_link" ? "Candidate Link" : "Manual"}
                                   </Badge>
                                 </div>
                                 
