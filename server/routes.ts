@@ -1149,11 +1149,11 @@ export async function registerRoutes(
         }
       }
       
-      // Fallback: return resume text as plain text file
-      const baseName = resumeDoc.fileName.replace(/\.[^/.]+$/, "") || "resume";
-      res.setHeader("Content-Type", "text/plain; charset=utf-8");
-      res.setHeader("Content-Disposition", `attachment; filename="${baseName}.txt"`);
-      res.send(resumeDoc.resumeText || "Resume text not available");
+      // File not found on disk - return error (don't serve .txt fallback)
+      res.status(404).json({ 
+        error: "Original file not found on disk. Please re-upload the resume as a PDF.",
+        message: "The original file may have been uploaded before persistent storage was enabled. Please upload the resume again."
+      });
     } catch (error) {
       console.error("Resume download error:", error);
       res.status(500).json({ error: "Failed to download resume" });

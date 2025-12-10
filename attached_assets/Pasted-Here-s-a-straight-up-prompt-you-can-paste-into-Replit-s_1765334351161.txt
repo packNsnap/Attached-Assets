@@ -1,0 +1,128 @@
+Here’s a straight-up prompt you can paste into Replit’s AI so it stops turning your PDFs into .txt and always stores + serves the original files.
+
+---
+
+**PROMPT FOR REPLIT (PASTE THIS DIRECTLY):**
+
+I have a web app here on Replit that handles resumes and “resume logic reports.” Right now, when I upload a resume or a logic report, the app converts them into `.txt` files and stores those instead of the original PDFs. I want this behavior removed permanently and replaced with proper binary file storage and download.
+
+**Your job is:**
+
+1. **Find all upload logic for resumes and logic reports**
+
+   * Search the entire project for any code that handles:
+
+     * Resume uploads
+     * “Resume logic report” uploads
+   * This may include fields/variables like:
+
+     * `resume`, `resume_file`, `uploaded_resume`
+     * `logic_report`, `logic_file`, `resume_logic_report`, or similar
+   * Also search for any code that:
+
+     * Converts PDFs or docs to `.txt`
+     * Saves `.txt` files derived from uploaded resumes
+
+2. **STOP converting anything to `.txt`**
+
+   * Remove or refactor any logic that:
+
+     * Reads uploaded files as text (`.read().decode(...)` or similar)
+     * Writes `.txt` files
+     * Changes extensions from `.pdf`/`.docx` to `.txt`
+   * The only acceptable conversion is **in-memory text extraction for analysis**, not for storage.
+   * Make sure **no stored file** is ever saved as `.txt` just because it was uploaded.
+
+3. **Store the original uploaded files exactly as they were**
+
+   * Create or confirm a persistent folder like: `uploads/` (and subfolders if needed, e.g. `uploads/resumes/` and `uploads/reports/`).
+   * For each uploaded file (resume and logic report):
+
+     * Save the **raw file bytes**, not decoded text.
+     * Preserve the original filename and extension.
+     * Generate a safe, unique stored filename (for example: `<uuid>_<original_filename>`).
+     * Store:
+
+       * Stored file path
+       * Original filename
+       * MIME type (`application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, etc.)
+       * Any foreign key or candidate ID link
+   * Ensure all database models and save logic refer to the **PDF or original file**, not a `.txt` derivative.
+
+4. **Keep text extraction strictly separate from file storage**
+
+   * If the app needs resume text for AI analysis, do this:
+
+     * Read from the stored original file (PDF/DOCX) when needed.
+     * Extract text in memory.
+     * Use that text for AI calls or internal logic.
+   * Do **not** overwrite or replace the stored file with the extracted text.
+   * If you store extracted text in the database, put it in a separate field like `resume_text` or `logic_report_text` and leave the file path pointing to the original file.
+
+5. **Fix and standardize download behavior**
+
+   * Implement or fix a proper download route for resumes and logic reports.
+
+     * For example:
+
+       * `/download/resume/<id>` or `/files/resume/<id>`
+       * `/download/logic-report/<id>` or similar
+   * When a user clicks “download”:
+
+     * Look up the file path, original filename, and mime type from the database.
+     * Send the actual file bytes with correct headers:
+
+       * `Content-Type` must match the original file (e.g., `application/pdf`).
+       * `Content-Disposition` should be `attachment; filename="<original_filename>"`.
+   * Verify that downloads give me the **same file type and content** that I uploaded (e.g., PDFs download as PDFs and open in a PDF viewer).
+
+6. **Remove conflicting / legacy code so this doesn’t “revert” again**
+
+   * Delete or refactor any old helpers/utilities that:
+
+     * Save `.txt` versions of resumes.
+     * Auto-convert files to `.txt` for “storage.”
+   * Make sure there is **only one** canonical upload handler per file type (resume and logic report), and that all forms, routes, and API endpoints call this updated logic.
+   * If you see any background jobs, cron logic, or AI-processing functions that re-save `.txt` files or overwrite stored paths, fix them so:
+
+     * The original binary file remains untouched.
+     * They only write to separate text fields or separate analytic tables.
+
+7. **UI behavior**
+
+   * In the UI:
+
+     * The upload forms for resume and logic report should accept PDF and doc/docx and show that the file is stored.
+     * Any “View” or “Download” buttons should:
+
+       * Either open the stored PDF in the browser
+       * Or download it with the correct extension, not `.txt`.
+   * Confirm that after making these changes:
+
+     * Upload PDF → stored as PDF → download gives back the same PDF.
+
+8. **Sanity checks (mandatory)**
+
+   * After code changes, simulate this flow:
+
+     1. Upload a PDF resume.
+     2. Upload a PDF logic report.
+     3. Go to wherever the files are listed in the app.
+     4. Click to download both files.
+     5. Confirm **in code** and behavior that:
+
+        * The files are still PDFs on disk.
+        * The files download as PDFs, not `.txt`.
+        * There is no `.txt` file being created anywhere as a replacement.
+   * If any `.txt` file creation is still present that touches these uploads, remove or isolate it so it never replaces the original file or its path.
+
+9. **Keep existing features working**
+
+   * Preserve all existing functionality:
+
+     * AI resume analysis
+     * Logic report generation
+     * Any status tracking and candidate profile features
+   * The only behavior change should be that the stored and downloadable files are always the original uploaded PDFs/docs, never `.txt`.
+
+Make these changes now across the entire project and update all relevant routes, models, and templates so this file handling behavior is consistent and permanent.
