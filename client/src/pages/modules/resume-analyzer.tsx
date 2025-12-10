@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, FileText, Upload, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns, Calendar, TrendingUp, Building, GraduationCap, ArrowRight, Clock, Flag, Download, Save, Eye } from "lucide-react";
+import { Loader2, FileText, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns, Calendar, TrendingUp, Building, GraduationCap, ArrowRight, Clock, Flag, Download, Save, Eye } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import { useLocation } from "wouter";
@@ -245,7 +245,6 @@ type AnalysisResult = {
 export default function ResumeAnalyzerModule() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult>(null);
-  const [fileName, setFileName] = useState<string>("");
   const [resumeText, setResumeText] = useState<string>("");
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
@@ -370,18 +369,10 @@ export default function ResumeAnalyzerModule() {
   const selectedJobId = form.watch("jobId");
   const selectedJob = jobs.find(j => j.id === selectedJobId);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFileName(e.target.files[0].name);
-      form.setValue("resumeName", e.target.files[0].name);
-    }
-  };
-
   const handleCandidateSelect = async (candidateId: string) => {
     setSelectedCandidateId(candidateId);
     const candidate = candidates.find(c => c.id === candidateId);
     if (candidate && candidate.resumeUrl) {
-      setFileName(candidate.resumeUrl);
       try {
         const response = await fetch(`/api/resume/${candidateId}`);
         if (response.ok) {
@@ -397,11 +388,11 @@ export default function ResumeAnalyzerModule() {
   };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!fileName && !resumeText) {
+    if (!resumeText) {
       toast({
         variant: "destructive",
         title: "Resume missing",
-        description: "Please upload a resume file or paste resume text to analyze.",
+        description: "Please select a candidate or paste resume text to analyze.",
       });
       return;
     }
@@ -770,34 +761,6 @@ export default function ResumeAnalyzerModule() {
                   {candidates.filter(c => c.resumeUrl).length === 0 && (
                     <p className="text-xs text-muted-foreground">No candidates with uploaded resumes. Add one in the Candidates module first.</p>
                   )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Or Upload Resume (PDF/Docx)</Label>
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center hover:bg-muted/50 transition-colors cursor-pointer relative">
-                    <Input 
-                      type="file" 
-                      className="absolute inset-0 opacity-0 cursor-pointer" 
-                      onChange={handleFileChange}
-                      accept=".pdf,.doc,.docx"
-                      data-testid="input-resume-file"
-                    />
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <Upload className="h-5 w-5" />
-                      </div>
-                      {fileName ? (
-                        <div className="text-sm font-medium text-foreground">
-                          {fileName}
-                        </div>
-                      ) : (
-                        <>
-                          <div className="text-sm font-medium">Click to upload or drag and drop</div>
-                          <div className="text-xs text-muted-foreground">PDF or DOCX up to 5MB</div>
-                        </>
-                      )}
-                    </div>
-                  </div>
                 </div>
 
                 <div className="space-y-2">
