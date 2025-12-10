@@ -44,7 +44,7 @@ export default function ReferenceCheckModule() {
   } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const module = getModuleByPath("/modules/reference-check");
+  const module = getModuleByPath("/references");
 
   const { data: candidates = [] } = useQuery<Candidate[]>({
     queryKey: ["/api/candidates"],
