@@ -1,6 +1,4 @@
-import OpenAI from "openai";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { callAI } from "./routes";
 
 // Types for structured data
 export interface ExtractedJob {
@@ -239,8 +237,7 @@ Rules:
 - Calculate total experience from job durations
 - extractionConfidence: 0-100 based on how complete/clear the resume was`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+  const completion = await callAI("resume_analysis", {
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.1,
@@ -413,8 +410,7 @@ Guidelines:
 - 5+ jobs in 4 years = major_concern for job hopping
 - Always provide balanced, professional assessments`;
 
-  const labelingCompletion = await openai.chat.completions.create({
-    model: "gpt-4o",
+  const labelingCompletion = await callAI("resume_analysis", {
     messages: [{ role: "user", content: labelingPrompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
@@ -506,8 +502,7 @@ Scoring Guidelines:
 - industry_match: Relevance of candidate's industry background to target role
 - Be specific about which skills are must-have vs nice-to-have based on job description`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+  const completion = await callAI("resume_analysis", {
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
@@ -591,8 +586,7 @@ Base recommendedAction on:
 - Fit Score > 50 + skill gaps → skills_test_first
 - Fit Score < 50 or high risk → reject or needs_review`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+  const completion = await callAI("resume_analysis", {
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.3,
@@ -866,8 +860,7 @@ MISMATCH DETECTION GUIDELINES:
 
 Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+  const completion = await callAI("ai_detection", {
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,

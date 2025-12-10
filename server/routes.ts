@@ -45,14 +45,14 @@ const MODEL_MAP: Record<string, string> = {
   "default": "gpt-4o-mini",
 };
 
-type ChatCompletionParams = Parameters<typeof openai.chat.completions.create>[0];
+type ChatCompletionParams = Omit<Parameters<typeof openai.chat.completions.create>[0], "model" | "stream">;
 
 export async function callAI(
   purpose: string = "default",
-  params: Omit<ChatCompletionParams, "model">
+  params: ChatCompletionParams
 ) {
   const model = MODEL_MAP[purpose] || MODEL_MAP["default"];
-  return openai.chat.completions.create({ model, ...params });
+  return openai.chat.completions.create({ model, stream: false, ...params });
 }
 
 const upload = multer({ storage: multer.memoryStorage() });
