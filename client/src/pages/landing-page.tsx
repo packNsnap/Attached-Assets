@@ -27,6 +27,10 @@ import {
   PieChart,
   Activity,
   Gauge,
+  Lock,
+  ShieldCheck,
+  Database,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -731,8 +735,90 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Security & Compliance Section - NEW */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-teal-500/5 to-cyan-500/5" />
+        
+        <div className="max-w-7xl mx-auto relative">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border-emerald-500/20">
+              <ShieldCheck className="h-3.5 w-3.5 mr-2" />
+              Enterprise-Grade Security
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
+              Be Compliant &{" "}
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                Secure
+              </span>
+            </h2>
+            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
+              Consumer AI tools like ChatGPT aren't designed for processing candidate PII.
+              Resume Logik uses secure, isolated API models where your data is protected.
+            </p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            {[
+              {
+                icon: Lock,
+                title: "Stays Encrypted",
+                description: "All candidate data is encrypted at rest and in transit"
+              },
+              {
+                icon: EyeOff,
+                title: "Never Trains Public Models",
+                description: "Your data is never used to train external AI systems"
+              },
+              {
+                icon: Database,
+                title: "Stays in Your Workspace",
+                description: "Data remains isolated inside your hiring workspace"
+              },
+              {
+                icon: ShieldCheck,
+                title: "HR Privacy Standards",
+                description: "Meets standard HR privacy and compliance expectations"
+              }
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="p-5 rounded-xl bg-background border shadow-sm hover:shadow-md transition-shadow text-center"
+              >
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
+                  <item.icon className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="font-semibold mb-2">{item.title}</h3>
+                <p className="text-sm text-muted-foreground">{item.description}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="p-6 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 text-center max-w-2xl mx-auto"
+          >
+            <Shield className="h-8 w-8 text-emerald-600 mx-auto mb-3" />
+            <p className="text-sm sm:text-base text-muted-foreground">
+              <strong className="text-foreground">No resumes or candidate data are ever exposed to public AI systems.</strong>{" "}
+              Your hiring data stays private, secure, and compliant.
+            </p>
+          </motion.div>
+        </div>
+      </section>
+
       {/* All Features Grid */}
-      <section id="features" className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
+      <section id="features" className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background to-muted/30">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0 }}
