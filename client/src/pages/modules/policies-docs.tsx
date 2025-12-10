@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, BookOpen, Copy, Download, FileText, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, BookOpen, Copy, Download, FileText, ExternalLink, AlertTriangle, CheckCircle2, FileJson } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
+import html2pdf from "html2pdf.js";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -97,6 +98,7 @@ export default function PoliciesDocsModule() {
   const [result, setResult] = useState<GeneratedPolicy | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const policyContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -280,6 +282,29 @@ export default function PoliciesDocsModule() {
     toast({
       title: "Downloaded",
       description: "You can open this file in your browser and print/save as PDF.",
+    });
+  };
+
+  const downloadAsPDF = () => {
+    if (!policyContentRef.current || !result) return;
+    
+    const companyName = form.getValues("companyName");
+    const policyType = policyNames[form.getValues("policyType")] || "Policy";
+    const element = policyContentRef.current;
+    
+    const opt = {
+      margin: 10,
+      filename: `${companyName.replace(/\s+/g, "_")}_${policyType.replace(/\s+/g, "_")}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { orientation: "portrait", unit: "mm", format: "a4" },
+    };
+    
+    html2pdf().set(opt).from(element).save();
+    
+    toast({
+      title: "Downloaded",
+      description: "Policy saved as PDF successfully.",
     });
   };
 
@@ -573,20 +598,28 @@ export default function PoliciesDocsModule() {
                       </CardDescription>
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2 mt-3">
                     <Button variant="outline" size="sm" onClick={copyToClipboard} data-testid="button-copy">
                       <Copy className="h-4 w-4 mr-2" />
-                      Copy Policy
+                      Copy
                     </Button>
-                    <Button size="sm" onClick={downloadAsHTML} data-testid="button-download">
+                    <Button size="sm" onClick={downloadAsPDF} data-testid="button-download-pdf">
+                      <FileJson className="h-4 w-4 mr-2" />
+                      Download PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={downloadAsHTML} data-testid="button-download-html">
                       <Download className="h-4 w-4 mr-2" />
-                      Download as HTML
+                      Download HTML
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[350px] pr-4">
-                    <div className="prose prose-sm dark:prose-invert max-w-none" data-testid="text-policy-content">
+                    <div 
+                      ref={policyContentRef}
+                      className="prose prose-sm dark:prose-invert max-w-none" 
+                      data-testid="text-policy-content"
+                    >
                       {renderMarkdown(result.policy_markdown)}
                     </div>
                   </ScrollArea>
