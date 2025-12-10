@@ -311,7 +311,7 @@ export default function PoliciesDocsModule() {
                             <SelectValue placeholder="Select policy type" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="max-h-[200px]">
                           <SelectItem value="remote-work">Remote Work Policy</SelectItem>
                           <SelectItem value="pto">PTO & Leave Policy</SelectItem>
                           <SelectItem value="code-of-conduct">Code of Conduct</SelectItem>
@@ -339,7 +339,7 @@ export default function PoliciesDocsModule() {
                             <SelectValue placeholder="Select industry" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent>
+                        <SelectContent className="max-h-[300px]">
                           {INDUSTRIES.map((ind) => (
                             <SelectItem key={ind.value} value={ind.value}>
                               {ind.label}
@@ -365,7 +365,7 @@ export default function PoliciesDocsModule() {
                               <SelectValue placeholder="Select state" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="max-h-[300px]">
                             {US_STATES.map((state) => (
                               <SelectItem key={state} value={state}>
                                 {state}
@@ -390,7 +390,7 @@ export default function PoliciesDocsModule() {
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
+                          <SelectContent className="max-h-[200px]">
                             <SelectItem value="1-10">1-10 employees</SelectItem>
                             <SelectItem value="11-50">11-50 employees</SelectItem>
                             <SelectItem value="51-200">51-200 employees</SelectItem>
