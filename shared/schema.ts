@@ -435,3 +435,29 @@ export const insertOnboardingPlanSchema = createInsertSchema(onboardingPlans).om
 export type InsertOnboardingPlan = z.infer<typeof insertOnboardingPlanSchema>;
 export type OnboardingPlan = typeof onboardingPlans.$inferSelect;
 
+export const performanceGoals = pgTable("performance_goals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  employeeId: varchar("employee_id").notNull(),
+  employeeName: text("employee_name").notNull(),
+  role: text("role").notNull(),
+  goalTitle: text("goal_title").notNull(),
+  goalDescription: text("goal_description").notNull(),
+  status: text("status").notNull().default("not_started"),
+  dueDate: timestamp("due_date").notNull(),
+  isAtRisk: text("is_at_risk").notNull().default("false"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertPerformanceGoalSchema = createInsertSchema(performanceGoals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  userId: z.string().optional(),
+});
+
+export type InsertPerformanceGoal = z.infer<typeof insertPerformanceGoalSchema>;
+export type PerformanceGoal = typeof performanceGoals.$inferSelect;
+

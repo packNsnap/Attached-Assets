@@ -1,0 +1,233 @@
+You don’t want a full performance system here. You want:
+
+Pick a hired employee
+
+Click one button
+
+Get 3–5 SMART goals generated from OpenAI + web search
+
+Track status (Not started / In progress / Completed) and a simple At Risk flag
+
+That’s it. Lightweight, but actually useful.
+
+What this section should do
+
+Flow:
+
+Select an employee (only from hired candidates).
+
+Click Add Goal → “AI-Suggest Goals”.
+
+Backend:
+
+Uses web search:
+"performance goals for [ROLE] in [INDUSTRY]".
+
+Uses OpenAI to turn that + your data into 3–5 SMART goals.
+
+Goals are saved to DB and shown in a list with:
+
+Goal title
+
+Description
+
+Owner (the employee)
+
+Due date
+
+Status dropdown (Not started / In progress / Completed)
+
+Top cards (Total, Overall Progress, Completed, At Risk) are just computed from those rows.
+
+At Risk = due date in the past OR within X days and status not Completed.
+
+Data model (minimal)
+
+performance_goals table:
+
+id
+
+employee_id (candidate/user ID)
+
+employee_name
+
+role
+
+goal_title
+
+goal_description
+
+status → "not_started" | "in_progress" | "completed"
+
+due_date
+
+is_at_risk (bool, auto-calculated)
+
+created_at
+
+updated_at
+
+Lean Replit prompt (copy/paste)
+
+Use this to have Replit wire the whole thing:
+
+On the /performance page, turn this into a simple AI-assisted goal tracker for hired employees, using web search + OpenAI.
+
+1. Database
+
+Create a performance_goals table with:
+
+id
+
+employee_id
+
+employee_name
+
+role
+
+goal_title
+
+goal_description
+
+status ("not_started" | "in_progress" | "completed")
+
+due_date
+
+is_at_risk (boolean)
+
+created_at
+
+updated_at
+
+is_at_risk should be recalculated as:
+
+true if status != "completed" AND (due_date is in the past OR within 7 days)
+
+otherwise false.
+
+2. API endpoints
+
+Implement:
+
+GET /api/performance/goals
+Optional query params: employee_id.
+Returns all goals plus computed summary:
+
+total_goals
+
+completed_goals
+
+at_risk_goals
+
+overall_progress (percentage = completed / total).
+
+POST /api/performance/goals/generate
+Body:
+
+{
+  "employee_id": "123",
+  "employee_name": "Ariella Harlin",
+  "role": "Verification Specialist",
+  "industry": "Background Screening",
+  "time_horizon": "90 days"
+}
+
+
+Steps:
+
+Build a search query like:
+"SMART performance goals for Verification Specialist in background screening 90 days".
+
+Call a web search API (using SEARCH_API_KEY) and get the top 3–5 results with title, url, snippet.
+
+Call OpenAI (Chat Completions, e.g. gpt-4.1-mini) with:
+
+System: you are an HR performance coach; create measurable SMART goals using the search snippets as context; do not claim legal or HR compliance guarantees.
+
+User: include employee_name, role, industry, time_horizon, and the search results.
+
+Ask OpenAI to return strict JSON:
+
+{
+  "goals": [
+    {
+      "title": "Improve verification accuracy",
+      "description": "Reduce verification errors by 20% within 90 days by using checklists and peer review.",
+      "due_in_days": 90
+    }
+  ]
+}
+
+
+For each goal:
+
+Insert into performance_goals with:
+
+employee_id, employee_name, role
+
+goal_title, goal_description
+
+status = "not_started"
+
+due_date = today + due_in_days
+
+Compute is_at_risk = false initially.
+
+Return the created goals.
+
+PATCH /api/performance/goals/:id
+Allows updating:
+
+status
+
+due_date
+After update, recompute is_at_risk for that goal.
+
+3. Frontend behavior on /performance
+
+Add an Employee selector at the top (dropdown of hired employees).
+
+“All employees” option shows all goals.
+
+Keep the existing four summary cards:
+
+Total Goals, Overall Progress, Completed, At Risk.
+Populate them from GET /api/performance/goals.
+
+Below, show a list/table of goals:
+
+Columns: Goal Title, Employee, Status (dropdown), Due Date, At Risk badge.
+
+Changing Status or Due Date calls PATCH /api/performance/goals/:id and refreshes the summary.
+
+The “Add Goal” button opens a modal with:
+
+Selected Employee (dropdown, required)
+
+Option A: “Generate AI Goals”
+
+Fields: Role (prefilled if available), Industry (optional), Time Horizon (30 / 60 / 90 days).
+
+On submit, call POST /api/performance/goals/generate, then append the returned goals to the list.
+
+Option B: “Manual Goal”
+
+Fields: Goal Title, Description, Due Date.
+
+Save directly into performance_goals with status="not_started".
+
+4. Constraints
+
+Do not change the existing layout of the header, summary cards, or page title.
+
+Keep the design simple and consistent with existing UI components.
+
+No email or notification system; this is just a lightweight goal tracker with AI-suggested goals plus manual status updates.
+
+That gives you a real feature:
+
+AI helps write meaningful goals using web context.
+
+You can pick any hired employee and track a few goals.
+
+The UI stays simple and non-core, which is exactly what you want.

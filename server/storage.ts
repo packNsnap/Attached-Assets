@@ -38,6 +38,8 @@ import {
   type InsertReferenceLink,
   type OnboardingPlan,
   type InsertOnboardingPlan,
+  type PerformanceGoal,
+  type InsertPerformanceGoal,
   type PlanType,
   PLAN_LIMITS,
   users,
@@ -58,7 +60,8 @@ import {
   scheduledInterviews,
   references,
   referenceLinks,
-  onboardingPlans
+  onboardingPlans,
+  performanceGoals
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql, desc, and, gte, lte, inArray } from "drizzle-orm";
@@ -211,6 +214,13 @@ export interface IStorage {
   getOnboardingPlan(id: string, userId: string): Promise<OnboardingPlan | undefined>;
   updateOnboardingPlanTaskIds(id: string, userId: string, completedTaskIds: string[]): Promise<OnboardingPlan | undefined>;
   completeOnboardingPlan(id: string, userId: string): Promise<OnboardingPlan | undefined>;
+  
+  // Performance goals
+  createPerformanceGoal(goal: InsertPerformanceGoal): Promise<PerformanceGoal>;
+  getPerformanceGoals(userId: string, employeeId?: string): Promise<PerformanceGoal[]>;
+  getPerformanceGoal(id: string, userId: string): Promise<PerformanceGoal | undefined>;
+  updatePerformanceGoal(id: string, userId: string, data: Partial<InsertPerformanceGoal>): Promise<PerformanceGoal | undefined>;
+  deletePerformanceGoal(id: string, userId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -935,6 +945,57 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(onboardingPlans.id, id), eq(onboardingPlans.userId, userId)))
       .returning();
     return result[0];
+  }
+
+  async createPerformanceGoal(goal: InsertPerformanceGoal): Promise<PerformanceGoal> {
+    const result = await db.insert(performanceGoals).values(goal).returning();
+    return result[0];
+  }
+
+  async getPerformanceGoals(userId: string, employeeId?: string): Promise<PerformanceGoal[]> {
+    if (employeeId) {
+      return await db.select().from(performanceGoals)
+        .where(and(eq(performanceGoals.userId, userId), eq(performanceGoals.employeeId, employeeId)))
+        .orderBy(desc(performanceGoals.createdAt));
+    }
+    return await db.select().from(performanceGoals)
+      .where(eq(performanceGoals.userId, userId))
+      .orderBy(desc(performanceGoals.createdAt));
+  }
+
+  async getPerformanceGoal(id: string, userId: string): Promise<PerformanceGoal | undefined> {
+    const result = await db.select().from(performanceGoals)
+      .where(and(eq(performanceGoals.id, id), eq(performanceGoals.userId, userId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async updatePerformanceGoal(id: string, userId: string, data: Partial<InsertPerformanceGoal>): Promise<PerformanceGoal | undefined> {
+    const now = new Date();
+    const dueDate = data.dueDate ? new Date(data.dueDate) : undefined;
+    const status = data.status;
+    
+    let isAtRisk = "false";
+    if (status !== "completed" && dueDate) {
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      if (dueDate < now || dueDate <= sevenDaysFromNow) {
+        isAtRisk = "true";
+      }
+    }
+    
+    const result = await db.update(performanceGoals)
+      .set({ ...data, isAtRisk, updatedAt: now })
+      .where(and(eq(performanceGoals.id, id), eq(performanceGoals.userId, userId)))
+      .returning();
+    return result[0];
+  }
+
+  async deletePerformanceGoal(id: string, userId: string): Promise<boolean> {
+    const result = await db.delete(performanceGoals)
+      .where(and(eq(performanceGoals.id, id), eq(performanceGoals.userId, userId)))
+      .returning();
+    return result.length > 0;
   }
 }
 
