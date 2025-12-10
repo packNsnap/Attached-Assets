@@ -169,4 +169,19 @@ Preferred communication style: Simple, everyday language.
 - **express-session** - Session middleware
 - **connect-pg-simple** - PostgreSQL session store
 
+## Onboarding Module Features
+
+The onboarding module provides AI-powered onboarding plan generation with persistent tracking:
+
+**Database Tables:**
+- `onboarding_plans` - Stores generated plans with: id, userId, candidateId, employeeName, role, startDate, onboardingType, status (active/completed), planJson (the full AI-generated plan), completedTaskIds (JSON array of task IDs marked complete), createdAt, completedAt
+
+**Key Features:**
+- AI generates structured plans with tasks by week, 30/60/90 day goals, and email templates
+- Task IDs follow format `week{week}-task{index}` for tracking completion
+- Active plans displayed in a table with progress bars (completed/total tasks)
+- Task checkboxes with optimistic UI updates and proper error rollback
+- View button loads existing plan for continued tracking
+- Mark Completed button moves plan to completed status
+
 **Note:** The application currently has placeholders for AI integration (job description generation, resume analysis, etc.). These features will require integration with AI services like OpenAI or Google's Generative AI, which are listed as dependencies but not yet implemented.
