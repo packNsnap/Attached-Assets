@@ -61,10 +61,52 @@ const { Pool } = pg;
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const db = drizzle(pool);
 
-// Persistent file storage directory
+// Persistent file storage directory - base uploads folder
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+// Helper to get user-specific upload directory: uploads/account_<userId>/candidate_<candidateId>/
+function getUserCandidateDir(userId: string, candidateId: string): string {
+  const dir = path.join(UPLOADS_DIR, `account_${userId}`, `candidate_${candidateId}`);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+}
+
+// Helper to resolve a stored file path (handles both new per-account paths and legacy flat paths)
+function resolveFilePath(storedPath: string, userId?: string, candidateId?: string): string | null {
+  // If it's an absolute path, just normalize and use it
+  if (path.isAbsolute(storedPath)) {
+    const resolved = path.normalize(storedPath);
+    // Security: must be within uploads dir
+    if (!resolved.startsWith(path.normalize(UPLOADS_DIR))) {
+      return null;
+    }
+    return fs.existsSync(resolved) ? resolved : null;
+  }
+  
+  // Check if it contains account_ folder structure (new format)
+  if (storedPath.includes("account_")) {
+    const resolved = path.join(UPLOADS_DIR, storedPath);
+    if (fs.existsSync(resolved)) {
+      return resolved;
+    }
+  }
+  
+  // Try the new per-account structure if userId and candidateId provided
+  if (userId && candidateId) {
+    const newPath = path.join(getUserCandidateDir(userId, candidateId), path.basename(storedPath));
+    if (fs.existsSync(newPath)) {
+      return newPath;
+    }
+  }
+  
+  // Fall back to legacy flat structure
+  const legacyPath = path.join(UPLOADS_DIR, path.basename(storedPath));
+  return fs.existsSync(legacyPath) ? legacyPath : null;
 }
 
 // In-memory resume storage (for text only - files are persisted to disk)
@@ -927,6 +969,7 @@ export async function registerRoutes(
 
   app.get("/api/documents/:documentId/download", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const doc = await storage.getDocumentById(req.params.documentId);
       if (!doc) {
         res.status(404).json({ error: "Document not found" });
@@ -936,20 +979,18 @@ export async function registerRoutes(
       const storedPath = doc.fileUrl;
       let resolvedPath: string | null = null;
 
+      // Special case for report files in public folder
       if (storedPath.startsWith("/uploads/reports/")) {
         resolvedPath = path.join(process.cwd(), "public", storedPath);
-      } else if (path.isAbsolute(storedPath)) {
-        resolvedPath = path.normalize(storedPath);
-        const normalizedUploads = path.normalize(UPLOADS_DIR);
-        if (!resolvedPath.startsWith(normalizedUploads)) {
-          res.status(403).json({ error: "Access denied" });
-          return;
+        if (!fs.existsSync(resolvedPath)) {
+          resolvedPath = null;
         }
       } else {
-        resolvedPath = path.join(UPLOADS_DIR, path.basename(storedPath));
+        // Use helper for normal uploads (supports per-account structure and legacy)
+        resolvedPath = resolveFilePath(storedPath, userId, doc.candidateId);
       }
 
-      if (!resolvedPath || !fs.existsSync(resolvedPath)) {
+      if (!resolvedPath) {
         res.status(404).json({ 
           error: "File not found on disk",
           message: "The original file may have been uploaded before persistent storage was enabled. Please re-upload the document."
@@ -1128,10 +1169,14 @@ export async function registerRoutes(
       // Store resume text in memory for quick access
       resumeStore.set(candidateId, resumeText);
 
-      // Generate unique filename with original extension and save to disk
+      // Generate unique filename with original extension and save to per-account/candidate folder
       const uniqueId = randomBytes(8).toString("hex");
-      const safeFileName = `${candidateId}_${uniqueId}.${fileExt}`;
-      const filePath = path.join(UPLOADS_DIR, safeFileName);
+      const safeFileName = `${uniqueId}.${fileExt}`;
+      const userCandidateDir = getUserCandidateDir(userId, candidateId);
+      const filePath = path.join(userCandidateDir, safeFileName);
+      
+      // Relative path to store in DB (relative to UPLOADS_DIR)
+      const relativeFilePath = path.relative(UPLOADS_DIR, filePath);
       
       // Save the original file buffer to disk
       fs.writeFileSync(filePath, file.buffer);
@@ -1157,7 +1202,7 @@ export async function registerRoutes(
         candidateId,
         fileName: fileName,
         fileType: fileExt || "unknown",
-        fileUrl: safeFileName,  // Store only the filename (relative to uploads dir)
+        fileUrl: relativeFilePath,  // Store path relative to uploads dir (includes account/candidate folders)
         documentType: "Resume",
         resumeText: resumeText
       });
@@ -1207,32 +1252,21 @@ export async function registerRoutes(
         return;
       }
       
-      // Safely resolve file path - only allow files within UPLOADS_DIR
+      // Use helper to resolve file path (supports both new per-account structure and legacy flat structure)
       const storedPath = resumeDoc.fileUrl;
-      if (storedPath) {
-        // Handle both relative filenames and legacy absolute paths
-        let resolvedPath: string;
-        if (path.isAbsolute(storedPath)) {
-          // Legacy absolute path - validate it's within uploads dir
-          resolvedPath = path.normalize(storedPath);
-        } else {
-          // Relative filename - resolve against uploads dir
-          resolvedPath = path.join(UPLOADS_DIR, path.basename(storedPath));
-        }
-        
-        // Security check: ensure resolved path is within UPLOADS_DIR
-        const normalizedUploads = path.normalize(UPLOADS_DIR);
-        if (resolvedPath.startsWith(normalizedUploads) && fs.existsSync(resolvedPath)) {
-          const fileBuffer = fs.readFileSync(resolvedPath);
-          const mimeType = resumeDoc.fileType === "pdf" ? "application/pdf" : 
-                          (resumeDoc.fileType === "docx" || resumeDoc.fileType === "doc") ? 
-                          "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : 
-                          "application/octet-stream";
-          res.setHeader("Content-Type", mimeType);
-          res.setHeader("Content-Disposition", `attachment; filename="${resumeDoc.fileName}"`);
-          res.send(fileBuffer);
-          return;
-        }
+      const candidateId = req.params.candidateId;
+      const resolvedPath = storedPath ? resolveFilePath(storedPath, userId, candidateId) : null;
+      
+      if (resolvedPath) {
+        const fileBuffer = fs.readFileSync(resolvedPath);
+        const mimeType = resumeDoc.fileType === "pdf" ? "application/pdf" : 
+                        (resumeDoc.fileType === "docx" || resumeDoc.fileType === "doc") ? 
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : 
+                        "application/octet-stream";
+        res.setHeader("Content-Type", mimeType);
+        res.setHeader("Content-Disposition", `attachment; filename="${resumeDoc.fileName}"`);
+        res.send(fileBuffer);
+        return;
       }
       
       // File not found on disk - return error (don't serve .txt fallback)
