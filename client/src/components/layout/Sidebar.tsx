@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, User, Sparkles, ExternalLink, GripVertical, RotateCcw } from "lucide-react";
+import { LogOut, User, Sparkles, ExternalLink, GripVertical, RotateCcw, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +18,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-export function Sidebar() {
+interface SidebarProps {
+  onClose?: () => void;
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const [location] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -84,11 +88,15 @@ export function Sidebar() {
     });
   };
 
+  const handleLinkClick = () => {
+    if (onClose) onClose();
+  };
+
   return (
     <div className="flex h-screen w-72 flex-col border-r bg-gradient-to-b from-background to-muted/30">
       {/* Header with gradient branding */}
       <div className="flex h-16 items-center justify-between border-b px-4">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group">
+        <Link href="/dashboard" className="flex items-center gap-2.5 group" onClick={handleLinkClick}>
           <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/40 transition-shadow">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
@@ -116,6 +124,17 @@ export function Sidebar() {
             </Tooltip>
           </TooltipProvider>
           <ModeToggle />
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 md:hidden"
+              onClick={onClose}
+              data-testid="button-close-sidebar"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
       
@@ -143,6 +162,7 @@ export function Sidebar() {
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, index)}
+                onClick={handleLinkClick}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-grab active:cursor-grabbing",
                   isActive 
