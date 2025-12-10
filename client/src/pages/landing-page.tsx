@@ -23,6 +23,10 @@ import {
   Award,
   ChevronRight,
   Briefcase,
+  GripVertical,
+  PieChart,
+  Activity,
+  Gauge,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,74 +49,82 @@ const staggerContainer = {
 const features = [
   {
     icon: FileSearch,
-    title: "AI Job Description Generator",
-    description: "Create compelling, bias-free job descriptions with AI-powered salary benchmarking in seconds.",
-    highlight: "Save 2+ hours per job posting",
-    color: "from-blue-500 to-cyan-500"
+    title: "AI Job Descriptions",
+    description: "Create compelling, bias-free job descriptions with AI-powered salary benchmarking.",
+    highlight: "Save 2+ hours per posting",
+    color: "from-blue-500 to-cyan-500",
+    hasAI: true
   },
   {
     icon: Brain,
     title: "Resume Logic Analysis",
-    description: "Detect AI-generated resumes, analyze authenticity signals, and get deep candidate insights.",
+    description: "Detect AI-generated resumes, analyze authenticity, and get deep candidate insights.",
     highlight: "Spot fake resumes instantly",
     color: "from-purple-500 to-pink-500",
-    featured: true
+    featured: true,
+    hasAI: true
   },
   {
     icon: ClipboardCheck,
     title: "Skills Test Builder",
-    description: "Auto-generate role-specific assessments with AI scoring. Send tests and track completions.",
-    highlight: "Objective candidate evaluation",
-    color: "from-green-500 to-emerald-500"
+    description: "Auto-generate role-specific assessments with AI scoring and tracking.",
+    highlight: "Objective evaluation",
+    color: "from-green-500 to-emerald-500",
+    hasAI: true
   },
   {
     icon: MessageSquare,
     title: "Interview Assistant",
-    description: "Get AI-generated questions based on resume analysis, skills gaps, and role requirements.",
+    description: "AI-generated questions based on resume analysis and role requirements.",
     highlight: "Never run out of questions",
-    color: "from-orange-500 to-amber-500"
+    color: "from-orange-500 to-amber-500",
+    hasAI: true
   },
   {
     icon: Users,
     title: "Candidate Management",
-    description: "Track candidates through your pipeline with notes, documents, and assessment history.",
-    highlight: "Complete candidate profiles",
+    description: "Track candidates with notes, documents, and complete assessment history.",
+    highlight: "Complete profiles",
     color: "from-indigo-500 to-violet-500"
   },
   {
     icon: TrendingUp,
     title: "Hiring Pipeline",
-    description: "Visualize your hiring funnel with drag-and-drop stages and real-time analytics.",
-    highlight: "Visual workflow management",
+    description: "Visualize your hiring funnel with drag-and-drop stages and analytics.",
+    highlight: "Visual workflow",
     color: "from-rose-500 to-red-500"
   },
   {
     icon: Shield,
-    title: "Reference Check Orchestration",
-    description: "Streamline reference collection with automated outreach and structured feedback forms.",
-    highlight: "Faster reference verification",
-    color: "from-teal-500 to-cyan-500"
+    title: "Reference Check",
+    description: "Streamlined reference collection with automated outreach and feedback forms.",
+    highlight: "Faster verification",
+    color: "from-teal-500 to-cyan-500",
+    hasAI: true
   },
   {
     icon: BookOpen,
-    title: "HR Policies & Documentation",
-    description: "Generate and manage HR policies, employee handbooks, and compliance documents.",
-    highlight: "AI-assisted policy creation",
-    color: "from-yellow-500 to-orange-500"
+    title: "HR Policies & Docs",
+    description: "Generate compliant HR policies with state-specific guidance and legal references.",
+    highlight: "AI policy creation",
+    color: "from-yellow-500 to-orange-500",
+    hasAI: true
   },
   {
     icon: UserPlus,
     title: "Employee Onboarding",
-    description: "Create onboarding checklists, track progress, and ensure smooth employee transitions.",
-    highlight: "Structured onboarding flows",
-    color: "from-lime-500 to-green-500"
+    description: "AI-generated onboarding plans with task tracking and 30/60/90 day goals.",
+    highlight: "Structured onboarding",
+    color: "from-lime-500 to-green-500",
+    hasAI: true
   },
   {
     icon: Award,
-    title: "Performance Management",
-    description: "Set goals, track achievements, and conduct reviews with AI-powered insights.",
-    highlight: "Data-driven performance",
-    color: "from-fuchsia-500 to-purple-500"
+    title: "Performance Goals",
+    description: "AI-powered SMART goal generation with status tracking for employees.",
+    highlight: "Data-driven goals",
+    color: "from-fuchsia-500 to-purple-500",
+    hasAI: true
   }
 ];
 
@@ -120,26 +132,26 @@ const aiFeatures = [
   {
     icon: AlertTriangle,
     title: "AI Resume Detection",
-    description: "Our advanced algorithms analyze writing patterns, structure, and authenticity signals to flag AI-generated content.",
+    description: "Our advanced algorithms analyze writing patterns and authenticity signals to flag AI-generated content.",
     stats: "85%+ accuracy"
   },
   {
     icon: Eye,
     title: "Authenticity Scoring",
-    description: "Get detailed breakdowns of generic writing, specificity levels, and cliché phrases that indicate AI assistance.",
-    stats: "10+ signals analyzed"
+    description: "Detailed breakdowns of generic writing, specificity levels, and cliché phrases.",
+    stats: "10+ signals"
   },
   {
     icon: Target,
     title: "Skills Gap Analysis",
-    description: "Automatically identify missing skills compared to job requirements and generate targeted interview questions.",
+    description: "Identify missing skills compared to job requirements and generate targeted questions.",
     stats: "Real-time matching"
   },
   {
     icon: Lightbulb,
     title: "Smart Recommendations",
-    description: "Receive AI-powered suggestions for interview questions, test topics, and candidate evaluation criteria.",
-    stats: "Personalized insights"
+    description: "AI suggestions for interview questions, test topics, and evaluation criteria.",
+    stats: "Personalized"
   }
 ];
 
@@ -147,11 +159,11 @@ const comparisonData = [
   { feature: "AI Job Description Generation", hrNexus: true, traditional: false },
   { feature: "AI Resume Analysis & Detection", hrNexus: true, traditional: false },
   { feature: "Automated Skills Testing", hrNexus: true, traditional: "Limited" },
-  { feature: "Interview Question Generation", hrNexus: true, traditional: false },
-  { feature: "Candidate Pipeline Management", hrNexus: true, traditional: true },
-  { feature: "Reference Check Automation", hrNexus: true, traditional: "Manual" },
-  { feature: "Onboarding Workflows", hrNexus: true, traditional: true },
-  { feature: "Performance Tracking", hrNexus: true, traditional: true },
+  { feature: "Real-Time Analytics Dashboard", hrNexus: true, traditional: "Basic" },
+  { feature: "AI Performance Goal Generation", hrNexus: true, traditional: false },
+  { feature: "Customizable Workspace", hrNexus: true, traditional: false },
+  { feature: "Onboarding with Task Tracking", hrNexus: true, traditional: true },
+  { feature: "State-Specific HR Policies", hrNexus: true, traditional: "Manual" },
   { feature: "Starting Price", hrNexus: "Free / Low Cost", traditional: "$5,000+/year" },
 ];
 
@@ -172,7 +184,7 @@ export default function LandingPage() {
                 Resume Logik
               </span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-4">
               <Button variant="ghost" asChild data-testid="link-pricing">
                 <a href="/pricing">Pricing</a>
               </Button>
@@ -186,12 +198,17 @@ export default function LandingPage() {
                 </a>
               </Button>
             </div>
+            <div className="sm:hidden">
+              <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600" asChild>
+                <a href="/auth">Start Free</a>
+              </Button>
+            </div>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4 sm:px-6 lg:px-8 relative">
+      <section className="pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 relative">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl" />
@@ -207,7 +224,6 @@ export default function LandingPage() {
             transition={{ delay: 0.3, duration: 0.6 }}
             className="space-y-4"
           >
-            {/* Floating module icons */}
             <motion.div
               animate={{ y: [0, -8, 0] }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
@@ -231,10 +247,6 @@ export default function LandingPage() {
             >
               <FileSearch className="h-5 w-5 text-white" />
             </motion.div>
-
-            {/* Decorative lines */}
-            <div className="absolute -left-4 top-20 w-20 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
-            <div className="absolute -left-2 top-40 w-16 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
           </motion.div>
         </div>
 
@@ -246,13 +258,12 @@ export default function LandingPage() {
             transition={{ delay: 0.4, duration: 0.6 }}
             className="space-y-4"
           >
-            {/* Floating module icons */}
             <motion.div
               animate={{ y: [0, -6, 0] }}
               transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
               className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25"
             >
-              <Briefcase className="h-7 w-7 text-white" />
+              <BarChart3 className="h-7 w-7 text-white" />
             </motion.div>
 
             <motion.div
@@ -266,17 +277,10 @@ export default function LandingPage() {
             <motion.div
               animate={{ y: [0, -5, 0] }}
               transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
-              className="h-10 w-10 rounded-lg bg-gradient-to-br from-rose-500 to-red-500 flex items-center justify-center shadow-lg shadow-rose-500/25"
+              className="h-10 w-10 rounded-lg bg-gradient-to-br from-fuchsia-500 to-purple-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/25"
             >
-              <Users className="h-5 w-5 text-white" />
+              <Target className="h-5 w-5 text-white" />
             </motion.div>
-
-            {/* Decorative dots */}
-            <div className="absolute -right-2 top-16 flex flex-col gap-2">
-              <div className="h-2 w-2 rounded-full bg-purple-500/40" />
-              <div className="h-1.5 w-1.5 rounded-full bg-blue-500/40" />
-              <div className="h-1 w-1 rounded-full bg-pink-500/40" />
-            </div>
           </motion.div>
         </div>
 
@@ -292,7 +296,7 @@ export default function LandingPage() {
               AI-Powered HR for the Modern Workplace
             </Badge>
             
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-6">
               <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-200 dark:to-white bg-clip-text text-transparent">
                 Hire Smarter,
               </span>
@@ -302,20 +306,20 @@ export default function LandingPage() {
               </span>
             </h1>
             
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-8 px-4">
               The complete HR platform that small businesses actually need. AI-powered tools to write job descriptions, 
               <span className="text-foreground font-semibold"> detect fake resumes</span>, build skills tests, and manage your entire hiring pipeline — 
               <span className="text-blue-600 dark:text-blue-400 font-semibold"> without the enterprise price tag</span>.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-6" asChild data-testid="button-start-free">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 px-4">
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-6 w-full sm:w-auto" asChild data-testid="button-start-free">
                 <a href="/auth">
                   Start Free Today
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </a>
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild data-testid="button-see-features">
+              <Button size="lg" variant="outline" className="text-lg px-8 py-6 w-full sm:w-auto" asChild data-testid="button-see-features">
                 <a href="#features">
                   See All Features
                   <ChevronRight className="ml-2 h-5 w-5" />
@@ -324,7 +328,7 @@ export default function LandingPage() {
             </div>
 
             {/* Trust Indicators */}
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-muted-foreground px-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
                 <span>No credit card required</span>
@@ -342,25 +346,146 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Problem Statement */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-muted/30 to-background">
+      {/* Dashboard Preview Section - NEW */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-muted/30 to-background overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12"
           >
+            <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+              <Activity className="h-3.5 w-3.5 mr-2" />
+              Real-Time Analytics
+            </Badge>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Your HR Dashboard,{" "}
+              <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                At a Glance
+              </span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Track KPIs, pipeline stages, hiring trends, and team performance with real-time data — not placeholder metrics.
+            </p>
+          </motion.div>
+
+          {/* Dashboard Mock */}
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="relative"
+          >
+            <div className="rounded-2xl border bg-background shadow-2xl overflow-hidden">
+              {/* Mock Header */}
+              <div className="border-b px-4 sm:px-6 py-4 flex items-center justify-between bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="font-semibold hidden sm:inline">Resume Logik</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <span className="text-sm text-muted-foreground">Live Data</span>
+                </div>
+              </div>
+              
+              {/* Mock Dashboard Content */}
+              <div className="p-4 sm:p-6">
+                {/* KPI Cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                  {[
+                    { label: "Active Jobs", value: "12", change: "+3 this week", color: "text-blue-600" },
+                    { label: "Total Candidates", value: "248", change: "+45 this month", color: "text-purple-600" },
+                    { label: "Interviews Scheduled", value: "18", change: "6 today", color: "text-green-600" },
+                    { label: "Offers Extended", value: "5", change: "80% acceptance", color: "text-orange-600" },
+                  ].map((kpi, i) => (
+                    <div key={i} className="p-3 sm:p-4 rounded-xl bg-muted/50 border">
+                      <p className="text-xs sm:text-sm text-muted-foreground">{kpi.label}</p>
+                      <p className={cn("text-xl sm:text-2xl font-bold", kpi.color)}>{kpi.value}</p>
+                      <p className="text-xs text-muted-foreground">{kpi.change}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pipeline Visualization */}
+                <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="p-4 rounded-xl bg-muted/30 border">
+                    <h4 className="font-semibold mb-4 flex items-center gap-2">
+                      <PieChart className="h-4 w-4 text-purple-500" />
+                      Pipeline Stages
+                    </h4>
+                    <div className="space-y-3">
+                      {[
+                        { stage: "Applied", count: 86, color: "bg-blue-500", width: "100%" },
+                        { stage: "Screening", count: 45, color: "bg-purple-500", width: "52%" },
+                        { stage: "Interview", count: 28, color: "bg-orange-500", width: "32%" },
+                        { stage: "Offer", count: 12, color: "bg-green-500", width: "14%" },
+                        { stage: "Hired", count: 5, color: "bg-emerald-500", width: "6%" },
+                      ].map((stage, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-xs sm:text-sm w-20 text-muted-foreground">{stage.stage}</span>
+                          <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                            <div className={cn("h-full rounded-full", stage.color)} style={{ width: stage.width }} />
+                          </div>
+                          <span className="text-xs sm:text-sm font-medium w-8">{stage.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-muted/30 border">
+                    <h4 className="font-semibold mb-4 flex items-center gap-2">
+                      <Gauge className="h-4 w-4 text-blue-500" />
+                      Hiring Efficiency
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { label: "Avg. Time to Hire", value: "18 days", trend: "↓ 3 days" },
+                        { label: "Interview Rate", value: "32%", trend: "↑ 5%" },
+                        { label: "Offer Acceptance", value: "80%", trend: "↑ 10%" },
+                        { label: "Quality Score", value: "4.2/5", trend: "Stable" },
+                      ].map((metric, i) => (
+                        <div key={i} className="text-center p-3 rounded-lg bg-background/50">
+                          <p className="text-xs text-muted-foreground mb-1">{metric.label}</p>
+                          <p className="text-base sm:text-lg font-bold">{metric.value}</p>
+                          <p className="text-xs text-green-600">{metric.trend}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Decorative blur behind dashboard */}
+            <div className="absolute -z-10 inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 blur-3xl scale-110" />
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Problem Statement */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12 sm:mb-16"
+          >
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
               Traditional ATS Systems Are{" "}
               <span className="text-red-500">Broken</span> for Small Businesses
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
               Enterprise HR software costs thousands per year and still can't detect AI-generated resumes flooding your inbox.
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
             {[
               {
                 title: "$5,000+ Per Year",
@@ -387,8 +512,8 @@ export default function LandingPage() {
                 className="p-6 rounded-2xl bg-background border shadow-sm"
               >
                 <div className="text-4xl mb-4">{problem.icon}</div>
-                <h3 className="text-xl font-semibold mb-2">{problem.title}</h3>
-                <p className="text-muted-foreground">{problem.description}</p>
+                <h3 className="text-lg sm:text-xl font-semibold mb-2">{problem.title}</h3>
+                <p className="text-sm sm:text-base text-muted-foreground">{problem.description}</p>
               </motion.div>
             ))}
           </div>
@@ -396,7 +521,7 @@ export default function LandingPage() {
       </section>
 
       {/* AI Detection Feature Highlight */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 via-pink-500/5 to-blue-500/5" />
         
         <div className="max-w-7xl mx-auto relative">
@@ -404,44 +529,44 @@ export default function LandingPage() {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
             <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20">
               <Brain className="h-3.5 w-3.5 mr-2" />
               Our Flagship Feature
             </Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
               <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                 AI-Generated Resume Detection
               </span>
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
               The hiring landscape has changed. ChatGPT and other AI tools make it easy to create polished resumes — 
               but how do you know who's authentic?
             </p>
           </motion.div>
 
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
-              className="space-y-6"
+              className="space-y-4 sm:space-y-6"
             >
               {aiFeatures.map((feature, index) => (
                 <div
                   key={index}
                   className="flex gap-4 p-4 rounded-xl bg-background border shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
-                    <feature.icon className="h-6 w-6 text-white" />
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shrink-0">
+                    <feature.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-semibold">{feature.title}</h3>
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h3 className="font-semibold text-sm sm:text-base">{feature.title}</h3>
                       <Badge variant="secondary" className="text-xs">{feature.stats}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{feature.description}</p>
                   </div>
                 </div>
               ))}
@@ -454,10 +579,10 @@ export default function LandingPage() {
               className="relative"
             >
               {/* Mock Resume Analysis Card */}
-              <div className="p-6 rounded-2xl bg-background border shadow-xl">
+              <div className="p-4 sm:p-6 rounded-2xl bg-background border shadow-xl">
                 <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-semibold">Resume Analysis Results</h3>
-                  <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                  <h3 className="font-semibold text-sm sm:text-base">Resume Analysis Results</h3>
+                  <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-xs">
                     <AlertTriangle className="h-3 w-3 mr-1" />
                     AI Detected
                   </Badge>
@@ -465,7 +590,7 @@ export default function LandingPage() {
                 
                 <div className="space-y-4">
                   <div>
-                    <div className="flex justify-between text-sm mb-1">
+                    <div className="flex justify-between text-xs sm:text-sm mb-1">
                       <span>AI Writing Likelihood</span>
                       <span className="font-semibold text-amber-600">85%</span>
                     </div>
@@ -475,7 +600,7 @@ export default function LandingPage() {
                   </div>
                   
                   <div>
-                    <div className="flex justify-between text-sm mb-1">
+                    <div className="flex justify-between text-xs sm:text-sm mb-1">
                       <span>Specificity Score</span>
                       <span className="font-semibold text-amber-600">40%</span>
                     </div>
@@ -485,7 +610,7 @@ export default function LandingPage() {
                   </div>
                   
                   <div>
-                    <div className="flex justify-between text-sm mb-1">
+                    <div className="flex justify-between text-xs sm:text-sm mb-1">
                       <span>Generic Phrases</span>
                       <span className="font-semibold text-red-600">70%</span>
                     </div>
@@ -495,9 +620,9 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                  <p className="text-sm text-amber-800 dark:text-amber-200">
-                    <strong>Warning:</strong> This resume exhibits multiple AI writing patterns including uniform structure, perfect grammar, and optimized buzzword placement.
+                <div className="mt-6 p-3 sm:p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                  <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200">
+                    <strong>Warning:</strong> This resume exhibits multiple AI writing patterns including uniform structure and optimized buzzword placement.
                   </p>
                 </div>
 
@@ -513,30 +638,116 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* Decorative Elements */}
               <div className="absolute -z-10 -top-4 -right-4 w-full h-full rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 blur-xl" />
             </motion.div>
           </div>
         </div>
       </section>
 
+      {/* Customizable Workspace Section - NEW */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background to-muted/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+            >
+              <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border-indigo-500/20">
+                <GripVertical className="h-3.5 w-3.5 mr-2" />
+                Your Workspace, Your Way
+              </Badge>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
+                Customize Your{" "}
+                <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  Workflow
+                </span>
+              </h2>
+              <p className="text-base sm:text-lg text-muted-foreground mb-6">
+                Drag and drop to reorder your sidebar modules. Put what matters most at your fingertips. Your preferences are saved automatically.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  "Drag modules to prioritize your workflow",
+                  "AI-powered modules marked with badges",
+                  "Dark and light mode support",
+                  "Mobile-friendly responsive design"
+                ].map((item, i) => (
+                  <li key={i} className="flex items-center gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+                    <span className="text-sm sm:text-base">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="relative"
+            >
+              {/* Mock Sidebar */}
+              <div className="p-4 rounded-2xl bg-background border shadow-xl max-w-xs mx-auto">
+                <div className="flex items-center gap-2 mb-4 pb-4 border-b">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-white" />
+                  </div>
+                  <span className="font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Resume Logik</span>
+                </div>
+                <div className="space-y-2">
+                  {[
+                    { icon: Brain, name: "Resume Logic", ai: true, active: true },
+                    { icon: BarChart3, name: "Analytics", ai: false },
+                    { icon: ClipboardCheck, name: "Skills Tests", ai: true },
+                    { icon: Target, name: "Performance", ai: true },
+                    { icon: Users, name: "Hiring Pipeline", ai: false },
+                  ].map((item, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "flex items-center gap-3 p-2.5 rounded-lg transition-all",
+                        item.active ? "bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-500/20" : "hover:bg-muted/50"
+                      )}
+                    >
+                      <GripVertical className="h-3 w-3 text-muted-foreground/50" />
+                      <div className={cn(
+                        "h-7 w-7 rounded-lg flex items-center justify-center",
+                        item.active ? "bg-gradient-to-br from-purple-500 to-pink-500" : "bg-muted"
+                      )}>
+                        <item.icon className={cn("h-3.5 w-3.5", item.active ? "text-white" : "text-muted-foreground")} />
+                      </div>
+                      <span className={cn("text-sm flex-1", item.active && "font-semibold")}>{item.name}</span>
+                      {item.ai && (
+                        <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] px-1.5 py-0">AI</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="absolute -z-10 inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 blur-3xl" />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
       {/* All Features Grid */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background to-muted/30">
+      <section id="features" className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12 sm:mb-16"
           >
             <Badge className="mb-4 px-4 py-2">
               <Zap className="h-3.5 w-3.5 mr-2" />
               Complete HR Suite
             </Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
               Everything You Need to Hire & Manage
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
               10 powerful modules designed specifically for small businesses. No enterprise complexity, just what works.
             </p>
           </motion.div>
@@ -546,33 +757,32 @@ export default function LandingPage() {
             initial="initial"
             whileInView="animate"
             viewport={{ once: true }}
-            className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"
+            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4"
           >
             {features.map((feature, index) => (
               <motion.div
                 key={index}
                 variants={fadeInUp}
                 className={cn(
-                  "group p-5 rounded-xl border bg-background hover:shadow-lg transition-all duration-300 cursor-pointer",
+                  "group p-4 sm:p-5 rounded-xl border bg-background hover:shadow-lg transition-all duration-300 cursor-pointer",
                   feature.featured && "ring-2 ring-purple-500/50 bg-gradient-to-br from-purple-500/5 to-pink-500/5"
                 )}
                 onMouseEnter={() => setActiveFeature(index)}
               >
                 <div className={cn(
-                  "h-10 w-10 rounded-lg bg-gradient-to-br flex items-center justify-center mb-3",
+                  "h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-gradient-to-br flex items-center justify-center mb-3",
                   feature.color
                 )}>
-                  <feature.icon className="h-5 w-5 text-white" />
+                  <feature.icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
-                <h3 className="font-semibold mb-1 text-sm">{feature.title}</h3>
-                <p className="text-xs text-muted-foreground mb-2 line-clamp-2">{feature.description}</p>
-                <Badge variant="secondary" className="text-xs">
+                <h3 className="font-semibold mb-1 text-xs sm:text-sm">{feature.title}</h3>
+                <p className="text-xs text-muted-foreground mb-2 line-clamp-2 hidden sm:block">{feature.description}</p>
+                <Badge variant="secondary" className="text-[10px] sm:text-xs">
                   {feature.highlight}
                 </Badge>
-                {feature.featured && (
-                  <Badge className="mt-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs">
-                    <Star className="h-3 w-3 mr-1" />
-                    Featured
+                {feature.hasAI && (
+                  <Badge className="mt-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[10px] ml-1">
+                    AI
                   </Badge>
                 )}
               </motion.div>
@@ -582,18 +792,18 @@ export default function LandingPage() {
       </section>
 
       {/* Comparison Table */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-muted/30 to-background">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-center mb-12"
+            className="text-center mb-8 sm:mb-12"
           >
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
               Resume Logik vs Traditional ATS
             </h2>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-base sm:text-lg text-muted-foreground">
               See why growing businesses choose Resume Logik over expensive enterprise solutions.
             </p>
           </motion.div>
@@ -602,41 +812,41 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="rounded-2xl border overflow-hidden shadow-lg"
+            className="rounded-2xl border overflow-hidden shadow-lg overflow-x-auto"
           >
-            <table className="w-full">
+            <table className="w-full min-w-[400px]">
               <thead>
                 <tr className="bg-muted/50">
-                  <th className="px-6 py-4 text-left font-semibold">Feature</th>
-                  <th className="px-6 py-4 text-center">
+                  <th className="px-4 sm:px-6 py-4 text-left font-semibold text-sm">Feature</th>
+                  <th className="px-4 sm:px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <div className="h-6 w-6 rounded bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                        <Sparkles className="h-3.5 w-3.5 text-white" />
+                      <div className="h-5 w-5 sm:h-6 sm:w-6 rounded bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                        <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-white" />
                       </div>
-                      <span>Resume Logik</span>
+                      <span className="text-sm">Resume Logik</span>
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-center text-muted-foreground">Traditional ATS</th>
+                  <th className="px-4 sm:px-6 py-4 text-center text-muted-foreground text-sm">Traditional ATS</th>
                 </tr>
               </thead>
               <tbody>
                 {comparisonData.map((row, index) => (
                   <tr key={index} className="border-t">
-                    <td className="px-6 py-4 text-sm">{row.feature}</td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-xs sm:text-sm">{row.feature}</td>
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       {row.hrNexus === true ? (
                         <CheckCircle2 className="h-5 w-5 text-green-500 mx-auto" />
                       ) : (
-                        <span className="text-sm font-medium text-green-600">{row.hrNexus}</span>
+                        <span className="text-xs sm:text-sm font-medium text-green-600">{row.hrNexus}</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       {row.traditional === true ? (
                         <CheckCircle2 className="h-5 w-5 text-muted-foreground mx-auto" />
                       ) : row.traditional === false ? (
                         <span className="text-muted-foreground">✕</span>
                       ) : (
-                        <span className="text-sm text-muted-foreground">{row.traditional}</span>
+                        <span className="text-xs sm:text-sm text-muted-foreground">{row.traditional}</span>
                       )}
                     </td>
                   </tr>
@@ -648,13 +858,13 @@ export default function LandingPage() {
       </section>
 
       {/* Social Proof / Stats */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600">
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 text-white text-center"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-white text-center"
           >
             {[
               { stat: "85%", label: "AI Resume Detection Accuracy" },
@@ -663,8 +873,8 @@ export default function LandingPage() {
               { stat: "$0", label: "To Get Started" },
             ].map((item, index) => (
               <div key={index}>
-                <div className="text-5xl font-bold mb-2">{item.stat}</div>
-                <div className="text-white/80">{item.label}</div>
+                <div className="text-3xl sm:text-5xl font-bold mb-2">{item.stat}</div>
+                <div className="text-white/80 text-sm sm:text-base">{item.label}</div>
               </div>
             ))}
           </motion.div>
@@ -672,7 +882,7 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+      <section className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="absolute inset-0">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
@@ -684,44 +894,44 @@ export default function LandingPage() {
           viewport={{ once: true }}
           className="max-w-3xl mx-auto text-center relative"
         >
-          <h2 className="text-4xl sm:text-5xl font-bold mb-6">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
             Ready to Transform Your{" "}
             <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               Hiring Process
             </span>
             ?
           </h2>
-          <p className="text-xl text-muted-foreground mb-8">
+          <p className="text-lg sm:text-xl text-muted-foreground mb-8">
             Join small businesses who've ditched overpriced ATS systems for something that actually works.
           </p>
           
-          <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-10 py-7" asChild data-testid="button-final-cta">
+          <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-base sm:text-lg px-8 sm:px-10 py-6 sm:py-7 w-full sm:w-auto" asChild data-testid="button-final-cta">
             <a href="/auth">
               Start Using Resume Logik Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </a>
           </Button>
 
-          <p className="mt-6 text-sm text-muted-foreground">
+          <p className="mt-6 text-xs sm:text-sm text-muted-foreground">
             No credit card required • Free forever plan available • Set up in minutes
           </p>
         </motion.div>
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 border-t bg-muted/30">
+      <footer className="py-8 sm:py-12 px-4 sm:px-6 lg:px-8 border-t bg-muted/30">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <span className="font-bold">Resume Logik</span>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground text-center">
               © 2025 Resume Logik. AI-powered HR for modern businesses.
             </p>
-            <div className="flex gap-6 text-sm text-muted-foreground">
+            <div className="flex gap-6 text-xs sm:text-sm text-muted-foreground">
               <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
               <a href="#" className="hover:text-foreground transition-colors">Terms</a>
               <a href="#" className="hover:text-foreground transition-colors">Contact</a>
