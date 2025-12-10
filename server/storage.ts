@@ -36,6 +36,8 @@ import {
   type InsertReference,
   type ReferenceLink,
   type InsertReferenceLink,
+  type OnboardingPlan,
+  type InsertOnboardingPlan,
   type PlanType,
   PLAN_LIMITS,
   users,
@@ -55,7 +57,8 @@ import {
   aiActionUsage,
   scheduledInterviews,
   references,
-  referenceLinks
+  referenceLinks,
+  onboardingPlans
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { eq, sql, desc, and, gte, lte, inArray } from "drizzle-orm";
@@ -201,6 +204,13 @@ export interface IStorage {
   getReferencesByCandidateId(candidateId: string): Promise<Reference[]>;
   updateReference(id: string, data: Partial<InsertReference>): Promise<Reference | undefined>;
   markReferenceEmailSent(id: string): Promise<Reference | undefined>;
+  
+  // Onboarding plans
+  createOnboardingPlan(plan: InsertOnboardingPlan): Promise<OnboardingPlan>;
+  getOnboardingPlans(userId: string, status?: string): Promise<OnboardingPlan[]>;
+  getOnboardingPlan(id: string, userId: string): Promise<OnboardingPlan | undefined>;
+  updateOnboardingPlanTaskIds(id: string, userId: string, completedTaskIds: string[]): Promise<OnboardingPlan | undefined>;
+  completeOnboardingPlan(id: string, userId: string): Promise<OnboardingPlan | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -885,6 +895,45 @@ export class DatabaseStorage implements IStorage {
       status: "email_sent", 
       emailSentAt: new Date() 
     }).where(eq(references.id, id)).returning();
+    return result[0];
+  }
+
+  async createOnboardingPlan(plan: InsertOnboardingPlan): Promise<OnboardingPlan> {
+    const result = await db.insert(onboardingPlans).values(plan).returning();
+    return result[0];
+  }
+
+  async getOnboardingPlans(userId: string, status?: string): Promise<OnboardingPlan[]> {
+    if (status) {
+      return await db.select().from(onboardingPlans)
+        .where(and(eq(onboardingPlans.userId, userId), eq(onboardingPlans.status, status)))
+        .orderBy(desc(onboardingPlans.createdAt));
+    }
+    return await db.select().from(onboardingPlans)
+      .where(eq(onboardingPlans.userId, userId))
+      .orderBy(desc(onboardingPlans.createdAt));
+  }
+
+  async getOnboardingPlan(id: string, userId: string): Promise<OnboardingPlan | undefined> {
+    const result = await db.select().from(onboardingPlans)
+      .where(and(eq(onboardingPlans.id, id), eq(onboardingPlans.userId, userId)))
+      .limit(1);
+    return result[0];
+  }
+
+  async updateOnboardingPlanTaskIds(id: string, userId: string, completedTaskIds: string[]): Promise<OnboardingPlan | undefined> {
+    const result = await db.update(onboardingPlans)
+      .set({ completedTaskIds })
+      .where(and(eq(onboardingPlans.id, id), eq(onboardingPlans.userId, userId)))
+      .returning();
+    return result[0];
+  }
+
+  async completeOnboardingPlan(id: string, userId: string): Promise<OnboardingPlan | undefined> {
+    const result = await db.update(onboardingPlans)
+      .set({ status: "completed", completedAt: new Date() })
+      .where(and(eq(onboardingPlans.id, id), eq(onboardingPlans.userId, userId)))
+      .returning();
     return result[0];
   }
 }

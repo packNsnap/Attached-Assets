@@ -2979,10 +2979,15 @@ Return a JSON object with these exact fields:
     }
   });
 
-  // Generate AI-powered onboarding plan
+  // Generate AI-powered onboarding plan and save to database
   app.post("/api/onboarding/generate", isAuthenticated, async (req: any, res) => {
     try {
-      const { employee_name, role, start_date, onboarding_type } = req.body;
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const { employee_name, role, start_date, onboarding_type, candidate_id } = req.body;
 
       if (!employee_name || !role || !start_date || !onboarding_type) {
         res.status(400).json({ error: "All fields are required" });
@@ -2999,6 +3004,7 @@ The output must exactly follow this structure:
       "title": "Week 1: Orientation & Setup",
       "tasks": [
         {
+          "id": "week1_task1",
           "title": "Task name",
           "owner": "HR" | "Manager" | "IT" | "Employee",
           "relative_day": 0,
@@ -3034,7 +3040,8 @@ The output must exactly follow this structure:
   }
 }
 
-Generate realistic, role-appropriate tasks. Include 2-4 weeks of tasks depending on onboarding type. Use the employee name, role, and department to customize the content.`;
+IMPORTANT: Each task MUST have a unique "id" field like "week1_task1", "week1_task2", "week2_task1", etc.
+Generate realistic, role-appropriate tasks. Include 2-4 weeks of tasks depending on onboarding type. Use the employee name and role to customize the content.`;
 
       const userPrompt = `Generate an onboarding plan for:
 - Employee Name: ${employee_name}
@@ -3064,10 +3071,132 @@ Make sure all emails reference the employee by name (${employee_name}) and their
         return;
       }
 
-      res.json(parsed);
+      // Ensure all tasks have IDs (fallback if AI didn't generate them)
+      let taskCounter = 0;
+      if (parsed.tasks_by_week) {
+        for (const week of parsed.tasks_by_week) {
+          if (week.tasks) {
+            for (const task of week.tasks) {
+              if (!task.id) {
+                taskCounter++;
+                task.id = `week${week.week}_task${taskCounter}`;
+              }
+            }
+          }
+        }
+      }
+
+      // Save to database
+      const plan = await storage.createOnboardingPlan({
+        userId,
+        candidateId: candidate_id || null,
+        employeeName: employee_name,
+        role,
+        startDate: start_date,
+        onboardingType: onboarding_type,
+        status: "active",
+        planJson: parsed,
+        completedTaskIds: [],
+      });
+
+      res.json({ ...parsed, planId: plan.id });
     } catch (error) {
       console.error("Error generating onboarding plan:", error);
       res.status(500).json({ error: "Failed to generate onboarding plan" });
+    }
+  });
+
+  // Get onboarding plans
+  app.get("/api/onboarding/plans", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const status = req.query.status as string | undefined;
+      const plans = await storage.getOnboardingPlans(userId, status);
+      res.json(plans);
+    } catch (error) {
+      console.error("Error fetching onboarding plans:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding plans" });
+    }
+  });
+
+  // Get single onboarding plan
+  app.get("/api/onboarding/plans/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const plan = await storage.getOnboardingPlan(req.params.id, userId);
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+      res.json(plan);
+    } catch (error) {
+      console.error("Error fetching onboarding plan:", error);
+      res.status(500).json({ error: "Failed to fetch onboarding plan" });
+    }
+  });
+
+  // Toggle task completion
+  app.post("/api/onboarding/plans/:id/tasks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const { task_id, completed } = req.body;
+      if (!task_id || typeof completed !== "boolean") {
+        res.status(400).json({ error: "task_id and completed are required" });
+        return;
+      }
+
+      const plan = await storage.getOnboardingPlan(req.params.id, userId);
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+
+      let completedTaskIds = (plan.completedTaskIds as string[]) || [];
+      if (completed) {
+        if (!completedTaskIds.includes(task_id)) {
+          completedTaskIds.push(task_id);
+        }
+      } else {
+        completedTaskIds = completedTaskIds.filter(id => id !== task_id);
+      }
+
+      const updated = await storage.updateOnboardingPlanTaskIds(req.params.id, userId, completedTaskIds);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      res.status(500).json({ error: "Failed to update task" });
+    }
+  });
+
+  // Mark plan as completed
+  app.post("/api/onboarding/plans/:id/complete", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const plan = await storage.completeOnboardingPlan(req.params.id, userId);
+      if (!plan) {
+        res.status(404).json({ error: "Plan not found" });
+        return;
+      }
+      res.json(plan);
+    } catch (error) {
+      console.error("Error completing plan:", error);
+      res.status(500).json({ error: "Failed to complete plan" });
     }
   });
 

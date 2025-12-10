@@ -1,0 +1,207 @@
+Data
+
+Use one table:
+
+onboarding_plans
+
+id
+
+candidate_id (nullable)
+
+employee_name
+
+role
+
+start_date
+
+onboarding_type
+
+status → "active" | "completed"
+
+plan_json → full AI output (includes checklist, 30/60/90, emails)
+
+completed_task_ids → JSON array of task IDs (optional, see below)
+
+created_at
+
+completed_at (nullable)
+
+Checklist tasks
+
+Inside plan_json, each checklist task already has:
+
+week info
+
+title
+
+owner
+
+relative day
+
+Add a simple ID per task when you generate the plan, like:
+
+{
+  "id": "week1_task1",
+  "title": "Complete HR Orientation",
+  ...
+}
+
+
+On the UI, next to each checklist card, add a tiny checkbox “Done”.
+
+When user checks/unchecks:
+
+You don’t call OpenAI.
+
+You don’t mutate the whole JSON in a crazy way.
+
+Just update completed_task_ids for that onboarding_plan:
+
+completed_task_ids = ["week1_task1", "week1_task2", ...]
+
+Front-end uses that array to:
+
+Style done tasks (dimmed / check icon).
+
+Calculate progress: e.g. “5 / 14 tasks done”.
+
+Listing “all candidates until completed”
+
+At top of the Onboarding page, add a simple table of active plans:
+
+Active Onboarding Plans
+
+Employee	Role	Start Date	Progress	Actions
+Ariella Harlin	verification specialist	12/30/2025	0 / 14 tasks	View · Mark Completed
+
+Progress is just len(completed_task_ids) / total_tasks_in_plan_json.
+
+View:
+
+Loads that plan into the existing UI (form + tabs, including checklist with which tasks are done).
+
+Mark Completed:
+
+Sets status = "completed", completed_at = now().
+
+Removes from this list.
+
+When a plan is “completed” you stop caring about per-task toggles. No extra states.
+
+Lean Replit prompt (includes checklist)
+
+Copy/paste this:
+
+On the /onboarding page I want to:
+
+Track onboarding plans per candidate.
+
+Show a list of all active plans.
+
+Track simple checklist progress per plan.
+
+1. Database changes
+
+Create/update an onboarding_plans table with:
+
+id
+
+candidate_id (nullable)
+
+employee_name
+
+role
+
+start_date
+
+onboarding_type
+
+status ("active" or "completed")
+
+plan_json (full AI output, including checklist, 30/60/90, emails)
+
+completed_task_ids (JSON array of checklist task IDs, default empty)
+
+created_at
+
+completed_at (nullable)
+
+When a plan is generated successfully, insert a row with:
+
+status="active"
+
+plan_json = AI response
+
+completed_task_ids = []
+
+2. Checklist task IDs
+
+When generating the checklist in plan_json, ensure each task has a stable id string (e.g. "week1_task1", "week1_task2", etc.).
+
+The frontend will use these IDs to mark tasks done.
+
+3. APIs
+
+GET /api/onboarding/plans?status=active
+Returns all active plans with basic fields plus computed task counts if convenient.
+
+POST /api/onboarding/plans/:id/tasks with body { "task_id": "week1_task1", "completed": true|false }
+
+If completed=true, add task_id to completed_task_ids (if not already there).
+
+If completed=false, remove it from completed_task_ids.
+
+POST /api/onboarding/plans/:id/complete
+Sets status="completed" and completed_at=now().
+
+4. Frontend – Active Plans list
+
+On the /onboarding page, above the existing form, add a section “Active Onboarding Plans” with a table:
+
+Columns: Employee, Role, Start Date, Progress, Actions.
+
+Populate via GET /api/onboarding/plans?status=active.
+
+Progress shows: <completed_tasks_count> / <total_tasks_in_checklist>.
+
+Actions:
+
+View:
+
+Loads that plan into the existing form:
+
+Fill employee name, role, start date, candidate if present, onboarding type.
+
+Parses plan_json and renders Checklist / 30/60/90 / Emails as we already do for a freshly generated plan.
+
+Uses completed_task_ids to mark checklist tasks visually as done.
+
+Mark Completed:
+
+Calls POST /api/onboarding/plans/:id/complete.
+
+On success, remove the row from the table.
+
+5. Frontend – Checklist task toggles
+
+In the Checklist tab, add a small checkbox or “Mark as done” control on each task card.
+
+Toggling this calls POST /api/onboarding/plans/:id/tasks with the task’s id and the new completed value.
+
+Style completed tasks (e.g. check icon + lighter background) and update the progress in the Active Plans list.
+
+6. Constraints
+
+Do not change the current layout of the Onboarding form or tabs.
+
+Do not change the way we generate the AI plan beyond adding task IDs.
+
+Keep everything visually consistent with the existing design.
+
+That gives you:
+
+All candidates with onboarding in one simple list.
+
+Minimal state: plan active/completed + which tasks are done.
+
+No crazy workflow engine.

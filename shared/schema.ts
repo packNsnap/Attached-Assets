@@ -409,3 +409,29 @@ export const insertReferenceSchema = createInsertSchema(references).omit({
 export type InsertReference = z.infer<typeof insertReferenceSchema>;
 export type Reference = typeof references.$inferSelect;
 
+export const onboardingPlans = pgTable("onboarding_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  candidateId: varchar("candidate_id"),
+  employeeName: text("employee_name").notNull(),
+  role: text("role").notNull(),
+  startDate: text("start_date").notNull(),
+  onboardingType: text("onboarding_type").notNull(),
+  status: text("status").notNull().default("active"),
+  planJson: jsonb("plan_json").notNull(),
+  completedTaskIds: jsonb("completed_task_ids").notNull().default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  completedAt: timestamp("completed_at"),
+});
+
+export const insertOnboardingPlanSchema = createInsertSchema(onboardingPlans).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+}).extend({
+  userId: z.string().optional(),
+});
+
+export type InsertOnboardingPlan = z.infer<typeof insertOnboardingPlanSchema>;
+export type OnboardingPlan = typeof onboardingPlans.$inferSelect;
+
