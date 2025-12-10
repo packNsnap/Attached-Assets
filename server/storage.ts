@@ -113,6 +113,7 @@ export interface IStorage {
   
   createCandidateDocument(doc: InsertCandidateDocument): Promise<CandidateDocument>;
   getCandidateDocuments(candidateId: string): Promise<CandidateDocument[]>;
+  getDocumentById(id: string): Promise<CandidateDocument | undefined>;
   deleteCandidateDocument(id: string, candidateId: string): Promise<boolean>;
   
   createResumeAnalysis(analysis: InsertResumeAnalysis): Promise<ResumeAnalysis>;
@@ -438,6 +439,11 @@ export class DatabaseStorage implements IStorage {
 
   async getCandidateDocuments(candidateId: string): Promise<CandidateDocument[]> {
     return await db.select().from(candidateDocuments).where(eq(candidateDocuments.candidateId, candidateId)).orderBy(desc(candidateDocuments.uploadedAt));
+  }
+
+  async getDocumentById(id: string): Promise<CandidateDocument | undefined> {
+    const result = await db.select().from(candidateDocuments).where(eq(candidateDocuments.id, id)).limit(1);
+    return result[0];
   }
 
   async deleteCandidateDocument(id: string, candidateId: string): Promise<boolean> {

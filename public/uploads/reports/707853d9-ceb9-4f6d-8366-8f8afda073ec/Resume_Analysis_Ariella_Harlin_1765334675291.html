@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Resume Analysis Report - Ariella Harlin</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; color: #1f2937; padding: 40px; max-width: 900px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb; }
+    .header h1 { font-size: 28px; color: #111827; margin-bottom: 8px; }
+    .header .subtitle { color: #6b7280; font-size: 14px; }
+    .meta { display: flex; justify-content: space-between; margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px; }
+    .meta-item { text-align: center; }
+    .meta-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: 14px; font-weight: 600; color: #111827; margin-top: 4px; }
+    .scores { display: flex; gap: 24px; margin-bottom: 32px; }
+    .score-card { flex: 1; padding: 20px; border-radius: 12px; text-align: center; }
+    .score-card.fit { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #a7f3d0; }
+    .score-card.risk { background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); border: 1px solid #fca5a5; }
+    .score-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .score-value { font-size: 36px; font-weight: 700; }
+    .score-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-top: 8px; }
+    .recommendation { padding: 16px 24px; border-radius: 8px; margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
+    .recommendation-icon { font-size: 20px; }
+    .recommendation-text { font-weight: 600; }
+    .section { margin-bottom: 32px; }
+    .section-title { font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ''; width: 4px; height: 20px; border-radius: 2px; }
+    .section-title.skills::before { background: #3b82f6; }
+    .section-title.timeline::before { background: #8b5cf6; }
+    .section-title.flags::before { background: #f59e0b; }
+    .section-title.authenticity::before { background: #ec4899; }
+    .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .skills-box { padding: 12px; border-radius: 8px; }
+    .skills-box.matched { background: #ecfdf5; border: 1px solid #a7f3d0; }
+    .skills-box.missing { background: #fef2f2; border: 1px solid #fca5a5; }
+    .skills-box.extra { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .skills-box-title { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .skill-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; }
+    .skill-tag.matched { background: #d1fae5; color: #047857; }
+    .skill-tag.missing { background: #fecaca; color: #b91c1c; }
+    .skill-tag.extra { background: #dbeafe; color: #1d4ed8; }
+    .finding { display: flex; gap: 12px; padding: 12px; border-radius: 8px; margin-bottom: 8px; }
+    .finding.risk { background: #fef2f2; border-left: 3px solid #dc2626; }
+    .finding.warning { background: #fffbeb; border-left: 3px solid #f59e0b; }
+    .finding.good { background: #ecfdf5; border-left: 3px solid #16a34a; }
+    .finding-icon { font-size: 16px; }
+    .finding-content { flex: 1; }
+    .finding-message { font-weight: 500; font-size: 14px; }
+    .finding-details { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .authenticity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .auth-item { padding: 12px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; }
+    .auth-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .auth-value { font-size: 20px; font-weight: 600; }
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; }
+    .summary { padding: 20px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 32px; }
+    .summary p { font-size: 14px; color: #374151; }
+    .footer { text-align: center; padding-top: 24px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
+    .print-btn { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+    .print-btn:hover { background: #2563eb; }
+    @media print { .print-btn { display: none; } body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Resume Analysis Report</h1>
+    <p class="subtitle">Generated by Resume Logik AI</p>
+  </div>
+
+  <div class="meta">
+    <div class="meta-item">
+      <div class="meta-label">Candidate</div>
+      <div class="meta-value">Ariella Harlin</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Position</div>
+      <div class="meta-value">DOT FMCSA compliance officer</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Date</div>
+      <div class="meta-value">December 9, 2025</div>
+    </div>
+  </div>
+
+  <div class="scores">
+    <div class="score-card fit">
+      <div class="score-label">Fit Score</div>
+      <div class="score-value" style="color: #dc2626">44%</div>
+      <span class="score-badge" style="background: #dc262620; color: #dc2626">
+        Low Fit
+      </span>
+    </div>
+    <div class="score-card risk">
+      <div class="score-label">Risk Score</div>
+      <div class="score-value" style="color: #16a34a">14%</div>
+      <span class="score-badge" style="background: #16a34a20; color: #16a34a">
+        Low Risk
+      </span>
+    </div>
+  </div>
+
+  
+  <div class="recommendation" style="background: #dc262610; border: 1px solid #dc262640;">
+    <span class="recommendation-icon">🚫</span>
+    <span class="recommendation-text" style="color: #dc2626">Final Recommendation: Do Not Recommend</span>
+  </div>
+  
+  <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px; margin-bottom: 24px;">
+    <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>⚠️ Recommendation Override:</strong> Resume mismatch detected: Email address does not match the name</p>
+  </div>
+  
+  
+
+  <!-- Authenticity Assessment Section -->
+  
+  <div class="section">
+    <h2 class="section-title authenticity">Resume Authenticity Assessment</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px;">
+      
+      <div class="auth-item" style="background: #fffbeb; border: 1px solid #fde68a;">
+        <div class="auth-label">Plausibility Score</div>
+        <div class="auth-value" style="color: #ca8a04">75%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 75%; background: #ca8a04"></div></div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">Some Concerns</div>
+      </div>
+      
+      
+      <div class="auth-item" style="background: #ecfdf5; border: 1px solid #a7f3d0;">
+        <div class="auth-label">Too Perfect Score</div>
+        <div class="auth-value" style="color: #16a34a">40%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 40%; background: #16a34a"></div></div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">Natural</div>
+      </div>
+      
+    </div>
+    
+    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+      <p style="font-size: 12px; font-weight: 600; color: #92400e; margin-bottom: 8px;">Over-Optimization Indicators:</p>
+      <ul style="margin: 0; padding-left: 16px; font-size: 12px; color: #78350f;">
+        <li>Consistent career progression without major gaps or unexplained jumps</li>
+      </ul>
+    </div>
+    
+    
+    <div style="background: #fef2f2; border: 2px solid #dc2626; border-radius: 8px; padding: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="font-size: 20px;">🚨</span>
+        <span style="font-weight: 600; color: #b91c1c; font-size: 16px;">Resume Mismatch Detected</span>
+        <span style="background: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;">WARNING</span>
+      </div>
+      <div style="space-y: 8px;">
+        
+          <div style="background: #fecaca; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>[contact]</strong> Email address does not match the name</p>
+            <p style="font-size: 12px; color: #991b1b; margin-top: 4px; font-style: italic;">"Email: johnacosta951@yahoo.com, Name: Ariella Harlin"</p>
+          </div>
+        
+      </div>
+    </div>
+    
+  </div>
+  
+
+  
+  <div class="summary">
+    <p>Ariella Harlin is an experienced professional with over 16 years in the workforce, primarily in background verification and finance sectors. Currently, she serves as the International Verifications Lead at A-Check Global, where she has demonstrated strong leadership and organizational skills by overseeing international verification processes and ensuring compliance with global regulations. Her previous roles as a bank teller have honed her customer service and multitasking abilities. Despite her extensive experience, there is a notable gap in industry-specific knowledge required for the transportation sector, particularly in DOT FMCSA compliance.</p>
+  </div>
+  
+
+  <div class="section">
+    <h2 class="section-title skills">Skills Match</h2>
+    <div class="skills-grid">
+      <div class="skills-box matched">
+        <div class="skills-box-title">Matched Skills (2)</div>
+        <span class="skill-tag matched">Attention to Detail</span><span class="skill-tag matched">Problem-Solving</span>
+      </div>
+      <div class="skills-box missing">
+        <div class="skills-box-title">Missing Skills (2)</div>
+        <span class="skill-tag missing">DOT FMCSA compliance officer</span><span class="skill-tag missing">In-depth knowledge of DOT and FMCSA regulations</span>
+      </div>
+      <div class="skills-box extra">
+        <div class="skills-box-title">Extra Skills (5)</div>
+        <span class="skill-tag extra">Organizational</span><span class="skill-tag extra">Time Management</span><span class="skill-tag extra">Customer Service</span><span class="skill-tag extra">Multitasking</span><span class="skill-tag extra">Record Keeping</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2 class="section-title flags">Findings</h2>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">No overlapping employment periods</div>
+          <div class="finding-details">The timeline analysis shows no overlapping employment periods, indicating consistent and non-conflicting job transitions.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">No significant employment gaps</div>
+          <div class="finding-details">There are no employment gaps identified in the timeline, suggesting a stable employment history without unexplained breaks.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">No rapid promotions</div>
+          <div class="finding-details">The data does not indicate any rapid promotions, suggesting a steady career progression without abrupt title changes.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Stable job history</div>
+          <div class="finding-details">With only 3 jobs over 16.5 years, there is no indication of job hopping. This reflects a stable career path with long-term commitments.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Healthy average tenure</div>
+          <div class="finding-details">The average tenure of 74 months per job is well above the concern threshold, indicating a strong commitment to each role and employer.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Stable job history</div>
+          <div class="finding-details">The candidate has held long-term positions with an average tenure of 74 months, indicating commitment and reliability.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Strong organizational skills</div>
+          <div class="finding-details">Demonstrated ability to manage teams and processes effectively, ensuring compliance and accuracy in international verifications.</div>
+        </div>
+      </div>
+    
+      <div class="finding warning">
+        <span class="finding-icon">⚠️</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Long tenure in the same role without clear progression</div>
+          <div class="finding-details">International verifications lead at A-Check Global for 13 years</div>
+        </div>
+      </div>
+    
+      <div class="finding warning">
+        <span class="finding-icon">⚠️</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Email address does not match the name on the resume</div>
+          <div class="finding-details">Email: johnacosta951@yahoo.com, Name: Ariella Harlin</div>
+        </div>
+      </div>
+    
+  </div>
+  
+
+  
+  <div class="section">
+    <h2 class="section-title authenticity">Authenticity Signals</h2>
+    <div class="authenticity-grid">
+      <div class="auth-item">
+        <div class="auth-label">Generic Writing Score</div>
+        <div class="auth-value" style="color: #16a34a">30%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 30%; background: #16a34a"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Specificity Score</div>
+        <div class="auth-value" style="color: #16a34a">60%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 60%; background: #16a34a"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Fluff Ratio</div>
+        <div class="auth-value" style="color: #ca8a04">70%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 70%; background: #ca8a04"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">AI-Style Likelihood</div>
+        <div class="auth-value" style="color: #16a34a">40%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 40%; background: #16a34a"></div></div>
+      </div>
+    </div>
+    
+    <div style="margin-top: 16px; padding: 12px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px;">
+      <p style="font-size: 13px; color: #7c3aed;"><strong>Recommendation:</strong> verified</p>
+    </div>
+    
+  </div>
+  
+
+  <div class="footer">
+    <p>This report was generated automatically by Resume Logik AI analysis.</p>
+    <p style="margin-top: 4px;">This is an internal consistency analysis only and is not a background check or verification of claims.</p>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</body>
+</html>

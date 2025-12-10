@@ -894,6 +894,61 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/documents/:documentId/download", isAuthenticated, async (req: any, res) => {
+    try {
+      const doc = await storage.getDocumentById(req.params.documentId);
+      if (!doc) {
+        res.status(404).json({ error: "Document not found" });
+        return;
+      }
+
+      const storedPath = doc.fileUrl;
+      let resolvedPath: string | null = null;
+
+      if (storedPath.startsWith("/uploads/reports/")) {
+        resolvedPath = path.join(process.cwd(), "public", storedPath);
+      } else if (path.isAbsolute(storedPath)) {
+        resolvedPath = path.normalize(storedPath);
+        const normalizedUploads = path.normalize(UPLOADS_DIR);
+        if (!resolvedPath.startsWith(normalizedUploads)) {
+          res.status(403).json({ error: "Access denied" });
+          return;
+        }
+      } else {
+        resolvedPath = path.join(UPLOADS_DIR, path.basename(storedPath));
+      }
+
+      if (!resolvedPath || !fs.existsSync(resolvedPath)) {
+        res.status(404).json({ 
+          error: "File not found on disk",
+          message: "The original file may have been uploaded before persistent storage was enabled. Please re-upload the document."
+        });
+        return;
+      }
+
+      const fileBuffer = fs.readFileSync(resolvedPath);
+      
+      let mimeType: string;
+      const ext = doc.fileType.toLowerCase();
+      if (ext === "pdf" || ext === "application/pdf") {
+        mimeType = "application/pdf";
+      } else if (ext === "html" || ext === "text/html") {
+        mimeType = "text/html";
+      } else if (ext === "docx" || ext === "doc" || ext.includes("word")) {
+        mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      } else {
+        mimeType = "application/octet-stream";
+      }
+
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Content-Disposition", `attachment; filename="${doc.fileName}"`);
+      res.send(fileBuffer);
+    } catch (error) {
+      console.error("Document download error:", error);
+      res.status(500).json({ error: "Failed to download document" });
+    }
+  });
+
   app.get("/api/candidates/:id/resume-analyses", async (req, res) => {
     try {
       const analyses = await storage.getResumeAnalysisByCandidateId(req.params.id);
