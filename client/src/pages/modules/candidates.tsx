@@ -541,7 +541,7 @@ export default function CandidatesModule() {
       const data = await res.json();
       
       if (data.mailto) {
-        window.open(data.mailto, "_blank");
+        window.location.href = data.mailto;
         updateReferenceStatusMutation.mutate({ id: reference.id, status: "emailed" });
         toast({ title: "Email Opened", description: "Your email client has been opened with the reference request." });
       } else {

@@ -131,7 +131,7 @@ export default function ReferenceCheckModule() {
     },
     onSuccess: (data, refId) => {
       if (data.mailto) {
-        window.open(data.mailto, "_blank");
+        window.location.href = data.mailto;
         markEmailSentMutation.mutate(refId);
       } else {
         toast({ title: "Error", description: "Failed to generate email link.", variant: "destructive" });
