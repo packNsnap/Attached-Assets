@@ -1,25 +1,86 @@
+import { useState, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { MODULES, APP_NAME } from "@/lib/constants";
+import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, User, Sparkles, ExternalLink } from "lucide-react";
+import { LogOut, User, Sparkles, ExternalLink, GripVertical, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Badge } from "@/components/ui/badge";
 import { UsageDisplay } from "@/components/UsageDisplay";
 import { useAuth } from "@/hooks/useAuth";
+import { useModuleOrder } from "@/hooks/useModuleOrder";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { orderedModules, reorderModules, resetOrder } = useModuleOrder();
+  
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const dragNodeRef = useRef<HTMLAnchorElement | null>(null);
 
   const handleLogout = () => {
     window.location.href = "/";
     toast({
       title: "Logged out",
       description: "You have been successfully logged out."
+    });
+  };
+
+  const handleDragStart = (e: React.DragEvent<HTMLAnchorElement>, index: number) => {
+    setDraggedIndex(index);
+    dragNodeRef.current = e.currentTarget;
+    e.currentTarget.style.opacity = "0.5";
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleDragEnd = (e: React.DragEvent<HTMLAnchorElement>) => {
+    e.currentTarget.style.opacity = "1";
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+    dragNodeRef.current = null;
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLAnchorElement>, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLAnchorElement>, toIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== toIndex) {
+      reorderModules(draggedIndex, toIndex);
+      toast({
+        title: "Sidebar reordered",
+        description: "Your sidebar order has been saved.",
+      });
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleResetOrder = () => {
+    resetOrder();
+    toast({
+      title: "Sidebar reset",
+      description: "Sidebar order has been reset to default.",
     });
   };
 
@@ -35,36 +96,76 @@ export function Sidebar() {
             {APP_NAME}
           </span>
         </Link>
-        <ModeToggle />
+        <div className="flex items-center gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleResetOrder}
+                  data-testid="button-reset-sidebar"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Reset sidebar order</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <ModeToggle />
+        </div>
       </div>
       
       <ScrollArea className="flex-1 py-4">
+        <div className="px-3 mb-2">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+            <GripVertical className="h-3 w-3" />
+            Drag to reorder
+          </p>
+        </div>
         <nav className="grid gap-1 px-3">
-          {MODULES.map((module) => {
+          {orderedModules.map((module, index) => {
             const Icon = module.icon;
             const isActive = location === module.path;
+            const isDragging = draggedIndex === index;
+            const isDragOver = dragOverIndex === index;
             
             return (
               <Link 
                 key={module.path} 
                 href={module.path}
+                draggable
+                onDragStart={(e) => handleDragStart(e, index)}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index)}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-grab active:cursor-grabbing",
                   isActive 
                     ? "bg-gradient-to-r from-blue-600/10 to-purple-600/10 text-foreground shadow-sm border border-blue-500/20" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                  isDragging && "opacity-50",
+                  isDragOver && "border-t-2 border-t-blue-500"
                 )}
+                data-testid={`sidebar-item-${module.path.slice(1)}`}
               >
-                <div className={cn(
-                  "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
-                  isActive 
-                    ? `bg-gradient-to-br ${module.color} shadow-md`
-                    : "bg-muted"
-                )}>
-                  <Icon className={cn(
-                    "h-4 w-4",
-                    isActive ? "text-white" : "text-muted-foreground"
-                  )} />
+                <div className="flex items-center gap-2">
+                  <GripVertical className="h-3 w-3 text-muted-foreground/50 hover:text-muted-foreground" />
+                  <div className={cn(
+                    "h-8 w-8 rounded-lg flex items-center justify-center transition-all",
+                    isActive 
+                      ? `bg-gradient-to-br ${module.color} shadow-md`
+                      : "bg-muted"
+                  )}>
+                    <Icon className={cn(
+                      "h-4 w-4",
+                      isActive ? "text-white" : "text-muted-foreground"
+                    )} />
+                  </div>
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className={cn(
