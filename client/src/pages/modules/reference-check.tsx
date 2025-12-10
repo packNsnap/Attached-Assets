@@ -1,25 +1,14 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useQuery } from "@tanstack/react-query";
-import * as z from "zod";
-import { Loader2, UserCheck, Copy, Mail, FileText, Link, ExternalLink, CheckCircle2, User, Building, Clock, AlertCircle, ClipboardList } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2, UserCheck, Copy, Mail, Link, ExternalLink, Plus, Trash2, Users, Send, Clock } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
-import type { Candidate, ReferenceRequest } from "@shared/schema";
+import type { Candidate, Reference, ReferenceLink } from "@shared/schema";
 import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -31,681 +20,431 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-
-const formSchema = z.object({
-  candidateName: z.string().min(2, "Candidate name is required"),
-  position: z.string().min(2, "Position is required"),
-  referenceName: z.string().optional(),
-  referenceEmail: z.string().email("Valid email required").optional().or(z.literal("")),
-  referenceRelationship: z.string().optional(),
-  templateType: z.string().optional(),
-  resumeText: z.string().optional(),
-  candidateEmail: z.string().email("Valid email required").optional().or(z.literal("")),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-type GeneratedResult = {
-  selectedReference: {
-    name: string;
-    email: string;
-    relationship: string;
-    title: string | null;
-    company: string | null;
-  } | null;
-  emailSubject: string | null;
-  emailBody: string | null;
-  questions: string[] | null;
-  mailtoTemplate: string | null;
-  candidateLinkRequestText: string | null;
-  candidateEmail: string | null;
-} | null;
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function ReferenceCheckModule() {
-  const [mode, setMode] = useState<"from_form" | "from_resume" | "request_link" | "requests">("from_form");
-  const [result, setResult] = useState<GeneratedResult>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
-  const [isLoadingResume, setIsLoadingResume] = useState(false);
-  const [resumeAutoLoaded, setResumeAutoLoaded] = useState(false);
+  const [newRefName, setNewRefName] = useState("");
+  const [newRefEmail, setNewRefEmail] = useState("");
+  const [newRefRelationship, setNewRefRelationship] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const module = getModuleByPath("/modules/reference-check");
 
   const { data: candidates = [] } = useQuery<Candidate[]>({
     queryKey: ["/api/candidates"],
   });
 
-  const { data: referenceRequests = [], isLoading: isLoadingRequests } = useQuery<ReferenceRequest[]>({
-    queryKey: ["/api/reference-requests"],
-    enabled: mode === "requests",
+  const { data: references = [], isLoading: isLoadingRefs } = useQuery<Reference[]>({
+    queryKey: [`/api/candidates/${selectedCandidateId}/references`],
+    enabled: !!selectedCandidateId,
   });
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      candidateName: "",
-      position: "",
-      referenceName: "",
-      referenceEmail: "",
-      referenceRelationship: "",
-      templateType: "formal",
-      resumeText: "",
-      candidateEmail: "",
+  const { data: referenceLinks = [] } = useQuery<ReferenceLink[]>({
+    queryKey: [`/api/candidates/${selectedCandidateId}/reference-links`],
+    enabled: !!selectedCandidateId,
+  });
+
+  const createReferenceMutation = useMutation({
+    mutationFn: async (data: { name: string; email: string; relationship?: string }) => {
+      const response = await fetch(`/api/candidates/${selectedCandidateId}/references`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error("Failed to create reference");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/candidates/${selectedCandidateId}/references`] });
+      setNewRefName("");
+      setNewRefEmail("");
+      setNewRefRelationship("");
+      setIsAddDialogOpen(false);
+      toast({ title: "Reference added", description: "Reference contact has been added successfully." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to add reference.", variant: "destructive" });
     },
   });
 
-  const handleCandidateSelect = async (candidateId: string) => {
-    setSelectedCandidateId(candidateId);
-    setResumeAutoLoaded(false);
-    const candidate = candidates.find(c => c.id === candidateId);
-    if (candidate) {
-      form.setValue("candidateName", candidate.name);
-      form.setValue("position", candidate.role);
-      if (candidate.email) {
-        form.setValue("candidateEmail", candidate.email);
-      }
-      
-      setIsLoadingResume(true);
-      try {
-        const response = await fetch(`/api/candidates/${candidateId}/documents`, {
-          credentials: "include"
-        });
-        if (response.ok) {
-          const documents = await response.json();
-          const resumeDoc = documents.find((doc: any) => doc.documentType === "resume" && doc.resumeText);
-          if (resumeDoc?.resumeText) {
-            form.setValue("resumeText", resumeDoc.resumeText);
-            setResumeAutoLoaded(true);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load resume:", error);
-      } finally {
-        setIsLoadingResume(false);
-      }
-    }
-  };
-
-  async function onSubmit(values: FormValues) {
-    setIsGenerating(true);
-    try {
-      const response = await fetch("/api/generate-reference-check", {
+  const createLinkMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/candidates/${selectedCandidateId}/reference-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode,
-          candidateName: values.candidateName,
-          positionAppliedFor: values.position,
-          referenceName: values.referenceName,
-          referenceEmail: values.referenceEmail,
-          relationshipToCandidate: values.referenceRelationship,
-          emailTemplate: values.templateType,
-          resumeText: values.resumeText,
-        }),
+        credentials: "include",
       });
+      if (!response.ok) throw new Error("Failed to create link");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/candidates/${selectedCandidateId}/reference-links`] });
+      navigator.clipboard.writeText(data.url);
+      toast({ title: "Link created and copied!", description: "Share this link with the candidate to collect references." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create reference link.", variant: "destructive" });
+    },
+  });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to generate reference check");
-      }
-
-      const data = await response.json();
-      setResult({ ...data, candidateEmail: values.candidateEmail || null });
-      toast({
-        title: "Reference Check Generated",
-        description: mode === "request_link" 
-          ? "Candidate link request text is ready."
-          : "AI-powered reference request email is ready.",
+  const markEmailSentMutation = useMutation({
+    mutationFn: async (refId: string) => {
+      const response = await fetch(`/api/references/${refId}/email-sent`, {
+        method: "POST",
+        credentials: "include",
       });
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to generate reference check.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGenerating(false);
-    }
-  }
+      if (!response.ok) throw new Error("Failed to mark email sent");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/candidates/${selectedCandidateId}/references`] });
+      toast({ title: "Marked as sent", description: "Reference has been marked as contacted." });
+    },
+  });
 
-  const copyToClipboard = (text: string, label: string) => {
-    navigator.clipboard.writeText(text);
-    toast({
-      title: "Copied to clipboard",
-      description: `${label} copied successfully.`,
-    });
+  const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
+
+  const generateMailtoLink = (ref: Reference) => {
+    const subject = encodeURIComponent(`Reference Request for ${selectedCandidate?.name || "Candidate"}`);
+    const body = encodeURIComponent(`Dear ${ref.name},
+
+We are considering ${selectedCandidate?.name || "a candidate"} for the ${selectedCandidate?.role || "open"} position at our company. They provided your contact information as a professional reference.
+
+Would you be willing to provide a brief reference? I would appreciate any insights you can share about:
+- Their work performance and reliability
+- Their strengths and areas of growth
+- Their interpersonal skills and teamwork
+- Whether you would recommend them for this role
+
+Please feel free to reply to this email or let me know if you prefer a phone call instead.
+
+Thank you for your time.
+
+Best regards`);
+    return `mailto:${ref.email}?subject=${subject}&body=${body}`;
   };
-
-  const openMailClient = () => {
-    if (!result?.mailtoTemplate) return;
-    window.open(result.mailtoTemplate, "_blank");
-  };
-
-  const openOutlookForCandidate = () => {
-    if (!result?.candidateLinkRequestText || !result?.candidateEmail) return;
-    const subject = encodeURIComponent(`Reference Request for ${form.getValues("candidateName")} - ${form.getValues("position")}`);
-    const body = encodeURIComponent(result.candidateLinkRequestText);
-    window.open(`mailto:${result.candidateEmail}?subject=${subject}&body=${body}`, "_blank");
-  };
-
-  const module = getModuleByPath("/references");
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6">
       <PageHeader
-        title="Reference Check"
-        description="AI-powered professional reference request emails with personalized questions."
-        icon={module.icon}
-        gradient={module.color}
+        title={module?.title || "Reference Check"}
+        description={module?.description || "Manage reference checks for candidates"}
+        icon={module?.icon || UserCheck}
+        gradient={module?.color || "from-teal-500 to-cyan-500"}
       />
 
-      <Tabs value={mode} onValueChange={(v) => { setMode(v as typeof mode); setResult(null); }} className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[650px]">
-          <TabsTrigger value="from_form" data-testid="tab-from-form">
-            <User className="h-4 w-4 mr-2" />
-            Manual Entry
-          </TabsTrigger>
-          <TabsTrigger value="from_resume" data-testid="tab-from-resume">
-            <FileText className="h-4 w-4 mr-2" />
-            From Resume
-          </TabsTrigger>
-          <TabsTrigger value="request_link" data-testid="tab-request-link">
-            <Link className="h-4 w-4 mr-2" />
-            Request Link
-          </TabsTrigger>
-          <TabsTrigger value="requests" data-testid="tab-requests">
-            <ClipboardList className="h-4 w-4 mr-2" />
-            Requests
-          </TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Select Candidate
+          </CardTitle>
+          <CardDescription>Choose a candidate to manage their references</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={selectedCandidateId} onValueChange={setSelectedCandidateId}>
+            <SelectTrigger data-testid="select-candidate">
+              <SelectValue placeholder="Select a candidate..." />
+            </SelectTrigger>
+            <SelectContent>
+              {candidates.map((candidate) => (
+                <SelectItem key={candidate.id} value={candidate.id}>
+                  {candidate.name} - {candidate.role}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
 
-        {mode === "requests" ? (
-          <div className="mt-6">
+      {selectedCandidateId && (
+        <Tabs defaultValue="manual" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="manual" data-testid="tab-manual-entry">
+              <UserCheck className="h-4 w-4 mr-2" />
+              Manual Entry
+            </TabsTrigger>
+            <TabsTrigger value="candidate-link" data-testid="tab-candidate-link">
+              <Link className="h-4 w-4 mr-2" />
+              Candidate Link
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="manual" className="space-y-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Reference Requests</CardTitle>
-                <CardDescription>
-                  View all reference requests you've sent to candidates
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Reference Contacts</CardTitle>
+                  <CardDescription>Add and manage references for {selectedCandidate?.name}</CardDescription>
+                </div>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button data-testid="button-add-reference">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Reference
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add Reference Contact</DialogTitle>
+                      <DialogDescription>
+                        Enter the details for a reference you want to contact.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <div>
+                        <Label htmlFor="ref-name">Name</Label>
+                        <Input
+                          id="ref-name"
+                          data-testid="input-ref-name"
+                          value={newRefName}
+                          onChange={(e) => setNewRefName(e.target.value)}
+                          placeholder="John Smith"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="ref-email">Email</Label>
+                        <Input
+                          id="ref-email"
+                          data-testid="input-ref-email"
+                          type="email"
+                          value={newRefEmail}
+                          onChange={(e) => setNewRefEmail(e.target.value)}
+                          placeholder="john@company.com"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="ref-relationship">Relationship (optional)</Label>
+                        <Input
+                          id="ref-relationship"
+                          data-testid="input-ref-relationship"
+                          value={newRefRelationship}
+                          onChange={(e) => setNewRefRelationship(e.target.value)}
+                          placeholder="Former Manager"
+                        />
+                      </div>
+                      <Button
+                        data-testid="button-save-reference"
+                        onClick={() => {
+                          if (newRefName && newRefEmail) {
+                            createReferenceMutation.mutate({
+                              name: newRefName,
+                              email: newRefEmail,
+                              relationship: newRefRelationship || undefined,
+                            });
+                          }
+                        }}
+                        disabled={!newRefName || !newRefEmail || createReferenceMutation.isPending}
+                        className="w-full"
+                      >
+                        {createReferenceMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : null}
+                        Save Reference
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardHeader>
               <CardContent>
-                {isLoadingRequests ? (
-                  <div className="flex items-center justify-center py-12">
+                {isLoadingRefs ? (
+                  <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
-                ) : referenceRequests.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <ClipboardList className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                    <p className="text-muted-foreground">No reference requests yet</p>
-                    <p className="text-sm text-muted-foreground/70 mt-1">
-                      Use the "Request Link" tab to send reference requests to candidates
-                    </p>
+                ) : references.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <UserCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No references added yet.</p>
+                    <p className="text-sm">Click "Add Reference" to get started.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {referenceRequests.map((request) => (
-                      <Card key={request.id} className="bg-muted/20" data-testid={`card-reference-request-${request.id}`}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-semibold" data-testid={`text-candidate-name-${request.id}`}>
-                                  {request.candidateName}
-                                </h4>
-                                {request.status === "pending" && (
-                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    Pending
-                                  </Badge>
-                                )}
-                                {request.status === "submitted" && (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    Submitted
-                                  </Badge>
-                                )}
-                                {request.status === "expired" && (
-                                  <Badge variant="secondary" className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-                                    <AlertCircle className="h-3 w-3 mr-1" />
-                                    Expired
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground">{request.positionAppliedFor}</p>
-                              {request.candidateEmail && (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Mail className="h-3 w-3" />
-                                  {request.candidateEmail}
-                                </div>
-                              )}
-                            </div>
-                            <div className="text-right text-xs text-muted-foreground">
-                              <div>Sent: {request.createdAt ? format(new Date(request.createdAt), "MMM d, yyyy") : "N/A"}</div>
-                              {request.expiresAt && (
-                                <div>Expires: {format(new Date(request.expiresAt), "MMM d, yyyy")}</div>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {request.status === "submitted" && request.referenceName && (
-                            <div className="mt-4 pt-4 border-t">
-                              <p className="text-xs font-medium text-muted-foreground mb-2">Submitted Reference:</p>
-                              <div className="flex items-center gap-4">
-                                <div className="flex items-center gap-2">
-                                  <User className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm font-medium">{request.referenceName}</span>
-                                </div>
-                                {request.referenceEmail && (
-                                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                    <Mail className="h-3 w-3" />
-                                    {request.referenceEmail}
-                                  </div>
-                                )}
-                                {request.referenceRelationship && (
-                                  <Badge variant="outline" className="text-xs">{request.referenceRelationship}</Badge>
-                                )}
-                              </div>
-                              {request.submittedAt && (
-                                <p className="text-xs text-muted-foreground mt-2">
-                                  Submitted on {format(new Date(request.submittedAt), "MMM d, yyyy 'at' h:mm a")}
-                                </p>
-                              )}
-                            </div>
+                  <div className="space-y-3">
+                    {references.map((ref) => (
+                      <div
+                        key={ref.id}
+                        data-testid={`reference-card-${ref.id}`}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div className="space-y-1">
+                          <div className="font-medium">{ref.name}</div>
+                          <div className="text-sm text-muted-foreground">{ref.email}</div>
+                          {ref.relationship && (
+                            <div className="text-sm text-muted-foreground">{ref.relationship}</div>
                           )}
-                        </CardContent>
-                      </Card>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={ref.status === "email_sent" ? "default" : "secondary"}
+                            className="capitalize"
+                          >
+                            {ref.status === "email_sent" ? "Contacted" : "Pending"}
+                          </Badge>
+                          {ref.status === "pending_contact" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                data-testid={`button-email-${ref.id}`}
+                                onClick={() => {
+                                  window.open(generateMailtoLink(ref), "_blank");
+                                  markEmailSentMutation.mutate(ref.id);
+                                }}
+                              >
+                                <Mail className="h-4 w-4 mr-1" />
+                                Email
+                              </Button>
+                            </>
+                          )}
+                          {ref.emailSentAt && (
+                            <span className="text-xs text-muted-foreground">
+                              Sent {format(new Date(ref.emailSentAt), "MMM d")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 )}
               </CardContent>
             </Card>
-          </div>
-        ) : (
-          <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {mode === "from_form" && "Reference Details"}
-                {mode === "from_resume" && "Extract from Resume"}
-                {mode === "request_link" && "Candidate Link Request"}
-              </CardTitle>
-              <CardDescription>
-                {mode === "from_form" && "Enter the candidate and reference information manually"}
-                {mode === "from_resume" && "Paste the candidate's resume to find potential references"}
-                {mode === "request_link" && "Generate a link for the candidate to submit their references"}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Select Candidate</label>
-                    <Select value={selectedCandidateId} onValueChange={handleCandidateSelect}>
-                      <SelectTrigger data-testid="select-candidate">
-                        <SelectValue placeholder="Choose a candidate from your pipeline" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {candidates.map((candidate) => (
-                          <SelectItem key={candidate.id} value={candidate.id}>
-                            <div className="flex items-center gap-2">
-                              <span>{candidate.name}</span>
-                              <Badge variant="outline" className="text-xs">{candidate.stage}</Badge>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Or enter details manually below</p>
-                  </div>
+          </TabsContent>
 
-                  <Separator className="my-4" />
-
-                  <FormField
-                    control={form.control}
-                    name="candidateName"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Candidate Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. John Smith" {...field} data-testid="input-candidate-name" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="position"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Position Applied For</FormLabel>
-                        <FormControl>
-                          <Input placeholder="e.g. Senior Software Engineer" {...field} data-testid="input-position" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  {mode === "request_link" && (
-                    <FormField
-                      control={form.control}
-                      name="candidateEmail"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Candidate Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="candidate@email.com" {...field} data-testid="input-candidate-email" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+          <TabsContent value="candidate-link" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link className="h-5 w-5" />
+                  Request References via Link
+                </CardTitle>
+                <CardDescription>
+                  Generate a secure link to send to {selectedCandidate?.name}. They can submit their own references through the link.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button
+                  data-testid="button-generate-link"
+                  onClick={() => createLinkMutation.mutate()}
+                  disabled={createLinkMutation.isPending}
+                >
+                  {createLinkMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4 mr-2" />
                   )}
+                  Generate New Link
+                </Button>
 
-                  {mode === "from_form" && (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={form.control}
-                          name="referenceName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Reference Name</FormLabel>
-                              <FormControl>
-                                <Input placeholder="e.g. Jane Doe" {...field} data-testid="input-reference-name" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="referenceEmail"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Reference Email</FormLabel>
-                              <FormControl>
-                                <Input placeholder="jane@company.com" {...field} data-testid="input-reference-email" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="referenceRelationship"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Relationship to Candidate</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-relationship">
-                                  <SelectValue placeholder="Select relationship" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Direct Manager">Direct Manager</SelectItem>
-                                <SelectItem value="Colleague">Colleague</SelectItem>
-                                <SelectItem value="Direct Report">Direct Report</SelectItem>
-                                <SelectItem value="Client">Client</SelectItem>
-                                <SelectItem value="Mentor">Mentor</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="templateType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email Style</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-template">
-                                  <SelectValue placeholder="Select style" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="formal">Formal</SelectItem>
-                                <SelectItem value="friendly">Friendly</SelectItem>
-                                <SelectItem value="brief">Brief</SelectItem>
-                                <SelectItem value="detailed">Detailed</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  )}
-
-                  {mode === "from_resume" && (
-                    <FormField
-                      control={form.control}
-                      name="resumeText"
-                      render={({ field }) => (
-                        <FormItem>
-                          <div className="flex items-center justify-between">
-                            <FormLabel>Resume Text</FormLabel>
-                            {isLoadingResume && (
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                                Loading resume...
-                              </span>
-                            )}
-                            {resumeAutoLoaded && !isLoadingResume && (
-                              <Badge variant="secondary" className="text-xs">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Auto-loaded from profile
-                              </Badge>
-                            )}
-                          </div>
-                          {resumeAutoLoaded && (
-                            <p className="text-xs text-muted-foreground">
-                              This field is prefilled with the resume saved in the candidate's profile. Review or edit the text below, or paste a different resume to override.
-                            </p>
-                          )}
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Paste the candidate's resume text here. The AI will identify potential references from their work history..."
-                              className="min-h-[200px]"
-                              {...field} 
-                              data-testid="input-resume-text" 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-
-                  <Button type="submit" className="w-full" disabled={isGenerating} data-testid="button-generate">
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck className="mr-2 h-4 w-4" />
-                        {mode === "request_link" ? "Generate Link Request" : "Generate Reference Request"}
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-4">
-            {result ? (
-              <>
-                {mode === "request_link" && result.candidateLinkRequestText ? (
-                  <Card className="border-primary/20">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">Candidate Link Request</CardTitle>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => copyToClipboard(result.candidateLinkRequestText!, "Link request text")} 
-                            data-testid="button-copy-link-request"
+                {referenceLinks.length > 0 && (
+                  <div className="space-y-3 pt-4">
+                    <h4 className="font-medium text-sm">Generated Links</h4>
+                    {referenceLinks.map((link) => (
+                      <div
+                        key={link.id}
+                        data-testid={`link-card-${link.id}`}
+                        className="flex items-center justify-between p-3 border rounded-lg bg-muted/50"
+                      >
+                        <div className="flex items-center gap-2 text-sm">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          Created {format(new Date(link.createdAt), "MMM d, yyyy")}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const url = `${window.location.origin}/reference-link/${link.token}`;
+                              navigator.clipboard.writeText(url);
+                              toast({ title: "Copied!", description: "Link copied to clipboard." });
+                            }}
                           >
-                            <Copy className="h-4 w-4 mr-2" />
+                            <Copy className="h-4 w-4 mr-1" />
                             Copy
                           </Button>
-                          {result.candidateEmail && (
-                            <Button 
-                              size="sm" 
-                              onClick={openOutlookForCandidate}
-                              data-testid="button-open-outlook"
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              window.open(`/reference-link/${link.token}`, "_blank");
+                            }}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>References from Candidate</CardTitle>
+                <CardDescription>
+                  References submitted by the candidate through the link will appear here.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {references.filter(r => r.source === "candidate_link").length === 0 ? (
+                  <div className="text-center py-6 text-muted-foreground">
+                    <Send className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p>No references submitted yet.</p>
+                    <p className="text-sm">Share the link with the candidate to collect references.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {references.filter(r => r.source === "candidate_link").map((ref) => (
+                      <div
+                        key={ref.id}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
+                        <div className="space-y-1">
+                          <div className="font-medium">{ref.name}</div>
+                          <div className="text-sm text-muted-foreground">{ref.email}</div>
+                          {ref.relationship && (
+                            <div className="text-sm text-muted-foreground">{ref.relationship}</div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">From Candidate</Badge>
+                          <Badge
+                            variant={ref.status === "email_sent" ? "default" : "secondary"}
+                          >
+                            {ref.status === "email_sent" ? "Contacted" : "Pending"}
+                          </Badge>
+                          {ref.status === "pending_contact" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                window.open(generateMailtoLink(ref), "_blank");
+                                markEmailSentMutation.mutate(ref.id);
+                              }}
                             >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Open in Outlook
+                              <Mail className="h-4 w-4 mr-1" />
+                              Email
                             </Button>
                           )}
                         </div>
                       </div>
-                      <CardDescription>Send this to the candidate to request their references</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded border max-h-96 overflow-y-auto">
-                        {result.candidateLinkRequestText}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <>
-                    {result.selectedReference && (
-                      <Card className="border-green-200 bg-green-50/30">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <CheckCircle2 className="h-5 w-5 text-green-600" />
-                            {mode === "from_resume" ? "Identified Reference" : "Reference Contact"}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{result.selectedReference.name}</span>
-                            {result.selectedReference.relationship && (
-                              <Badge variant="secondary">{result.selectedReference.relationship}</Badge>
-                            )}
-                          </div>
-                          {result.selectedReference.email && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Mail className="h-4 w-4" />
-                              {result.selectedReference.email}
-                            </div>
-                          )}
-                          {(result.selectedReference.title || result.selectedReference.company) && (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <Building className="h-4 w-4" />
-                              {[result.selectedReference.title, result.selectedReference.company].filter(Boolean).join(" at ")}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {result.questions && result.questions.length > 0 && (
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-lg">AI-Generated Questions</CardTitle>
-                          <CardDescription>Personalized reference check questions</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <ul className="space-y-2">
-                            {result.questions.map((q, idx) => (
-                              <li key={idx} className="flex gap-3 text-sm">
-                                <span className="flex-shrink-0 h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium">
-                                  {idx + 1}
-                                </span>
-                                <span>{q}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {result.emailSubject && result.emailBody && (
-                      <Card className="border-primary/20">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <CardTitle className="text-lg">Generated Email</CardTitle>
-                              {result.selectedReference?.email && (
-                                <div className="flex gap-2 mt-2">
-                                  <Badge variant="secondary">
-                                    <Mail className="h-3 w-3 mr-1" />
-                                    {result.selectedReference.email}
-                                  </Badge>
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => copyToClipboard(`Subject: ${result.emailSubject}\n\n${result.emailBody}`, "Email content")} 
-                                data-testid="button-copy"
-                              >
-                                <Copy className="h-4 w-4 mr-2" />
-                                Copy
-                              </Button>
-                              {result.mailtoTemplate && (
-                                <Button size="sm" onClick={openMailClient} data-testid="button-send">
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Open in Email
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-1">Subject:</p>
-                            <p className="text-sm font-medium">{result.emailSubject}</p>
-                          </div>
-                          <Separator />
-                          <div>
-                            <p className="text-sm font-medium text-muted-foreground mb-1">Body:</p>
-                            <div className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded border max-h-80 overflow-y-auto">
-                              {result.emailBody}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-                  </>
+                    ))}
+                  </div>
                 )}
-              </>
-            ) : (
-              <Card className="bg-muted/10 border-dashed h-96 flex items-center justify-center">
-                <CardContent className="text-center">
-                  <UserCheck className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-muted-foreground">
-                    {mode === "from_form" && "Fill the form to generate an AI-powered reference request"}
-                    {mode === "from_resume" && "Paste a resume to identify potential references"}
-                    {mode === "request_link" && "Enter candidate details to generate a reference request link"}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </div>
-        )}
-      </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

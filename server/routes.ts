@@ -14,8 +14,7 @@ import {
   insertSkillsTestSchema,
   insertSkillsTestInvitationSchema,
   insertSkillsTestResponseSchema,
-  insertScheduledInterviewSchema,
-  insertReferenceRequestSchema
+  insertScheduledInterviewSchema
 } from "@shared/schema";
 import { randomBytes } from "crypto";
 import { z } from "zod";
@@ -2443,10 +2442,10 @@ Respond in this exact JSON format:
         return;
       }
 
-      // For request_link mode, create a real reference request and generate text with actual URL
+      // For request_link mode, create a reference link and generate text with actual URL
       if (mode === "request_link") {
-        if (!candidateName || !positionAppliedFor) {
-          res.status(400).json({ error: "Candidate name and position are required for request_link mode" });
+        if (!candidateName || !positionAppliedFor || !candidateId) {
+          res.status(400).json({ error: "Candidate name, position, and candidateId are required for request_link mode" });
           return;
         }
 
@@ -2457,27 +2456,19 @@ Respond in this exact JSON format:
         }
 
         // Generate a secure token for the reference submission link
-        const token = randomBytes(32).toString("hex");
-        
-        // Set expiration to 14 days from now
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 14);
+        const token = randomBytes(16).toString("hex");
 
-        // Create the reference request in the database
-        const referenceRequest = await storage.createReferenceRequest({
-          userId,
-          candidateId: candidateId || null,
+        // Create the reference link in the database
+        const referenceLink = await storage.createReferenceLink({
+          candidateId,
           candidateName,
-          positionAppliedFor,
-          token,
-          status: "pending",
-          expiresAt
+          token
         });
 
         // Build the actual submission URL
         const host = req.headers.host || "localhost:5000";
         const protocol = req.headers["x-forwarded-proto"] || "https";
-        const referenceSubmissionUrl = `${protocol}://${host}/reference/${token}`;
+        const referenceSubmissionUrl = `${protocol}://${host}/reference-link/${token}`;
 
         const linkRequestText = `Dear ${candidateName},
 
@@ -2490,7 +2481,6 @@ We will ask for:
 - Reference name
 - Reference email address
 - Their relationship to you
-- Confirmation that they agree to be contacted
 
 Thank you for taking a moment to complete this step in the hiring process.
 
@@ -2504,7 +2494,7 @@ Best regards,
           questions: null,
           mailtoTemplate: null,
           candidateLinkRequestText: linkRequestText,
-          referenceRequestId: referenceRequest.id,
+          referenceLinkId: referenceLink.id,
           referenceSubmissionUrl
         });
         return;
@@ -2635,163 +2625,183 @@ Respond in this exact JSON format:
     }
   });
 
-  // Public endpoint to get reference request details by token (no auth required)
-  app.get("/api/reference/:token", async (req, res) => {
+  // Public endpoint to get reference link details by token (no auth required)
+  app.get("/api/reference-link/:token", async (req, res) => {
     try {
       const { token } = req.params;
-      const referenceRequest = await storage.getReferenceRequestByToken(token);
+      const link = await storage.getReferenceLinkByToken(token);
 
-      if (!referenceRequest) {
-        res.status(404).json({ error: "Reference request not found" });
-        return;
-      }
-
-      // Check if expired
-      if (referenceRequest.expiresAt && new Date() > new Date(referenceRequest.expiresAt)) {
-        res.status(410).json({ error: "This reference request has expired" });
-        return;
-      }
-
-      // Check if already submitted
-      if (referenceRequest.status === "ready" || referenceRequest.status === "submitted") {
-        res.status(409).json({ error: "This reference request has already been submitted" });
+      if (!link) {
+        res.status(404).json({ error: "Reference link not found" });
         return;
       }
 
       res.json({
-        candidateName: referenceRequest.candidateName,
-        positionAppliedFor: referenceRequest.positionAppliedFor,
-        status: referenceRequest.status
+        candidateName: link.candidateName,
+        createdAt: link.createdAt
       });
     } catch (error) {
-      console.error("Error fetching reference request:", error);
-      res.status(500).json({ error: "Failed to fetch reference request" });
+      console.error("Error fetching reference link:", error);
+      res.status(500).json({ error: "Failed to fetch reference link" });
     }
   });
 
-  // Public endpoint to submit reference details (no auth required)
-  app.post("/api/reference/:token/submit", async (req, res) => {
+  // Public endpoint to submit references via link (no auth required)
+  app.post("/api/reference-link/:token/submit", async (req, res) => {
     try {
       const { token } = req.params;
-      const { referenceName, referenceEmail, referenceRelationship, consentGiven } = req.body;
+      const { references } = req.body;
 
-      if (!referenceName || !referenceEmail || !referenceRelationship) {
-        res.status(400).json({ error: "Reference name, email, and relationship are required" });
+      if (!references || !Array.isArray(references) || references.length === 0) {
+        res.status(400).json({ error: "At least one reference is required" });
         return;
       }
 
-      if (!consentGiven) {
-        res.status(400).json({ error: "Consent is required to proceed" });
+      const link = await storage.getReferenceLinkByToken(token);
+
+      if (!link) {
+        res.status(404).json({ error: "Reference link not found" });
         return;
       }
 
-      const referenceRequest = await storage.getReferenceRequestByToken(token);
-
-      if (!referenceRequest) {
-        res.status(404).json({ error: "Reference request not found" });
-        return;
-      }
-
-      // Check if expired
-      if (referenceRequest.expiresAt && new Date() > new Date(referenceRequest.expiresAt)) {
-        res.status(410).json({ error: "This reference request has expired" });
-        return;
-      }
-
-      // Check if already submitted
-      if (referenceRequest.status === "ready" || referenceRequest.status === "submitted") {
-        res.status(409).json({ error: "This reference request has already been submitted" });
-        return;
-      }
-
-      // Update the reference request with the submitted information
-      const updatedRequest = await storage.updateReferenceRequest(referenceRequest.id, {
-        referenceName,
-        referenceEmail,
-        referenceRelationship,
-        consentGiven: "true",
-        status: "ready",
-        submittedAt: new Date()
-      });
-
-      // Also save to candidate references if candidateId exists
-      if (referenceRequest.candidateId) {
-        await storage.createCandidateReference({
-          candidateId: referenceRequest.candidateId,
-          referenceName,
-          referenceEmail,
-          relationship: referenceRelationship,
-          consentGiven: "true",
-          source: "candidate_link"
+      // Create each reference
+      for (const ref of references) {
+        if (!ref.name || !ref.email) {
+          res.status(400).json({ error: "Each reference must have name and email" });
+          return;
+        }
+        
+        await storage.createReference({
+          candidateId: link.candidateId,
+          source: "candidate_link",
+          name: ref.name,
+          email: ref.email,
+          relationship: ref.relationship || null,
+          status: "pending_contact"
         });
       }
 
       res.json({
         success: true,
-        message: "Reference details submitted successfully. Thank you!"
+        message: "References submitted successfully. Thank you!"
       });
     } catch (error) {
-      console.error("Error submitting reference:", error);
-      res.status(500).json({ error: "Failed to submit reference" });
+      console.error("Error submitting references:", error);
+      res.status(500).json({ error: "Failed to submit references" });
     }
   });
 
-  // Get reference requests for the current user
-  app.get("/api/reference-requests", isAuthenticated, async (req, res) => {
-    try {
-      const userId = (req as any).user?.claims?.sub;
-      if (!userId) {
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-      }
-
-      const requests = await storage.getReferenceRequestsByUserId(userId);
-      res.json(requests);
-    } catch (error) {
-      console.error("Error fetching reference requests:", error);
-      res.status(500).json({ error: "Failed to fetch reference requests" });
-    }
-  });
-
-  // Get candidate references by candidate ID
-  app.get("/api/candidates/:id/references", isAuthenticated, async (req: any, res) => {
+  // Create a reference link for a candidate
+  app.post("/api/candidates/:id/reference-link", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const candidateId = req.params.id;
       
-      // Verify the candidate belongs to this user
+      const candidate = await storage.getCandidate(candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+
+      const token = randomBytes(16).toString("hex");
+      const link = await storage.createReferenceLink({
+        candidateId,
+        candidateName: candidate.name,
+        token
+      });
+
+      const protocol = req.headers["x-forwarded-proto"] || "https";
+      const host = req.headers.host;
+      const url = `${protocol}://${host}/reference-link/${token}`;
+
+      res.json({ link, url });
+    } catch (error) {
+      console.error("Error creating reference link:", error);
+      res.status(500).json({ error: "Failed to create reference link" });
+    }
+  });
+
+  // Get reference links for a candidate
+  app.get("/api/candidates/:id/reference-links", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const candidateId = req.params.id;
+      
       const candidate = await storage.getCandidate(candidateId, userId);
       if (!candidate) {
         res.status(404).json({ error: "Candidate not found" });
         return;
       }
       
-      const references = await storage.getCandidateReferencesByCandidateId(candidateId);
-      res.json(references);
+      const links = await storage.getReferenceLinksByCandidateId(candidateId);
+      res.json(links);
     } catch (error) {
-      console.error("Error fetching candidate references:", error);
-      res.status(500).json({ error: "Failed to fetch candidate references" });
+      console.error("Error fetching reference links:", error);
+      res.status(500).json({ error: "Failed to fetch reference links" });
     }
   });
 
-  // Update candidate reference status
-  app.patch("/api/candidate-references/:id/status", isAuthenticated, async (req: any, res) => {
+  // Get references for a candidate
+  app.get("/api/candidates/:id/references", isAuthenticated, async (req: any, res) => {
     try {
-      const { status } = req.body;
-      const referenceId = req.params.id;
+      const userId = req.user.claims.sub;
+      const candidateId = req.params.id;
       
-      if (!status || typeof status !== "string") {
-        res.status(400).json({ error: "Status is required and must be a string" });
+      const candidate = await storage.getCandidate(candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
         return;
       }
       
-      const validStatuses = ["not_contacted", "email_generated", "emailed", "completed"];
-      if (!validStatuses.includes(status)) {
-        res.status(400).json({ error: `Status must be one of: ${validStatuses.join(", ")}` });
+      const refs = await storage.getReferencesByCandidateId(candidateId);
+      res.json(refs);
+    } catch (error) {
+      console.error("Error fetching references:", error);
+      res.status(500).json({ error: "Failed to fetch references" });
+    }
+  });
+
+  // Create a manual reference for a candidate
+  app.post("/api/candidates/:id/references", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const candidateId = req.params.id;
+      const { name, email, relationship } = req.body;
+
+      if (!name || !email) {
+        res.status(400).json({ error: "Name and email are required" });
         return;
       }
       
-      const updated = await storage.updateCandidateReferenceStatus(referenceId, status);
+      const candidate = await storage.getCandidate(candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+      
+      const ref = await storage.createReference({
+        candidateId,
+        source: "manual",
+        name,
+        email,
+        relationship: relationship || null,
+        status: "pending_contact"
+      });
+      
+      res.json(ref);
+    } catch (error) {
+      console.error("Error creating reference:", error);
+      res.status(500).json({ error: "Failed to create reference" });
+    }
+  });
+
+  // Update a reference
+  app.patch("/api/references/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const data = req.body;
+      
+      const updated = await storage.updateReference(id, data);
       if (!updated) {
         res.status(404).json({ error: "Reference not found" });
         return;
@@ -2799,8 +2809,26 @@ Respond in this exact JSON format:
       
       res.json(updated);
     } catch (error) {
-      console.error("Error updating candidate reference status:", error);
-      res.status(500).json({ error: "Failed to update reference status" });
+      console.error("Error updating reference:", error);
+      res.status(500).json({ error: "Failed to update reference" });
+    }
+  });
+
+  // Mark reference email as sent
+  app.post("/api/references/:id/email-sent", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updated = await storage.markReferenceEmailSent(id);
+      if (!updated) {
+        res.status(404).json({ error: "Reference not found" });
+        return;
+      }
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error marking email sent:", error);
+      res.status(500).json({ error: "Failed to mark email sent" });
     }
   });
 

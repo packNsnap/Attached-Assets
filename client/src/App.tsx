@@ -21,7 +21,7 @@ import PerformanceModule from "@/pages/modules/performance";
 import AnalyticsModule from "@/pages/modules/analytics";
 import CandidatesModule from "@/pages/modules/candidates";
 import SkillsTestPublic from "@/pages/public/SkillsTestPublic";
-import ReferenceSubmitPublic from "@/pages/public/ReferenceSubmitPublic";
+import ReferenceLinkPage from "@/pages/reference-link";
 
 function Router() {
   return (
@@ -30,7 +30,7 @@ function Router() {
       <Route path="/pricing" component={PricingPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/test/:token" component={SkillsTestPublic} />
-      <Route path="/reference/:token" component={ReferenceSubmitPublic} />
+      <Route path="/reference-link/:token" component={ReferenceLinkPage} />
       
       {/* Protected Routes Wrapper */}
       <Route>
