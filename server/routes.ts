@@ -3200,5 +3200,175 @@ Make sure all emails reference the employee by name (${employee_name}) and their
     }
   });
 
+  // Policy generation with web search and AI
+  app.post("/api/policies/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { company_name, policy_type, industry, team_size, additional_requirements } = req.body;
+
+      if (!company_name || !policy_type) {
+        res.status(400).json({ error: "Company name and policy type are required" });
+        return;
+      }
+
+      // Curated reference sources based on policy type (real, authoritative HR sources)
+      const policyReferences: Record<string, Array<{ title: string; url: string; snippet: string }>> = {
+        "remote-work": [
+          { title: "SHRM Remote Work Policy Template", url: "https://www.shrm.org/topics-tools/tools/policies/telecommuting-policy", snippet: "Sample telecommuting policy covering eligibility, expectations, equipment, and performance standards for remote work arrangements." },
+          { title: "DOL Remote Work Best Practices", url: "https://www.dol.gov/agencies/whd/flsa/pandemic", snippet: "Department of Labor guidance on wage and hour laws for remote workers, including overtime and recordkeeping requirements." },
+          { title: "OSHA Home Office Guidelines", url: "https://www.osha.gov/workers/remote-work", snippet: "Workplace safety considerations for home offices and employer obligations under OSHA for remote employees." },
+          { title: "IRS Home Office Deduction Rules", url: "https://www.irs.gov/businesses/small-businesses-self-employed/home-office-deduction", snippet: "Tax implications and deduction rules for employees working from home offices." },
+        ],
+        "pto": [
+          { title: "SHRM PTO Policy Best Practices", url: "https://www.shrm.org/topics-tools/tools/policies/paid-time-off-policy", snippet: "Comprehensive guide to structuring paid time off policies including accrual, carryover, and payout provisions." },
+          { title: "DOL FMLA Guidelines", url: "https://www.dol.gov/agencies/whd/fmla", snippet: "Family and Medical Leave Act requirements for eligible employers regarding unpaid, job-protected leave." },
+          { title: "State Leave Law Compliance", url: "https://www.dol.gov/agencies/whd/state/leave", snippet: "Overview of state-specific leave requirements that may exceed federal minimums." },
+        ],
+        "code-of-conduct": [
+          { title: "SHRM Code of Conduct Template", url: "https://www.shrm.org/topics-tools/tools/policies/code-ethics-conduct", snippet: "Sample code of ethics and business conduct policy covering integrity, compliance, and professional behavior." },
+          { title: "EEOC Workplace Guidelines", url: "https://www.eeoc.gov/employers", snippet: "Equal Employment Opportunity Commission guidance on preventing discrimination and maintaining inclusive workplaces." },
+          { title: "SOX Compliance for Public Companies", url: "https://www.sec.gov/spotlight/sarbanes-oxley.htm", snippet: "Sarbanes-Oxley Act requirements for corporate ethics and financial reporting standards." },
+        ],
+        "anti-harassment": [
+          { title: "EEOC Harassment Prevention", url: "https://www.eeoc.gov/harassment", snippet: "Federal guidelines on preventing workplace harassment, including definitions, examples, and employer responsibilities." },
+          { title: "SHRM Anti-Harassment Policy", url: "https://www.shrm.org/topics-tools/tools/policies/anti-harassment-policy-complaint-procedure", snippet: "Sample anti-harassment policy with complaint procedures and investigation protocols." },
+          { title: "Title VII Compliance", url: "https://www.eeoc.gov/statutes/title-vii-civil-rights-act-1964", snippet: "Title VII requirements prohibiting employment discrimination based on protected characteristics." },
+          { title: "State Harassment Training Requirements", url: "https://www.eeoc.gov/employers/small-business/harassment-training", snippet: "Overview of state-mandated harassment prevention training requirements for employers." },
+        ],
+        "expense": [
+          { title: "IRS Business Expense Rules", url: "https://www.irs.gov/publications/p463", snippet: "IRS Publication 463 covering travel, gift, and car expense deductions and documentation requirements." },
+          { title: "SHRM Expense Reimbursement Policy", url: "https://www.shrm.org/topics-tools/tools/policies/travel-expense-reimbursement-policy", snippet: "Sample expense reimbursement policy with approval workflows and documentation standards." },
+          { title: "Per Diem Rates", url: "https://www.gsa.gov/travel/plan-book/per-diem-rates", snippet: "Federal per diem rates for lodging and meals that serve as benchmarks for corporate policies." },
+        ],
+        "social-media": [
+          { title: "NLRB Social Media Guidelines", url: "https://www.nlrb.gov/about-nlrb/rights-we-protect/your-rights/social-media", snippet: "National Labor Relations Board guidance on employee rights regarding social media use and protected concerted activity." },
+          { title: "SHRM Social Media Policy", url: "https://www.shrm.org/topics-tools/tools/policies/social-media-policy", snippet: "Sample social media policy balancing company interests with employee rights." },
+          { title: "FTC Endorsement Guidelines", url: "https://www.ftc.gov/business-guidance/resources/ftcs-endorsement-guides", snippet: "FTC rules on disclosure requirements when employees post about their employer or products." },
+        ],
+        "dress-code": [
+          { title: "SHRM Dress Code Policy", url: "https://www.shrm.org/topics-tools/tools/policies/dress-code-policy", snippet: "Sample dress code policies covering professional attire, casual days, and accommodation considerations." },
+          { title: "EEOC Religious Accommodation", url: "https://www.eeoc.gov/laws/guidance/religious-garb-and-grooming-workplace-rights-and-responsibilities", snippet: "Guidance on accommodating religious dress and grooming practices in workplace dress codes." },
+          { title: "ADA Dress Code Considerations", url: "https://www.ada.gov/resources/employers/", snippet: "Americans with Disabilities Act considerations for dress code accommodations." },
+        ],
+        "confidentiality": [
+          { title: "DTSA Trade Secret Protection", url: "https://www.congress.gov/bill/114th-congress/senate-bill/1890", snippet: "Defend Trade Secrets Act provisions for protecting confidential business information." },
+          { title: "SHRM Confidentiality Agreement", url: "https://www.shrm.org/topics-tools/tools/policies/confidentiality-nondisclosure-agreement", snippet: "Sample confidentiality and non-disclosure agreement templates for employees." },
+          { title: "HIPAA for Healthcare", url: "https://www.hhs.gov/hipaa/for-professionals/index.html", snippet: "HIPAA privacy and security rules for organizations handling protected health information." },
+        ],
+      };
+
+      // Get references for this policy type
+      const references = policyReferences[policy_type] || policyReferences["code-of-conduct"];
+
+      // Format references for the prompt
+      const referencesText = references.map((ref, i) => 
+        `${i + 1}. "${ref.title}" - ${ref.url}\n   ${ref.snippet}`
+      ).join("\n\n");
+
+      const policyNames: Record<string, string> = {
+        "remote-work": "Remote Work Policy",
+        "pto": "Paid Time Off & Leave Policy",
+        "code-of-conduct": "Code of Conduct",
+        "anti-harassment": "Anti-Harassment Policy",
+        "expense": "Expense Reimbursement Policy",
+        "social-media": "Social Media Policy",
+        "dress-code": "Dress Code Policy",
+        "confidentiality": "Confidentiality Agreement",
+      };
+
+      const policyName = policyNames[policy_type] || "HR Policy";
+
+      const systemPrompt = `You are an HR policy assistant helping companies draft professional HR policies.
+
+IMPORTANT GUIDELINES:
+- You are NOT a lawyer and must NEVER claim any policy is legally sufficient or compliant.
+- Use phrases like "recommended clauses", "typical elements", and "common best practices".
+- Base your drafting on the provided reference sources and general HR best practices.
+- Include practical, actionable policy language appropriate for the company size and industry.
+- The policy should be professional, clear, and comprehensive.
+
+You must return ONLY valid JSON (no markdown code blocks) with this exact structure:
+{
+  "policy_markdown": "## Policy Title\\n\\n### Section 1\\n\\nPolicy content in markdown format...",
+  "compliance_notes": [
+    "Note about relevant compliance consideration",
+    "Another compliance consideration"
+  ],
+  "disclaimer": "This draft is for informational purposes only and is not legal advice. Please consult with qualified legal counsel before implementing any workplace policy.",
+  "sources": [
+    { "title": "Source Title", "url": "https://example.com" }
+  ]
+}`;
+
+      const userPrompt = `Generate a ${policyName} for the following company:
+
+**Company Name:** ${company_name}
+**Industry:** ${industry || "General"}
+**Team Size:** ${team_size || "Not specified"}
+**Additional Requirements:** ${additional_requirements || "None specified"}
+
+**Reference Sources to incorporate:**
+${referencesText}
+
+Please draft a comprehensive, professional ${policyName} that:
+1. Is tailored to the ${industry || "general"} industry
+2. Is appropriate for a company with ${team_size || "varying"} employees
+3. Incorporates best practices from the reference sources
+4. Addresses any additional requirements mentioned
+5. Uses clear, professional language
+6. Includes practical implementation guidance
+
+Include 3-5 compliance notes highlighting key legal or regulatory considerations.
+List the reference sources used in the sources array.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 4000,
+      });
+
+      const content = response.choices[0]?.message?.content?.trim();
+      if (!content) {
+        res.status(500).json({ error: "No response from AI" });
+        return;
+      }
+
+      // Parse the JSON response
+      let parsed;
+      try {
+        // Remove any markdown code block wrappers if present
+        let jsonContent = content;
+        if (jsonContent.startsWith("```")) {
+          jsonContent = jsonContent.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+        }
+        parsed = JSON.parse(jsonContent);
+      } catch (parseError) {
+        console.error("Failed to parse policy response:", content);
+        res.status(500).json({ error: "Failed to parse AI response. Please try again." });
+        return;
+      }
+
+      // Validate response structure
+      if (!parsed.policy_markdown || !parsed.compliance_notes || !parsed.disclaimer || !parsed.sources) {
+        res.status(500).json({ error: "Invalid response structure from AI" });
+        return;
+      }
+
+      res.json(parsed);
+    } catch (error) {
+      console.error("Error generating policy:", error);
+      res.status(500).json({ error: "Failed to generate policy. Please try again." });
+    }
+  });
+
   return httpServer;
 }

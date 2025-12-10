@@ -1,0 +1,164 @@
+On the Policies & Docs page, turn the form into a simple, compliant policy generator that:
+
+Uses web search to pull 3–5 up-to-date reference URLs for the selected policy type.
+
+Uses the OpenAI API to draft a policy based on:
+
+Company Name
+
+Policy Type
+
+Industry
+
+Team Size
+
+Additional Requirements
+
+Shows:
+
+A polished policy draft (Markdown/HTML)
+
+A short “Compliance Notes” summary
+
+A list of the sources used
+
+A visible disclaimer that this is not legal advice.
+
+1. Backend: /api/policies/generate
+
+Create a POST endpoint:
+
+POST /api/policies/generate
+
+Request body:
+
+{
+  "company_name": "Acme Corporation",
+  "policy_type": "Remote Work Policy",
+  "industry": "Technology",
+  "team_size": "51-200",
+  "additional_requirements": "We operate in California and handle customer PII."
+}
+
+
+Steps inside this endpoint:
+
+Build a search query string, for example:
+
+"Remote Work Policy template best practices technology HR California"
+
+Call a simple web search API (Brave, SerpAPI, or another you choose) using an env var like SEARCH_API_KEY.
+
+Get the top 3–5 results.
+
+For each result, keep: title, url, snippet.
+
+Call OpenAI using OPENAI_API_KEY.
+
+Use a model like gpt-4.1-mini or similar.
+
+System message:
+
+You are an HR policy assistant.
+
+You must base your drafting on the provided search snippets and URLs.
+
+You are not a lawyer and must not claim the policy is legally sufficient.
+
+User content should include:
+
+The form inputs
+
+The list of web results (title + snippet + URL)
+
+Ask the model to return strict JSON with this shape:
+
+{
+  "policy_markdown": "## Remote Work Policy\n\n...",
+  "compliance_notes": [
+    "Note 1...",
+    "Note 2..."
+  ],
+  "disclaimer": "This draft is for informational purposes only and is not legal advice.",
+  "sources": [
+    {
+      "title": "Example Source",
+      "url": "https://example.com"
+    }
+  ]
+}
+
+
+Validate that the response is parseable JSON.
+On error, return a 400 with a friendly message.
+
+Respond to the frontend with that JSON.
+
+2. Frontend: wire the form to the endpoint
+
+On /policies page:
+
+When Generate Policy is clicked:
+
+Validate required fields: Company Name, Policy Type.
+
+Show loading state on the button.
+
+POST the form values to /api/policies/generate.
+
+On success:
+
+Right-hand panel replaces the placeholder with three sections:
+
+Policy Draft
+
+Render policy_markdown as formatted text (Markdown → HTML).
+
+Add a “Copy Policy” button.
+
+Compliance Notes
+
+Bullet list from compliance_notes.
+
+Sources
+
+List the sources with clickable links.
+
+At the bottom, always show disclaimer in small, muted text.
+
+On error:
+
+Show an inline error alert:
+“We couldn’t generate this policy. Please try again or consult legal counsel.”
+
+Keep the existing left form layout and styling.
+
+3. Guardrails / compliance
+
+The OpenAI prompt must never say:
+
+“This is legally compliant”, “guaranteed compliant”, etc.
+
+The model should:
+
+Phrase things as “recommended clauses” and “typical elements”.
+
+Include the disclaimer text.
+
+The UI must always show the disclaimer near the policy output.
+
+Implement this end-to-end so a user can:
+
+Fill the form.
+
+Click Generate Policy.
+
+See:
+
+AI-generated policy based on real web sources,
+
+Notes,
+
+Source URLs,
+
+Clear “not legal advice” disclaimer.

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Loader2, BookOpen, Copy, Download, FileText } from "lucide-react";
+import { Loader2, BookOpen, Copy, Download, FileText, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 
@@ -27,6 +27,9 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
   companyName: z.string().min(2, "Company name is required"),
@@ -38,15 +41,22 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-type GeneratedPolicy = {
+type Source = {
   title: string;
-  content: string;
-  sections: string[];
-} | null;
+  url: string;
+};
+
+type GeneratedPolicy = {
+  policy_markdown: string;
+  compliance_notes: string[];
+  disclaimer: string;
+  sources: Source[];
+};
 
 export default function PoliciesDocsModule() {
-  const [result, setResult] = useState<GeneratedPolicy>(null);
+  const [result, setResult] = useState<GeneratedPolicy | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -60,37 +70,151 @@ export default function PoliciesDocsModule() {
     },
   });
 
-  function onSubmit(values: FormValues) {
+  async function onSubmit(values: FormValues) {
     setIsGenerating(true);
-    setTimeout(() => {
-      const generated = generatePolicy(values);
-      setResult(generated);
-      setIsGenerating(false);
+    setError(null);
+    
+    try {
+      const response = await fetch("/api/policies/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          company_name: values.companyName,
+          policy_type: values.policyType,
+          industry: values.industry,
+          team_size: values.teamSize,
+          additional_requirements: values.additionalNotes || "",
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to generate policy");
+      }
+
+      const data = await response.json();
+      setResult(data);
       toast({
         title: "Policy Generated",
         description: "Your HR policy document is ready.",
       });
-    }, 1000);
+    } catch (err: any) {
+      setError(err.message || "We couldn't generate this policy. Please try again or consult legal counsel.");
+      toast({
+        title: "Error",
+        description: err.message || "Failed to generate policy",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   }
 
   const copyToClipboard = () => {
     if (!result) return;
-    navigator.clipboard.writeText(result.content);
+    navigator.clipboard.writeText(result.policy_markdown);
     toast({
       title: "Copied to clipboard",
       description: "Policy content copied successfully.",
     });
   };
 
-  const downloadAsText = () => {
+  const downloadAsMarkdown = () => {
     if (!result) return;
-    const blob = new Blob([result.content], { type: "text/plain" });
+    const blob = new Blob([result.policy_markdown], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${result.title.replace(/\s+/g, "_")}.txt`;
+    a.download = `${form.getValues("companyName").replace(/\s+/g, "_")}_Policy.md`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const renderMarkdown = (markdown: string) => {
+    const lines = markdown.split('\n');
+    const elements: React.ReactElement[] = [];
+    let listItems: string[] = [];
+    let inList = false;
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        elements.push(
+          <ul key={`list-${elements.length}`} className="list-disc pl-6 space-y-1 mb-4">
+            {listItems.map((item, i) => (
+              <li key={i} className="text-sm">{item}</li>
+            ))}
+          </ul>
+        );
+        listItems = [];
+      }
+      inList = false;
+    };
+
+    lines.forEach((line, index) => {
+      const trimmed = line.trim();
+      
+      if (trimmed.startsWith('## ')) {
+        flushList();
+        elements.push(
+          <h2 key={index} className="text-xl font-bold mt-6 mb-3 text-primary">
+            {trimmed.replace('## ', '')}
+          </h2>
+        );
+      } else if (trimmed.startsWith('### ')) {
+        flushList();
+        elements.push(
+          <h3 key={index} className="text-lg font-semibold mt-4 mb-2">
+            {trimmed.replace('### ', '')}
+          </h3>
+        );
+      } else if (trimmed.startsWith('#### ')) {
+        flushList();
+        elements.push(
+          <h4 key={index} className="text-base font-medium mt-3 mb-2">
+            {trimmed.replace('#### ', '')}
+          </h4>
+        );
+      } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        inList = true;
+        listItems.push(trimmed.replace(/^[-*]\s/, ''));
+      } else if (trimmed.match(/^\d+\.\s/)) {
+        inList = true;
+        listItems.push(trimmed.replace(/^\d+\.\s/, ''));
+      } else if (trimmed === '') {
+        flushList();
+      } else if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+        flushList();
+        elements.push(
+          <p key={index} className="font-semibold mt-3 mb-1">
+            {trimmed.replace(/\*\*/g, '')}
+          </p>
+        );
+      } else {
+        flushList();
+        if (trimmed) {
+          elements.push(
+            <p key={index} className="text-sm mb-2 leading-relaxed">
+              {trimmed}
+            </p>
+          );
+        }
+      }
+    });
+
+    flushList();
+    return elements;
+  };
+
+  const policyNames: Record<string, string> = {
+    "remote-work": "Remote Work Policy",
+    "pto": "Paid Time Off & Leave Policy",
+    "code-of-conduct": "Code of Conduct",
+    "anti-harassment": "Anti-Harassment Policy",
+    "expense": "Expense Reimbursement Policy",
+    "social-media": "Social Media Policy",
+    "dress-code": "Dress Code Policy",
+    "confidentiality": "Confidentiality Agreement",
   };
 
   const module = getModuleByPath("/policies");
@@ -103,6 +227,12 @@ export default function PoliciesDocsModule() {
         icon={module.icon}
         gradient={module.color}
       />
+
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+        <p className="text-sm text-amber-900 dark:text-amber-100">
+          <span className="font-semibold">⚖️ Legal Notice</span> — Policies generated here are based on general best practices and should be reviewed by qualified legal counsel before implementation.
+        </p>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -217,7 +347,7 @@ export default function PoliciesDocsModule() {
                       <FormLabel>Additional Requirements (Optional)</FormLabel>
                       <FormControl>
                         <Textarea 
-                          placeholder="Any specific requirements or clauses to include..."
+                          placeholder="Any specific requirements, state regulations, or clauses to include..."
                           className="min-h-[80px]"
                           {...field} 
                           data-testid="input-additional-notes"
@@ -232,7 +362,7 @@ export default function PoliciesDocsModule() {
                   {isGenerating ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
+                      Generating Policy...
                     </>
                   ) : (
                     <>
@@ -241,6 +371,13 @@ export default function PoliciesDocsModule() {
                     </>
                   )}
                 </Button>
+
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
               </form>
             </Form>
           </CardContent>
@@ -248,38 +385,92 @@ export default function PoliciesDocsModule() {
 
         <div className="space-y-4">
           {result ? (
-            <Card className="border-primary/20">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{result.title}</CardTitle>
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      {result.sections.map((section, i) => (
-                        <Badge key={i} variant="secondary">
-                          <FileText className="h-3 w-3 mr-1" />
-                          {section}
-                        </Badge>
-                      ))}
+            <>
+              <Card className="border-primary/20">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">
+                        {policyNames[form.getValues("policyType")] || "Policy Draft"}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        Generated for {form.getValues("companyName")}
+                      </CardDescription>
                     </div>
                   </div>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <Button variant="outline" size="sm" onClick={copyToClipboard} data-testid="button-copy">
-                    <Copy className="h-4 w-4 mr-2" />
-                    Copy
-                  </Button>
-                  <Button size="sm" onClick={downloadAsText} data-testid="button-download">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="whitespace-pre-wrap text-sm bg-muted/30 p-4 rounded border max-h-[500px] overflow-y-auto font-mono" data-testid="text-policy-content">
-                  {result.content}
-                </div>
-              </CardContent>
-            </Card>
+                  <div className="flex gap-2 mt-3">
+                    <Button variant="outline" size="sm" onClick={copyToClipboard} data-testid="button-copy">
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copy Policy
+                    </Button>
+                    <Button size="sm" onClick={downloadAsMarkdown} data-testid="button-download">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-[350px] pr-4">
+                    <div className="prose prose-sm dark:prose-invert max-w-none" data-testid="text-policy-content">
+                      {renderMarkdown(result.policy_markdown)}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                    Compliance Notes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {result.compliance_notes.map((note, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm">
+                        <Badge variant="outline" className="shrink-0 mt-0.5">{i + 1}</Badge>
+                        <span>{note}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-green-500" />
+                    Reference Sources
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {result.sources.map((source, i) => (
+                      <li key={i}>
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm text-primary hover:underline"
+                          data-testid={`source-link-${i}`}
+                        >
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                          {source.title}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              <div className="p-3 bg-muted/50 rounded-lg border">
+                <p className="text-xs text-muted-foreground flex items-start gap-2">
+                  <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                  {result.disclaimer}
+                </p>
+              </div>
+            </>
           ) : (
             <Card className="bg-muted/10 border-dashed h-96 flex items-center justify-center">
               <CardContent className="text-center">
@@ -292,415 +483,4 @@ export default function PoliciesDocsModule() {
       </div>
     </div>
   );
-}
-
-function generatePolicy(values: FormValues): GeneratedPolicy {
-  const { companyName, policyType, industry, teamSize } = values;
-  
-  const policyNames: Record<string, string> = {
-    "remote-work": "Remote Work Policy",
-    "pto": "Paid Time Off & Leave Policy",
-    "code-of-conduct": "Code of Conduct",
-    "anti-harassment": "Anti-Harassment Policy",
-    "expense": "Expense Reimbursement Policy",
-    "social-media": "Social Media Policy",
-    "dress-code": "Dress Code Policy",
-    "confidentiality": "Confidentiality Agreement",
-  };
-
-  const title = `${companyName} - ${policyNames[policyType] || "HR Policy"}`;
-  
-  const policies: Record<string, { content: string; sections: string[] }> = {
-    "remote-work": {
-      sections: ["Eligibility", "Work Hours", "Equipment", "Communication"],
-      content: `${companyName.toUpperCase()}
-REMOTE WORK POLICY
-
-Effective Date: ${new Date().toLocaleDateString()}
-Industry: ${industry}
-Applicable to: All ${teamSize} employees
-
-1. PURPOSE
-This policy establishes guidelines for remote work arrangements at ${companyName}. We believe flexible work options enhance productivity and work-life balance.
-
-2. ELIGIBILITY
-- All employees who have completed their probationary period
-- Roles that can be performed effectively outside the office
-- Employees in good standing with satisfactory performance reviews
-
-3. WORK HOURS & AVAILABILITY
-- Core hours: 10:00 AM - 3:00 PM (local time zone)
-- Employees must be available during core hours for meetings
-- Flexible scheduling outside core hours with manager approval
-- Weekly working hours remain unchanged
-
-4. EQUIPMENT & WORKSPACE
-- ${companyName} will provide: laptop, monitor, keyboard, mouse
-- Employees must maintain a dedicated, secure workspace
-- High-speed internet (minimum 25 Mbps) required
-- Equipment stipend: $500 for home office setup
-
-5. COMMUNICATION EXPECTATIONS
-- Respond to messages within 2 business hours during work hours
-- Camera on during video meetings unless otherwise agreed
-- Daily check-in with team via designated channels
-- Weekly 1:1 meetings with direct manager
-
-6. SECURITY & CONFIDENTIALITY
-- Use company VPN when accessing sensitive systems
-- Lock computer when stepping away
-- No work in public spaces without privacy screen
-- Report any security incidents immediately
-
-7. PERFORMANCE MANAGEMENT
-- Regular performance reviews remain unchanged
-- Focus on output and deliverables, not hours logged
-- Clear goals and expectations set by managers
-
-This policy may be updated as ${companyName} evolves its remote work practices.
-
-Acknowledged by: ____________________
-Date: ____________________`
-    },
-    "pto": {
-      sections: ["Annual Leave", "Sick Leave", "Holidays", "Special Leave"],
-      content: `${companyName.toUpperCase()}
-PAID TIME OFF & LEAVE POLICY
-
-Effective Date: ${new Date().toLocaleDateString()}
-
-1. ANNUAL LEAVE ENTITLEMENT
-- 0-2 years: 15 days per year
-- 3-5 years: 20 days per year
-- 6+ years: 25 days per year
-
-2. SICK LEAVE
-- 10 paid sick days per year
-- Doctor's note required for absences over 3 consecutive days
-- Unused sick days do not carry over
-
-3. COMPANY HOLIDAYS
-${companyName} observes the following holidays:
-- New Year's Day
-- Memorial Day
-- Independence Day
-- Labor Day
-- Thanksgiving (2 days)
-- Christmas Eve & Day
-- Additional floating holiday
-
-4. SPECIAL LEAVE
-- Bereavement: 3-5 days depending on relationship
-- Jury Duty: Full pay for duration
-- Parental Leave: 12 weeks paid
-- Marriage: 5 days
-
-5. REQUEST PROCESS
-- Submit requests via HR system minimum 2 weeks in advance
-- Manager approval required for all leave
-- Emergency leave: Notify manager ASAP
-
-6. CARRYOVER
-- Maximum 5 days can be carried to next year
-- Must be used by March 31
-
-Contact HR with any questions about this policy.`
-    },
-    "code-of-conduct": {
-      sections: ["Ethics", "Workplace Behavior", "Conflicts of Interest", "Reporting"],
-      content: `${companyName.toUpperCase()}
-CODE OF CONDUCT
-
-1. OUR VALUES
-At ${companyName}, we are committed to:
-- Integrity in all our actions
-- Respect for every individual
-- Excellence in our work
-- Accountability for our decisions
-
-2. PROFESSIONAL BEHAVIOR
-All employees are expected to:
-- Treat colleagues, clients, and partners with respect
-- Communicate professionally and constructively
-- Maintain a positive and collaborative work environment
-- Arrive on time and meet deadlines
-
-3. ETHICS & INTEGRITY
-- Always act honestly and transparently
-- Never misrepresent information
-- Protect confidential information
-- Follow all applicable laws and regulations
-
-4. CONFLICTS OF INTEREST
-- Disclose any potential conflicts to your manager
-- Do not accept gifts over $50 from vendors
-- Outside employment requires HR approval
-- Do not use company resources for personal gain
-
-5. WORKPLACE SAFETY
-- Report unsafe conditions immediately
-- Follow all safety procedures
-- Keep workspaces clean and organized
-- Participate in safety training
-
-6. DIGITAL CONDUCT
-- Use company technology responsibly
-- Protect passwords and access credentials
-- Do not access inappropriate content
-- Follow data privacy guidelines
-
-7. REPORTING VIOLATIONS
-- Report concerns to your manager or HR
-- Anonymous reporting available through ethics hotline
-- No retaliation for good-faith reports
-- Investigations conducted confidentially
-
-Violations may result in disciplinary action up to termination.`
-    },
-    "anti-harassment": {
-      sections: ["Definitions", "Prohibited Conduct", "Reporting", "Investigation"],
-      content: `${companyName.toUpperCase()}
-ANTI-HARASSMENT POLICY
-
-1. COMMITMENT
-${companyName} is committed to providing a work environment free from harassment, discrimination, and retaliation. This policy applies to all employees, contractors, vendors, and visitors.
-
-2. DEFINITIONS
-Harassment includes unwelcome conduct based on:
-- Race, color, or national origin
-- Religion or creed
-- Sex, gender, or sexual orientation
-- Age or disability
-- Any other protected characteristic
-
-3. PROHIBITED CONDUCT
-The following behaviors are strictly prohibited:
-- Verbal: Slurs, jokes, comments, epithets
-- Physical: Assault, unwanted touching, blocking movement
-- Visual: Offensive posters, drawings, emails, gestures
-- Sexual: Unwanted advances, requests for favors, inappropriate comments
-
-4. REPORTING PROCEDURES
-If you experience or witness harassment:
-- Report to your manager, HR, or any member of leadership
-- Email: hr@${companyName.toLowerCase().replace(/\s+/g, "")}.com
-- Anonymous hotline available 24/7
-
-5. INVESTIGATION PROCESS
-- All complaints investigated promptly and thoroughly
-- Confidentiality maintained to extent possible
-- Both parties interviewed separately
-- Findings documented and appropriate action taken
-
-6. NO RETALIATION
-Retaliation against anyone who reports harassment or participates in an investigation is strictly prohibited and will result in disciplinary action.
-
-7. CONSEQUENCES
-Violations will result in appropriate disciplinary action, which may include termination of employment.
-
-${companyName} takes all complaints seriously. Thank you for helping maintain a respectful workplace.`
-    },
-    "expense": {
-      sections: ["Eligible Expenses", "Limits", "Submission", "Approval"],
-      content: `${companyName.toUpperCase()}
-EXPENSE REIMBURSEMENT POLICY
-
-1. PURPOSE
-This policy outlines procedures for business expense reimbursement at ${companyName}.
-
-2. ELIGIBLE EXPENSES
-- Travel: Airfare, hotels, rental cars, rideshare
-- Meals: Business meals with clients or during travel
-- Office Supplies: Pre-approved items only
-- Professional Development: Conferences, training, courses
-- Client Entertainment: With prior approval
-
-3. EXPENSE LIMITS
-- Meals (per day): $75
-- Hotel (per night): $200 (higher in major cities with approval)
-- Mileage: IRS standard rate
-- Client entertainment: $100 per person (requires approval)
-
-4. NON-REIMBURSABLE EXPENSES
-- Personal items
-- Alcohol (except approved client entertainment)
-- Traffic violations or parking tickets
-- Personal travel extensions
-- Upgrades without approval
-
-5. SUBMISSION REQUIREMENTS
-- Submit within 30 days of expense
-- Original itemized receipts required for all expenses over $25
-- Use company expense management system
-- Include business purpose for each expense
-
-6. APPROVAL PROCESS
-- Expenses under $100: Manager approval
-- Expenses $100-$500: Director approval
-- Expenses over $500: VP approval required
-
-7. REIMBURSEMENT TIMELINE
-- Approved expenses reimbursed within 2 pay periods
-- Direct deposit to employee bank account
-
-Questions? Contact accounts payable or HR.`
-    },
-    "social-media": {
-      sections: ["Personal Use", "Company Accounts", "Guidelines", "Confidentiality"],
-      content: `${companyName.toUpperCase()}
-SOCIAL MEDIA POLICY
-
-1. PURPOSE
-This policy provides guidelines for social media use to protect both ${companyName} and our employees.
-
-2. PERSONAL SOCIAL MEDIA
-When posting about work-related topics:
-- Make clear views are your own, not ${companyName}'s
-- Do not share confidential or proprietary information
-- Be respectful of colleagues, clients, and competitors
-- Do not use company logos without approval
-
-3. COMPANY SOCIAL MEDIA ACCOUNTS
-- Only authorized personnel may post on behalf of ${companyName}
-- All content must be approved before posting
-- Respond to inquiries professionally and promptly
-- Escalate complaints or issues to appropriate teams
-
-4. GENERAL GUIDELINES
-DO:
-- Use good judgment
-- Protect confidential information
-- Be authentic and transparent
-- Add value to conversations
-
-DON'T:
-- Share trade secrets or financial information
-- Make disparaging comments
-- Engage in arguments or flame wars
-- Post during work hours without approval
-
-5. MONITORING
-${companyName} may monitor public social media for brand mentions and compliance. This is not intended to restrict lawful employee discussions.
-
-6. CONSEQUENCES
-Violations may result in:
-- Required removal of content
-- Disciplinary action
-- Termination for serious violations
-
-When in doubt, don't post. Consult with HR or Communications if unsure.`
-    },
-    "dress-code": {
-      sections: ["Daily Attire", "Client Meetings", "Casual Days", "Exceptions"],
-      content: `${companyName.toUpperCase()}
-DRESS CODE POLICY
-
-1. PURPOSE
-${companyName} maintains a professional environment while allowing comfort. This policy outlines appropriate workplace attire.
-
-2. BUSINESS CASUAL (DAILY)
-Acceptable:
-- Collared shirts, blouses, sweaters
-- Slacks, khakis, professional skirts/dresses
-- Closed-toe shoes, clean sneakers
-- Modest patterns and colors
-
-Not Acceptable:
-- Ripped or torn clothing
-- Graphic t-shirts with offensive content
-- Flip-flops or beach sandals
-- Athletic wear (unless approved for specific events)
-
-3. BUSINESS PROFESSIONAL (CLIENT MEETINGS)
-- Suits or blazers
-- Dress shirts and ties (optional)
-- Professional dresses or pantsuits
-- Polished dress shoes
-
-4. CASUAL FRIDAYS
-- Jeans allowed (no rips or tears)
-- Casual tops (no offensive graphics)
-- Clean sneakers acceptable
-- Still maintain professionalism
-
-5. INDUSTRY CONSIDERATIONS
-As a ${industry} company, additional considerations:
-- Safety gear required in applicable areas
-- Closed-toe shoes in production areas
-- ID badges visible at all times
-
-6. EXCEPTIONS
-- Religious or cultural accommodations available
-- Medical accommodations with HR approval
-- Special events may have different requirements
-
-7. ENFORCEMENT
-Managers are responsible for addressing dress code issues privately and professionally.
-
-Present yourself as a representative of ${companyName}.`
-    },
-    "confidentiality": {
-      sections: ["Scope", "Obligations", "Exceptions", "Duration"],
-      content: `${companyName.toUpperCase()}
-CONFIDENTIALITY AGREEMENT
-
-This Confidentiality Agreement is entered into by the undersigned employee of ${companyName}.
-
-1. DEFINITION OF CONFIDENTIAL INFORMATION
-"Confidential Information" includes but is not limited to:
-- Trade secrets and proprietary processes
-- Business strategies and plans
-- Financial information and projections
-- Customer and vendor lists
-- Employee information
-- Technical data and software
-- Marketing plans and research
-- Any information marked "Confidential"
-
-2. OBLIGATIONS
-The employee agrees to:
-- Keep all Confidential Information strictly confidential
-- Use Confidential Information only for company purposes
-- Not disclose to any third party without written consent
-- Take reasonable measures to protect confidentiality
-- Return all materials upon termination
-
-3. EXCEPTIONS
-This agreement does not apply to information that:
-- Is publicly available through no fault of employee
-- Was known to employee prior to employment
-- Is disclosed pursuant to legal requirement
-- Is independently developed by employee
-
-4. DURATION
-These obligations:
-- Begin on date of employment
-- Continue for 2 years following termination
-- Trade secrets protected indefinitely
-
-5. REMEDIES
-Breach may result in:
-- Immediate termination
-- Legal action for damages
-- Injunctive relief
-
-6. ACKNOWLEDGMENT
-I have read and understand this Agreement.
-
-Employee Signature: ____________________
-Printed Name: ____________________
-Date: ____________________
-
-Witness: ____________________
-Date: ____________________`
-    }
-  };
-
-  const policyData = policies[policyType] || policies["code-of-conduct"];
-  
-  return {
-    title,
-    content: policyData.content,
-    sections: policyData.sections,
-  };
 }
