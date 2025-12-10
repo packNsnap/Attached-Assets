@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, User, Sparkles, ExternalLink, GripVertical, RotateCcw, X } from "lucide-react";
+import { LogOut, User, ExternalLink, GripVertical, RotateCcw, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import logoImage from "@/assets/logo.png";
 
 interface SidebarProps {
   onClose?: () => void;
@@ -96,11 +97,13 @@ export function Sidebar({ onClose }: SidebarProps) {
     <div className="flex h-screen w-72 flex-col border-r bg-gradient-to-b from-background to-muted/30">
       {/* Header with gradient branding */}
       <div className="flex h-16 items-center justify-between border-b px-4">
-        <Link href="/dashboard" className="flex items-center gap-2.5 group" onClick={handleLinkClick}>
-          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover:shadow-purple-500/40 transition-shadow">
-            <Sparkles className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-bold text-xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        <Link href="/dashboard" className="flex items-center gap-2 group" onClick={handleLinkClick}>
+          <img 
+            src={logoImage} 
+            alt="Resume Logik" 
+            className="h-9 w-9 object-contain"
+          />
+          <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             {APP_NAME}
           </span>
         </Link>

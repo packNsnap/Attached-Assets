@@ -3,6 +3,7 @@ import { Sidebar } from "./Sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import logoImage from "@/assets/logo.png";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -62,9 +63,12 @@ export function Layout({ children }: LayoutProps) {
           >
             <Menu className="h-6 w-6" />
           </Button>
-          <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Resume Logik
-          </span>
+          <div className="flex items-center gap-2">
+            <img src={logoImage} alt="Resume Logik" className="h-8 w-8 object-contain" />
+            <span className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Resume Logik
+            </span>
+          </div>
           <div className="w-10" />
         </div>
 

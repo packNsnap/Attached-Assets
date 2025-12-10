@@ -35,6 +35,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import logoImage from "@/assets/logo.png";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -181,9 +182,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
+              <img src={logoImage} alt="Resume Logik" className="h-9 w-9 object-contain" />
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Resume Logik
               </span>
@@ -386,9 +385,7 @@ export default function LandingPage() {
               {/* Mock Header */}
               <div className="border-b px-4 sm:px-6 py-4 flex items-center justify-between bg-muted/30">
                 <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                    <Sparkles className="h-4 w-4 text-white" />
-                  </div>
+                  <img src={logoImage} alt="Resume Logik" className="h-8 w-8 object-contain" />
                   <span className="font-semibold hidden sm:inline">Resume Logik</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -694,9 +691,7 @@ export default function LandingPage() {
               {/* Mock Sidebar */}
               <div className="p-4 rounded-2xl bg-background border shadow-xl max-w-xs mx-auto">
                 <div className="flex items-center gap-2 mb-4 pb-4 border-b">
-                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                    <Sparkles className="h-4 w-4 text-white" />
-                  </div>
+                  <img src={logoImage} alt="Resume Logik" className="h-8 w-8 object-contain" />
                   <span className="font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Resume Logik</span>
                 </div>
                 <div className="space-y-2">
@@ -906,9 +901,7 @@ export default function LandingPage() {
                   <th className="px-4 sm:px-6 py-4 text-left font-semibold text-sm">Feature</th>
                   <th className="px-4 sm:px-6 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <div className="h-5 w-5 sm:h-6 sm:w-6 rounded bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                        <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-white" />
-                      </div>
+                      <img src={logoImage} alt="Resume Logik" className="h-5 w-5 sm:h-6 sm:w-6 object-contain" />
                       <span className="text-sm">Resume Logik</span>
                     </div>
                   </th>
@@ -1009,9 +1002,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-white" />
-              </div>
+              <img src={logoImage} alt="Resume Logik" className="h-8 w-8 object-contain" />
               <span className="font-bold">Resume Logik</span>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground text-center">
