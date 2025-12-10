@@ -67,9 +67,37 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
+// Strict regex for safe IDs (UUID format or alphanumeric with hyphens/underscores)
+const SAFE_ID_REGEX = /^[a-zA-Z0-9_-]+$/;
+
+// Security helper: validate ID is safe (no path traversal characters)
+function isSafeId(id: string): boolean {
+  return SAFE_ID_REGEX.test(id) && !id.includes("..") && id.length <= 100;
+}
+
+// Security helper: ensure path is within uploads directory
+function isWithinUploadsDir(filePath: string): boolean {
+  const normalizedPath = path.normalize(path.resolve(filePath));
+  const normalizedUploads = path.normalize(path.resolve(UPLOADS_DIR));
+  return normalizedPath.startsWith(normalizedUploads + path.sep) || normalizedPath === normalizedUploads;
+}
+
 // Helper to get user-specific upload directory: uploads/account_<userId>/candidate_<candidateId>/
-function getUserCandidateDir(userId: string, candidateId: string): string {
+function getUserCandidateDir(userId: string, candidateId: string): string | null {
+  // Validate IDs to prevent path traversal
+  if (!isSafeId(userId) || !isSafeId(candidateId)) {
+    console.error(`Invalid ID format: userId=${userId}, candidateId=${candidateId}`);
+    return null;
+  }
+  
   const dir = path.join(UPLOADS_DIR, `account_${userId}`, `candidate_${candidateId}`);
+  
+  // Double-check the resulting path is within uploads dir
+  if (!isWithinUploadsDir(dir)) {
+    console.error(`Path traversal attempt detected: ${dir}`);
+    return null;
+  }
+  
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
@@ -78,35 +106,45 @@ function getUserCandidateDir(userId: string, candidateId: string): string {
 
 // Helper to resolve a stored file path (handles both new per-account paths and legacy flat paths)
 function resolveFilePath(storedPath: string, userId?: string, candidateId?: string): string | null {
+  // Normalize and validate the stored path
+  const cleanStoredPath = path.normalize(storedPath);
+  
+  // Reject any path with directory traversal attempts
+  if (cleanStoredPath.includes("..")) {
+    console.error(`Path traversal attempt in storedPath: ${storedPath}`);
+    return null;
+  }
+  
+  let resolved: string | null = null;
+  
   // If it's an absolute path, just normalize and use it
-  if (path.isAbsolute(storedPath)) {
-    const resolved = path.normalize(storedPath);
-    // Security: must be within uploads dir
-    if (!resolved.startsWith(path.normalize(UPLOADS_DIR))) {
-      return null;
-    }
-    return fs.existsSync(resolved) ? resolved : null;
+  if (path.isAbsolute(cleanStoredPath)) {
+    resolved = path.normalize(cleanStoredPath);
   }
-  
   // Check if it contains account_ folder structure (new format)
-  if (storedPath.includes("account_")) {
-    const resolved = path.join(UPLOADS_DIR, storedPath);
-    if (fs.existsSync(resolved)) {
-      return resolved;
-    }
+  else if (cleanStoredPath.includes("account_")) {
+    resolved = path.join(UPLOADS_DIR, cleanStoredPath);
   }
-  
   // Try the new per-account structure if userId and candidateId provided
-  if (userId && candidateId) {
-    const newPath = path.join(getUserCandidateDir(userId, candidateId), path.basename(storedPath));
-    if (fs.existsSync(newPath)) {
-      return newPath;
+  else if (userId && candidateId) {
+    const userDir = getUserCandidateDir(userId, candidateId);
+    if (userDir) {
+      resolved = path.join(userDir, path.basename(cleanStoredPath));
     }
   }
   
-  // Fall back to legacy flat structure
-  const legacyPath = path.join(UPLOADS_DIR, path.basename(storedPath));
-  return fs.existsSync(legacyPath) ? legacyPath : null;
+  // Fall back to legacy flat structure (use only basename to prevent traversal)
+  if (!resolved) {
+    resolved = path.join(UPLOADS_DIR, path.basename(cleanStoredPath));
+  }
+  
+  // Final security check: ensure resolved path is within UPLOADS_DIR
+  if (!isWithinUploadsDir(resolved)) {
+    console.error(`Security: resolved path outside uploads: ${resolved}`);
+    return null;
+  }
+  
+  return fs.existsSync(resolved) ? resolved : null;
 }
 
 // In-memory resume storage (for text only - files are persisted to disk)
@@ -1173,6 +1211,12 @@ export async function registerRoutes(
       const uniqueId = randomBytes(8).toString("hex");
       const safeFileName = `${uniqueId}.${fileExt}`;
       const userCandidateDir = getUserCandidateDir(userId, candidateId);
+      
+      if (!userCandidateDir) {
+        res.status(400).json({ error: "Invalid user or candidate ID format" });
+        return;
+      }
+      
       const filePath = path.join(userCandidateDir, safeFileName);
       
       // Relative path to store in DB (relative to UPLOADS_DIR)
