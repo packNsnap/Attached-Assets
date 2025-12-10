@@ -169,6 +169,28 @@ Preferred communication style: Simple, everyday language.
 - **express-session** - Session middleware
 - **connect-pg-simple** - PostgreSQL session store
 
+## Policies & Documents Module
+
+The policies module provides AI-powered HR policy generation:
+
+**API Endpoint:** POST /api/policies/generate
+- Takes: company_name, policy_type, industry, team_size, additional_requirements
+- Uses curated authoritative references (SHRM, DOL, EEOC, IRS, OSHA, NLRB)
+- Returns: policy_markdown, compliance_notes, disclaimer, sources
+
+**Key Features:**
+- 8 policy types: Remote Work, PTO, Code of Conduct, Anti-Harassment, Expense, Social Media, Dress Code, Confidentiality
+- Markdown rendering with proper heading structure
+- Compliance notes highlighting legal/regulatory considerations
+- Clickable source links to authoritative references
+- Mandatory legal disclaimer displayed at bottom
+- Copy and download functionality
+
+**Guardrails:**
+- AI never claims legal compliance or sufficiency
+- Uses "recommended clauses" and "typical elements" language
+- Always includes disclaimer that this is not legal advice
+
 ## Onboarding Module Features
 
 The onboarding module provides AI-powered onboarding plan generation with persistent tracking:
