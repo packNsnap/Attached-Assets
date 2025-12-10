@@ -14,8 +14,12 @@ import {
   insertSkillsTestSchema,
   insertSkillsTestInvitationSchema,
   insertSkillsTestResponseSchema,
-  insertScheduledInterviewSchema
+  insertScheduledInterviewSchema,
+  references
 } from "@shared/schema";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { eq } from "drizzle-orm";
+import pg from "pg";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import OpenAI from "openai";
@@ -28,6 +32,10 @@ import * as path from "path";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const upload = multer({ storage: multer.memoryStorage() });
+
+const { Pool } = pg;
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = drizzle(pool);
 
 // Persistent file storage directory
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
@@ -2829,6 +2837,46 @@ Respond in this exact JSON format:
     } catch (error) {
       console.error("Error marking email sent:", error);
       res.status(500).json({ error: "Failed to mark email sent" });
+    }
+  });
+
+  // Generate email for a reference (returns mailto link)
+  app.post("/api/references/:id/generate-email", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { candidateName, candidateRole } = req.body;
+
+      const refs = await db.select().from(references).where(eq(references.id, id)).limit(1);
+      const ref = refs[0];
+      
+      if (!ref) {
+        res.status(404).json({ error: "Reference not found" });
+        return;
+      }
+
+      const subject = encodeURIComponent(`Reference Request for ${candidateName || "Candidate"}`);
+      const body = encodeURIComponent(`Dear ${ref.name},
+
+We are considering ${candidateName || "a candidate"} for the ${candidateRole || "open"} position at our company. They provided your contact information as a professional reference.
+
+Would you be willing to provide a brief reference? I would appreciate any insights you can share about:
+- Their work performance and reliability
+- Their strengths and areas of growth
+- Their interpersonal skills and teamwork
+- Whether you would recommend them for this role
+
+Please feel free to reply to this email or let me know if you prefer a phone call instead.
+
+Thank you for your time.
+
+Best regards`);
+
+      const mailto = `mailto:${ref.email}?subject=${subject}&body=${body}`;
+      
+      res.json({ mailto });
+    } catch (error) {
+      console.error("Error generating reference email:", error);
+      res.status(500).json({ error: "SERVER_ERROR" });
     }
   });
 

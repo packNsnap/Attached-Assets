@@ -112,27 +112,37 @@ export default function ReferenceCheckModule() {
     },
   });
 
+  const generateEmailMutation = useMutation({
+    mutationFn: async (refId: string) => {
+      const response = await fetch(`/api/references/${refId}/generate-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          candidateName: selectedCandidate?.name,
+          candidateRole: selectedCandidate?.role,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to generate reference email");
+      }
+      return response.json();
+    },
+    onSuccess: (data, refId) => {
+      if (data.mailto) {
+        window.open(data.mailto, "_blank");
+        markEmailSentMutation.mutate(refId);
+      } else {
+        toast({ title: "Error", description: "Failed to generate email link.", variant: "destructive" });
+      }
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message || "Failed to generate reference email.", variant: "destructive" });
+    },
+  });
+
   const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
-
-  const generateMailtoLink = (ref: Reference) => {
-    const subject = encodeURIComponent(`Reference Request for ${selectedCandidate?.name || "Candidate"}`);
-    const body = encodeURIComponent(`Dear ${ref.name},
-
-We are considering ${selectedCandidate?.name || "a candidate"} for the ${selectedCandidate?.role || "open"} position at our company. They provided your contact information as a professional reference.
-
-Would you be willing to provide a brief reference? I would appreciate any insights you can share about:
-- Their work performance and reliability
-- Their strengths and areas of growth
-- Their interpersonal skills and teamwork
-- Whether you would recommend them for this role
-
-Please feel free to reply to this email or let me know if you prefer a phone call instead.
-
-Thank you for your time.
-
-Best regards`);
-    return `mailto:${ref.email}?subject=${subject}&body=${body}`;
-  };
 
   return (
     <div className="space-y-6">
@@ -295,12 +305,14 @@ Best regards`);
                                 size="sm"
                                 variant="outline"
                                 data-testid={`button-email-${ref.id}`}
-                                onClick={() => {
-                                  window.open(generateMailtoLink(ref), "_blank");
-                                  markEmailSentMutation.mutate(ref.id);
-                                }}
+                                disabled={generateEmailMutation.isPending}
+                                onClick={() => generateEmailMutation.mutate(ref.id)}
                               >
-                                <Mail className="h-4 w-4 mr-1" />
+                                {generateEmailMutation.isPending ? (
+                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Mail className="h-4 w-4 mr-1" />
+                                )}
                                 Email
                               </Button>
                             </>
@@ -426,12 +438,14 @@ Best regards`);
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                window.open(generateMailtoLink(ref), "_blank");
-                                markEmailSentMutation.mutate(ref.id);
-                              }}
+                              disabled={generateEmailMutation.isPending}
+                              onClick={() => generateEmailMutation.mutate(ref.id)}
                             >
-                              <Mail className="h-4 w-4 mr-1" />
+                              {generateEmailMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              ) : (
+                                <Mail className="h-4 w-4 mr-1" />
+                              )}
                               Email
                             </Button>
                           )}
