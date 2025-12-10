@@ -2982,9 +2982,9 @@ Return a JSON object with these exact fields:
   // Generate AI-powered onboarding plan
   app.post("/api/onboarding/generate", isAuthenticated, async (req: any, res) => {
     try {
-      const { employee_name, role, department, start_date, onboarding_type } = req.body;
+      const { employee_name, role, start_date, onboarding_type } = req.body;
 
-      if (!employee_name || !role || !department || !start_date || !onboarding_type) {
+      if (!employee_name || !role || !start_date || !onboarding_type) {
         res.status(400).json({ error: "All fields are required" });
         return;
       }
@@ -3039,7 +3039,6 @@ Generate realistic, role-appropriate tasks. Include 2-4 weeks of tasks depending
       const userPrompt = `Generate an onboarding plan for:
 - Employee Name: ${employee_name}
 - Role: ${role}
-- Department: ${department}
 - Start Date: ${start_date}
 - Onboarding Type: ${onboarding_type}
 

@@ -36,7 +36,6 @@ const formSchema = z.object({
   candidateId: z.string().optional(),
   employeeName: z.string().min(2, "Employee name is required"),
   role: z.string().min(2, "Role is required"),
-  department: z.string().min(1, "Department is required"),
   startDate: z.string().min(1, "Start date is required"),
   onboardingType: z.string().min(1, "Onboarding type is required"),
 });
@@ -116,7 +115,6 @@ export default function OnboardingModule() {
       candidateId: "",
       employeeName: "",
       role: "",
-      department: "",
       startDate: "",
       onboardingType: "",
     },
@@ -143,7 +141,6 @@ export default function OnboardingModule() {
         body: JSON.stringify({
           employee_name: values.employeeName,
           role: values.role,
-          department: values.department,
           start_date: values.startDate,
           onboarding_type: values.onboardingType,
         }),
@@ -273,49 +270,19 @@ export default function OnboardingModule() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="department"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Department</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-department">
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="engineering">Engineering</SelectItem>
-                            <SelectItem value="design">Design</SelectItem>
-                            <SelectItem value="product">Product</SelectItem>
-                            <SelectItem value="marketing">Marketing</SelectItem>
-                            <SelectItem value="sales">Sales</SelectItem>
-                            <SelectItem value="hr">Human Resources</SelectItem>
-                            <SelectItem value="finance">Finance</SelectItem>
-                            <SelectItem value="operations">Operations</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Start Date</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} data-testid="input-start-date" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="startDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Start Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} data-testid="input-start-date" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
