@@ -2982,7 +2982,7 @@ Return a JSON object with these exact fields:
   // Generate AI-powered onboarding plan and save to database
   app.post("/api/onboarding/generate", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -3109,7 +3109,7 @@ Make sure all emails reference the employee by name (${employee_name}) and their
   // Get onboarding plans
   app.get("/api/onboarding/plans", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -3126,7 +3126,7 @@ Make sure all emails reference the employee by name (${employee_name}) and their
   // Get single onboarding plan
   app.get("/api/onboarding/plans/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -3146,7 +3146,7 @@ Make sure all emails reference the employee by name (${employee_name}) and their
   // Toggle task completion
   app.post("/api/onboarding/plans/:id/tasks", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -3183,7 +3183,7 @@ Make sure all emails reference the employee by name (${employee_name}) and their
   // Mark plan as completed
   app.post("/api/onboarding/plans/:id/complete", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub;
       if (!userId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
