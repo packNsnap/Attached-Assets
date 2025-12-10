@@ -499,9 +499,9 @@ export default function LandingPage() {
                 icon: "🤖"
               },
               {
-                title: "Complex & Overwhelming",
-                description: "Features designed for Fortune 500 companies, not growing teams that need simplicity.",
-                icon: "😵"
+                title: "Built for Small Businesses or Large",
+                description: "Designed for teams of any size that need simplicity without sacrificing power.",
+                icon: "✨"
               }
             ].map((problem, index) => (
               <motion.div
