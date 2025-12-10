@@ -162,15 +162,125 @@ export default function PoliciesDocsModule() {
     });
   };
 
-  const downloadAsMarkdown = () => {
+  const downloadAsHTML = () => {
     if (!result) return;
-    const blob = new Blob([result.policy_markdown], { type: "text/markdown" });
+    const companyName = form.getValues("companyName");
+    const policyType = policyNames[form.getValues("policyType")] || "Policy";
+    
+    // Convert markdown to HTML
+    let htmlContent = result.policy_markdown
+      .replace(/## (.*?)(?=\n|$)/g, '<h2 style="font-size: 24px; font-weight: bold; margin-top: 24px; margin-bottom: 16px; color: #1f2937;">$1</h2>')
+      .replace(/### (.*?)(?=\n|$)/g, '<h3 style="font-size: 20px; font-weight: 600; margin-top: 16px; margin-bottom: 12px;">$1</h3>')
+      .replace(/#### (.*?)(?=\n|$)/g, '<h4 style="font-size: 16px; font-weight: 500; margin-top: 12px; margin-bottom: 8px;">$1</h4>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^(?!<[h|p])/gm, '<p>')
+      .replace(/\n/g, '<br>')
+      .replace(/- (.*?)(?=<br>|$)/g, '<li>$1</li>')
+      .replace(/(\d+)\. (.*?)(?=<br>|$)/g, '<li>$2</li>')
+      .replace(/^<li>/gm, '<li style="margin-left: 20px;">')
+      .replace(/(<li>.*?<\/li>)/s, '<ul style="margin-left: 20px; margin-bottom: 16px;">$1</ul>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/_(.*?)_/g, '<em>$1</em>');
+    
+    const htmlDocument = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${companyName} - ${policyType}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            line-height: 1.6;
+            color: #1f2937;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background-color: #ffffff;
+        }
+        h1 {
+            text-align: center;
+            font-size: 32px;
+            margin-bottom: 8px;
+            color: #000;
+        }
+        .header-info {
+            text-align: center;
+            color: #6b7280;
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+        h2 {
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 8px;
+            margin-top: 32px;
+            margin-bottom: 16px;
+        }
+        h3, h4 {
+            margin-top: 20px;
+            margin-bottom: 12px;
+        }
+        p {
+            margin: 0 0 16px 0;
+            text-align: justify;
+        }
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 16px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        strong {
+            font-weight: 600;
+        }
+        .page-break {
+            page-break-after: always;
+        }
+        @media print {
+            body {
+                padding: 20px;
+            }
+            h2 {
+                page-break-after: avoid;
+            }
+            h3, h4 {
+                page-break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>${companyName}</h1>
+    <div class="header-info">
+        <p>${policyType} | Generated on ${new Date().toLocaleDateString()}</p>
+    </div>
+    ${htmlContent}
+    <hr style="margin-top: 40px; border: none; border-top: 1px solid #e5e7eb;">
+    <div style="margin-top: 24px; padding: 16px; background-color: #fef3c7; border-left: 4px solid #f59e0b; font-size: 12px; color: #92400e;">
+        <strong>Legal Disclaimer:</strong> ${result.disclaimer}
+    </div>
+    <div style="margin-top: 24px; font-size: 12px; color: #6b7280;">
+        <strong>Sources:</strong>
+        <ul>
+            ${result.sources.map(source => `<li><a href="${source.url}" style="color: #0066cc; text-decoration: none;">${source.title}</a></li>`).join('')}
+        </ul>
+    </div>
+</body>
+</html>`;
+    
+    const blob = new Blob([htmlDocument], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${form.getValues("companyName").replace(/\s+/g, "_")}_Policy.md`;
+    a.download = `${companyName.replace(/\s+/g, "_")}_${policyType.replace(/\s+/g, "_")}.html`;
     a.click();
     URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Downloaded",
+      description: "You can open this file in your browser and print/save as PDF.",
+    });
   };
 
   const renderMarkdown = (markdown: string) => {
@@ -468,9 +578,9 @@ export default function PoliciesDocsModule() {
                       <Copy className="h-4 w-4 mr-2" />
                       Copy Policy
                     </Button>
-                    <Button size="sm" onClick={downloadAsMarkdown} data-testid="button-download">
+                    <Button size="sm" onClick={downloadAsHTML} data-testid="button-download">
                       <Download className="h-4 w-4 mr-2" />
-                      Download
+                      Download as HTML
                     </Button>
                   </div>
                 </CardHeader>
