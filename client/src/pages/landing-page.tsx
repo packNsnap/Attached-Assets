@@ -180,9 +180,12 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-28 sm:h-36">
-            <div className="flex items-center">
-              <img src={logoImage} alt="Resume Logik" className="h-24 sm:h-32 object-contain" />
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-2">
+              <img src={logoImage} alt="Resume Logik" className="h-9 w-9 object-contain" />
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Resume Logik
+              </span>
             </div>
             <div className="hidden sm:flex items-center gap-4">
               <Button variant="ghost" asChild data-testid="link-pricing">
@@ -208,7 +211,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 sm:pt-44 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 relative">
+      <section className="pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 relative">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl" />
