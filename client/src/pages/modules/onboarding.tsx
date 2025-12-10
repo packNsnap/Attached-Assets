@@ -208,6 +208,12 @@ export default function OnboardingModule() {
         gradient={module.color}
       />
 
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <p className="text-sm text-blue-900 dark:text-blue-100">
+          <span className="font-semibold">✨ AI-Generated</span> — Onboarding plans are personalized by AI based on the candidate's role and profile.
+        </p>
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
