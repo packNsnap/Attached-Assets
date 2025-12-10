@@ -3209,7 +3209,7 @@ Make sure all emails reference the employee by name (${employee_name}) and their
         return;
       }
 
-      const { company_name, policy_type, industry, team_size, additional_requirements } = req.body;
+      const { company_name, policy_type, industry, state, team_size, additional_requirements } = req.body;
 
       if (!company_name || !policy_type) {
         res.status(400).json({ error: "Company name and policy type are required" });
@@ -3309,6 +3309,7 @@ You must return ONLY valid JSON (no markdown code blocks) with this exact struct
 
 **Company Name:** ${company_name}
 **Industry:** ${industry || "General"}
+**State:** ${state || "Not specified"}
 **Team Size:** ${team_size || "Not specified"}
 **Additional Requirements:** ${additional_requirements || "None specified"}
 
@@ -3318,12 +3319,15 @@ ${referencesText}
 Please draft a comprehensive, professional ${policyName} that:
 1. Is tailored to the ${industry || "general"} industry
 2. Is appropriate for a company with ${team_size || "varying"} employees
-3. Incorporates best practices from the reference sources
-4. Addresses any additional requirements mentioned
-5. Uses clear, professional language
-6. Includes practical implementation guidance
+3. Complies with ${state || "federal"} state-specific employment laws and regulations where applicable
+4. Incorporates best practices from the reference sources
+5. Addresses any additional requirements mentioned
+6. Uses clear, professional language
+7. Includes practical implementation guidance
 
-Include 3-5 compliance notes highlighting key legal or regulatory considerations.
+IMPORTANT: Include state-specific considerations for ${state || "applicable states"} in the policy where relevant (e.g., leave laws, wage requirements, harassment training mandates, etc.).
+
+Include 3-5 compliance notes highlighting key legal or regulatory considerations, especially any ${state || "state"}-specific requirements.
 List the reference sources used in the sources array.`;
 
       const response = await openai.chat.completions.create({

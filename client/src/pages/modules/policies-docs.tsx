@@ -35,9 +35,49 @@ const formSchema = z.object({
   companyName: z.string().min(2, "Company name is required"),
   policyType: z.string().min(1, "Policy type is required"),
   industry: z.string().min(1, "Industry is required"),
+  state: z.string().min(1, "State is required"),
   teamSize: z.string().min(1, "Team size is required"),
   additionalNotes: z.string().optional(),
 });
+
+const US_STATES = [
+  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut",
+  "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa",
+  "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan",
+  "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
+  "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
+  "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
+  "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia",
+  "Wisconsin", "Wyoming", "District of Columbia"
+];
+
+const INDUSTRIES = [
+  { value: "technology", label: "Technology / Software" },
+  { value: "healthcare", label: "Healthcare / Medical" },
+  { value: "finance", label: "Finance / Banking" },
+  { value: "insurance", label: "Insurance" },
+  { value: "retail", label: "Retail / E-commerce" },
+  { value: "manufacturing", label: "Manufacturing" },
+  { value: "education", label: "Education" },
+  { value: "hospitality", label: "Hospitality / Tourism" },
+  { value: "real-estate", label: "Real Estate" },
+  { value: "construction", label: "Construction" },
+  { value: "transportation", label: "Transportation / Logistics" },
+  { value: "energy", label: "Energy / Utilities" },
+  { value: "telecommunications", label: "Telecommunications" },
+  { value: "media", label: "Media / Entertainment" },
+  { value: "legal", label: "Legal Services" },
+  { value: "consulting", label: "Consulting / Professional Services" },
+  { value: "nonprofit", label: "Non-Profit / NGO" },
+  { value: "government", label: "Government / Public Sector" },
+  { value: "agriculture", label: "Agriculture / Farming" },
+  { value: "pharmaceutical", label: "Pharmaceutical / Biotech" },
+  { value: "aerospace", label: "Aerospace / Defense" },
+  { value: "automotive", label: "Automotive" },
+  { value: "food-beverage", label: "Food & Beverage" },
+  { value: "staffing", label: "Staffing / Recruiting" },
+  { value: "other", label: "Other" },
+];
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -65,6 +105,7 @@ export default function PoliciesDocsModule() {
       companyName: "",
       policyType: "",
       industry: "",
+      state: "",
       teamSize: "",
       additionalNotes: "",
     },
@@ -83,6 +124,7 @@ export default function PoliciesDocsModule() {
           company_name: values.companyName,
           policy_type: values.policyType,
           industry: values.industry,
+          state: values.state,
           team_size: values.teamSize,
           additional_requirements: values.additionalNotes || "",
         }),
@@ -285,27 +327,50 @@ export default function PoliciesDocsModule() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="industry"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Industry</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-industry">
+                            <SelectValue placeholder="Select industry" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {INDUSTRIES.map((ind) => (
+                            <SelectItem key={ind.value} value={ind.value}>
+                              {ind.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="industry"
+                    name="state"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Industry</FormLabel>
+                        <FormLabel>State</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
-                            <SelectTrigger data-testid="select-industry">
-                              <SelectValue placeholder="Select" />
+                            <SelectTrigger data-testid="select-state">
+                              <SelectValue placeholder="Select state" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="technology">Technology</SelectItem>
-                            <SelectItem value="healthcare">Healthcare</SelectItem>
-                            <SelectItem value="finance">Finance</SelectItem>
-                            <SelectItem value="retail">Retail</SelectItem>
-                            <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                            <SelectItem value="education">Education</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
+                            {US_STATES.map((state) => (
+                              <SelectItem key={state} value={state}>
+                                {state}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
