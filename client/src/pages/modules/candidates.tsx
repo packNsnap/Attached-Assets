@@ -541,9 +541,19 @@ export default function CandidatesModule() {
       const data = await res.json();
       
       if (data.mailto) {
-        window.location.href = data.mailto;
-        updateReferenceStatusMutation.mutate({ id: reference.id, status: "emailed" });
-        toast({ title: "Email Opened", description: "Your email client has been opened with the reference request." });
+        const mailtoUrl = new URL(data.mailto);
+        const subject = mailtoUrl.searchParams.get("subject") || `Reference Request for ${selectedCandidate.name}`;
+        const body = mailtoUrl.searchParams.get("body") || "";
+        
+        setActiveReferenceEmail({
+          referenceId: reference.id,
+          subject: decodeURIComponent(subject),
+          body: decodeURIComponent(body),
+          mailto: data.mailto
+        });
+        
+        updateReferenceStatusMutation.mutate({ id: reference.id, status: "email_sent" });
+        toast({ title: "Email Generated", description: "Use the buttons below to open your email client or copy the content." });
       } else {
         throw new Error("No mailto link returned");
       }

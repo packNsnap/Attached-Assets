@@ -35,6 +35,13 @@ export default function ReferenceCheckModule() {
   const [newRefEmail, setNewRefEmail] = useState("");
   const [newRefRelationship, setNewRefRelationship] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [activeEmail, setActiveEmail] = useState<{
+    refId: string;
+    to: string;
+    subject: string;
+    body: string;
+    mailto: string;
+  } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const module = getModuleByPath("/modules/reference-check");
@@ -113,7 +120,7 @@ export default function ReferenceCheckModule() {
   });
 
   const generateEmailMutation = useMutation({
-    mutationFn: async (refId: string) => {
+    mutationFn: async ({ refId, refEmail }: { refId: string; refEmail: string }) => {
       const response = await fetch(`/api/references/${refId}/generate-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -127,12 +134,26 @@ export default function ReferenceCheckModule() {
         const data = await response.json();
         throw new Error(data.error || "Failed to generate reference email");
       }
-      return response.json();
+      return { ...(await response.json()), refId, refEmail };
     },
-    onSuccess: (data, refId) => {
+    onSuccess: (data) => {
       if (data.mailto) {
-        window.location.href = data.mailto;
-        markEmailSentMutation.mutate(refId);
+        try {
+          const mailtoUrl = new URL(data.mailto);
+          const subject = decodeURIComponent(mailtoUrl.searchParams.get("subject") || "");
+          const body = decodeURIComponent(mailtoUrl.searchParams.get("body") || "");
+          setActiveEmail({
+            refId: data.refId,
+            to: data.refEmail,
+            subject,
+            body,
+            mailto: data.mailto,
+          });
+          markEmailSentMutation.mutate(data.refId);
+          toast({ title: "Email Generated", description: "Use the buttons to open your email client or copy the content." });
+        } catch {
+          toast({ title: "Error", description: "Failed to parse email link.", variant: "destructive" });
+        }
       } else {
         toast({ title: "Error", description: "Failed to generate email link.", variant: "destructive" });
       }
@@ -141,6 +162,13 @@ export default function ReferenceCheckModule() {
       toast({ title: "Error", description: error.message || "Failed to generate reference email.", variant: "destructive" });
     },
   });
+
+  const handleCopyEmail = () => {
+    if (!activeEmail) return;
+    const fullEmail = `To: ${activeEmail.to}\nSubject: ${activeEmail.subject}\n\n${activeEmail.body}`;
+    navigator.clipboard.writeText(fullEmail);
+    toast({ title: "Copied!", description: "Email content copied to clipboard." });
+  };
 
   const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
 
@@ -299,24 +327,20 @@ export default function ReferenceCheckModule() {
                           >
                             {ref.status === "email_sent" ? "Contacted" : "Pending"}
                           </Badge>
-                          {ref.status === "pending_contact" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                data-testid={`button-email-${ref.id}`}
-                                disabled={generateEmailMutation.isPending}
-                                onClick={() => generateEmailMutation.mutate(ref.id)}
-                              >
-                                {generateEmailMutation.isPending ? (
-                                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                ) : (
-                                  <Mail className="h-4 w-4 mr-1" />
-                                )}
-                                Email
-                              </Button>
-                            </>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            data-testid={`button-email-${ref.id}`}
+                            disabled={generateEmailMutation.isPending}
+                            onClick={() => generateEmailMutation.mutate({ refId: ref.id, refEmail: ref.email })}
+                          >
+                            {generateEmailMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            ) : (
+                              <Mail className="h-4 w-4 mr-1" />
+                            )}
+                            Generate Email
+                          </Button>
                           {ref.emailSentAt && (
                             <span className="text-xs text-muted-foreground">
                               Sent {format(new Date(ref.emailSentAt), "MMM d")}
@@ -325,6 +349,55 @@ export default function ReferenceCheckModule() {
                         </div>
                       </div>
                     ))}
+                    
+                    {activeEmail && (
+                      <Card className="mt-4 border-primary/50">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            Generated Email
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                          <div className="text-sm">
+                            <span className="font-medium">To:</span> {activeEmail.to}
+                          </div>
+                          <div className="text-sm">
+                            <span className="font-medium">Subject:</span> {activeEmail.subject}
+                          </div>
+                          <div className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md max-h-40 overflow-y-auto">
+                            {activeEmail.body}
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={handleCopyEmail}
+                              data-testid="button-copy-email"
+                            >
+                              <Copy className="h-4 w-4 mr-1" />
+                              Copy Email
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              asChild
+                            >
+                              <a href={activeEmail.mailto} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                Open in Email Client
+                              </a>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setActiveEmail(null)}
+                            >
+                              Dismiss
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -434,21 +507,19 @@ export default function ReferenceCheckModule() {
                           >
                             {ref.status === "email_sent" ? "Contacted" : "Pending"}
                           </Badge>
-                          {ref.status === "pending_contact" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={generateEmailMutation.isPending}
-                              onClick={() => generateEmailMutation.mutate(ref.id)}
-                            >
-                              {generateEmailMutation.isPending ? (
-                                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                              ) : (
-                                <Mail className="h-4 w-4 mr-1" />
-                              )}
-                              Email
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={generateEmailMutation.isPending}
+                            onClick={() => generateEmailMutation.mutate({ refId: ref.id, refEmail: ref.email })}
+                          >
+                            {generateEmailMutation.isPending ? (
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            ) : (
+                              <Mail className="h-4 w-4 mr-1" />
+                            )}
+                            Generate Email
+                          </Button>
                         </div>
                       </div>
                     ))}
