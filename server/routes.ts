@@ -3666,5 +3666,175 @@ Generate 3-5 diverse goals covering different aspects of the role.`;
     }
   });
 
+  // Analytics API - all real data
+  app.get("/api/analytics", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      // Fetch all candidates and jobs for this user
+      const allCandidates = await storage.getCandidates(userId);
+      const allJobs = await storage.getJobs(userId);
+
+      // 1. KPI Metrics
+      const hiredCandidates = allCandidates.filter(c => c.stage === "Hired");
+      const totalEmployees = hiredCandidates.length;
+      const openPositions = allJobs.filter(j => j.status === "active").length;
+
+      // Avg time to hire (days from appliedDate to now for hired candidates)
+      let avgTimeToHire = 0;
+      if (hiredCandidates.length > 0) {
+        const now = new Date();
+        const totalDays = hiredCandidates.reduce((sum, c) => {
+          const applied = new Date(c.appliedDate);
+          const days = Math.floor((now.getTime() - applied.getTime()) / (1000 * 60 * 60 * 24));
+          return sum + days;
+        }, 0);
+        avgTimeToHire = Math.round(totalDays / hiredCandidates.length);
+      }
+
+      // Offer acceptance rate (for now, approximate: hired / (hired + rejected offers))
+      const offersExtended = allCandidates.filter(c => c.stage === "Offer" || c.stage === "Hired").length;
+      const offerAcceptanceRate = offersExtended > 0 ? Math.round((hiredCandidates.length / offersExtended) * 100) : 0;
+
+      // 2. Pipeline Funnel - count candidates by stage
+      const stageOrder = ["Applied", "Screening", "Phone Interview", "Technical", "Final Round", "Offer", "Hired"];
+      const pipelineStages = stageOrder.map(stage => ({
+        stage,
+        count: allCandidates.filter(c => c.stage === stage).length
+      }));
+
+      // 3. Pipeline Conversion Rates
+      const conversions: Record<string, number> = {};
+      for (let i = 0; i < stageOrder.length - 1; i++) {
+        const fromStage = stageOrder[i];
+        const toStage = stageOrder[i + 1];
+        const fromCount = pipelineStages[i].count;
+        const toCount = pipelineStages[i + 1].count;
+        conversions[`${fromStage}_to_${toStage}`] = fromCount > 0 ? Math.round((toCount / fromCount) * 100) : 0;
+      }
+
+      // 4. Headcount Over Time - group hired candidates by month
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const headcountByMonth: Record<string, number> = {};
+      
+      // Get the last 6 months
+      const now = new Date();
+      const last6Months: string[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        last6Months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+
+      last6Months.forEach(m => headcountByMonth[m] = 0);
+
+      hiredCandidates.forEach(c => {
+        const applied = new Date(c.appliedDate);
+        const monthKey = `${applied.getFullYear()}-${String(applied.getMonth() + 1).padStart(2, '0')}`;
+        if (headcountByMonth[monthKey] !== undefined) {
+          headcountByMonth[monthKey]++;
+        }
+      });
+
+      const headcountOverTime = {
+        labels: last6Months.map(m => {
+          const [year, month] = m.split('-');
+          return monthNames[parseInt(month) - 1];
+        }),
+        data: last6Months.map(m => headcountByMonth[m] || 0)
+      };
+
+      // 5. Hiring trends over time (applications, interviews, hires per month)
+      const hiringTrends = last6Months.map(m => {
+        const [year, month] = m.split('-');
+        const monthStart = new Date(parseInt(year), parseInt(month) - 1, 1);
+        const monthEnd = new Date(parseInt(year), parseInt(month), 0);
+
+        const monthCandidates = allCandidates.filter(c => {
+          const applied = new Date(c.appliedDate);
+          return applied >= monthStart && applied <= monthEnd;
+        });
+
+        const applications = monthCandidates.length;
+        const interviews = monthCandidates.filter(c => 
+          ["Phone Interview", "Technical", "Final Round", "Offer", "Hired"].includes(c.stage)
+        ).length;
+        const hires = monthCandidates.filter(c => c.stage === "Hired").length;
+
+        return {
+          month: monthNames[parseInt(month) - 1],
+          applications,
+          interviews,
+          hires
+        };
+      });
+
+      // 6. Recruiting Sources
+      const sourceGroups: Record<string, { applications: number; hires: number }> = {};
+      allCandidates.forEach(c => {
+        const source = c.source || "Direct";
+        if (!sourceGroups[source]) {
+          sourceGroups[source] = { applications: 0, hires: 0 };
+        }
+        sourceGroups[source].applications++;
+        if (c.stage === "Hired") {
+          sourceGroups[source].hires++;
+        }
+      });
+
+      const sourceData = Object.entries(sourceGroups).map(([source, data]) => ({
+        source: source || "Direct",
+        applications: data.applications,
+        hires: data.hires
+      }));
+
+      // 7. Department/Role distribution (group hired by role)
+      const roleGroups: Record<string, number> = {};
+      const colors = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#06b6d4", "#ec4899", "#84cc16"];
+      hiredCandidates.forEach(c => {
+        const role = c.role || "Other";
+        roleGroups[role] = (roleGroups[role] || 0) + 1;
+      });
+
+      const departmentData = Object.entries(roleGroups).map(([name, value], index) => ({
+        name,
+        value,
+        color: colors[index % colors.length]
+      }));
+
+      // 8. Efficiency metrics
+      const avgDaysToFill = avgTimeToHire; // Using same calculation
+      const interviewToHireRatio = totalEmployees > 0 ? 
+        Math.round(allCandidates.filter(c => 
+          ["Phone Interview", "Technical", "Final Round", "Offer", "Hired"].includes(c.stage)
+        ).length / Math.max(totalEmployees, 1)) : 0;
+
+      res.json({
+        kpis: {
+          totalEmployees,
+          openPositions,
+          avgTimeToHire,
+          offerAcceptanceRate
+        },
+        pipelineStages,
+        conversions,
+        headcountOverTime,
+        hiringTrends,
+        sourceData,
+        departmentData,
+        efficiency: {
+          avgDaysToFill,
+          interviewToHireRatio
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching analytics:", error);
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
   return httpServer;
 }

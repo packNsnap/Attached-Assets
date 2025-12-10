@@ -1,67 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from "recharts";
-import { TrendingUp, TrendingDown, Users, Briefcase, Clock, Target, Calendar, DollarSign } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Briefcase, Clock, Target, Calendar, Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const hiringData = [
-  { month: "Jan", applications: 45, hires: 3, interviews: 12 },
-  { month: "Feb", applications: 52, hires: 4, interviews: 15 },
-  { month: "Mar", applications: 78, hires: 6, interviews: 22 },
-  { month: "Apr", applications: 65, hires: 5, interviews: 18 },
-  { month: "May", applications: 89, hires: 7, interviews: 25 },
-  { month: "Jun", applications: 95, hires: 8, interviews: 28 },
-];
-
-const departmentData = [
-  { name: "Engineering", value: 35, color: "#3b82f6" },
-  { name: "Sales", value: 22, color: "#10b981" },
-  { name: "Marketing", value: 15, color: "#f59e0b" },
-  { name: "Design", value: 12, color: "#8b5cf6" },
-  { name: "Operations", value: 10, color: "#ef4444" },
-  { name: "HR", value: 6, color: "#06b6d4" },
-];
-
-const timeToHireData = [
-  { month: "Jan", days: 32 },
-  { month: "Feb", days: 28 },
-  { month: "Mar", days: 35 },
-  { month: "Apr", days: 25 },
-  { month: "May", days: 22 },
-  { month: "Jun", days: 20 },
-];
-
-const sourceData = [
-  { source: "LinkedIn", hires: 12, applications: 89 },
-  { source: "Indeed", hires: 8, applications: 156 },
-  { source: "Referrals", hires: 15, applications: 34 },
-  { source: "Career Site", hires: 6, applications: 78 },
-  { source: "Other", hires: 4, applications: 45 },
-];
+type AnalyticsData = {
+  kpis: {
+    totalEmployees: number;
+    openPositions: number;
+    avgTimeToHire: number;
+    offerAcceptanceRate: number;
+  };
+  pipelineStages: Array<{ stage: string; count: number }>;
+  conversions: Record<string, number>;
+  headcountOverTime: { labels: string[]; data: number[] };
+  hiringTrends: Array<{ month: string; applications: number; interviews: number; hires: number }>;
+  sourceData: Array<{ source: string; applications: number; hires: number }>;
+  departmentData: Array<{ name: string; value: number; color: string }>;
+  efficiency: {
+    avgDaysToFill: number;
+    interviewToHireRatio: number;
+  };
+};
 
 type StatCardProps = {
   title: string;
   value: string | number;
-  change?: number;
   icon: React.ReactNode;
   description?: string;
 };
 
-function StatCard({ title, value, change, icon, description }: StatCardProps) {
-  const isPositive = change && change > 0;
-  const isNegative = change && change < 0;
-  
+function StatCard({ title, value, icon, description }: StatCardProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -71,25 +44,63 @@ function StatCard({ title, value, change, icon, description }: StatCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <div className="flex items-center gap-2 mt-1">
-          {change !== undefined && (
-            <div className={`flex items-center text-xs ${isPositive ? 'text-green-500' : isNegative ? 'text-red-500' : 'text-muted-foreground'}`}>
-              {isPositive ? <TrendingUp className="h-3 w-3 mr-1" /> : isNegative ? <TrendingDown className="h-3 w-3 mr-1" /> : null}
-              {isPositive ? '+' : ''}{change}%
-            </div>
-          )}
-          {description && <p className="text-xs text-muted-foreground">{description}</p>}
-        </div>
+        <div className="text-2xl font-bold" data-testid={`text-${title.toLowerCase().replace(/\s/g, '-')}`}>{value}</div>
+        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
       </CardContent>
     </Card>
   );
 }
 
+const stageColors: Record<string, string> = {
+  "Applied": "bg-slate-500",
+  "Screening": "bg-blue-500",
+  "Phone Interview": "bg-purple-500",
+  "Technical": "bg-orange-500",
+  "Final Round": "bg-green-500",
+  "Offer": "bg-emerald-500",
+  "Hired": "bg-teal-500",
+};
+
 export default function AnalyticsModule() {
-  const [timeRange, setTimeRange] = useState("6m");
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        const response = await fetch("/api/analytics", { credentials: "include" });
+        if (response.ok) {
+          const result = await response.json();
+          setData(result);
+        }
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAnalytics();
+  }, []);
 
   const module = getModuleByPath("/analytics");
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Failed to load analytics data.</p>
+      </div>
+    );
+  }
+
+  const maxPipelineCount = Math.max(...data.pipelineStages.map(s => s.count), 1);
 
   return (
     <div className="space-y-6 max-w-7xl">
@@ -98,47 +109,31 @@ export default function AnalyticsModule() {
         description="Track key metrics and performance indicators across your HR operations."
         icon={module.icon}
         gradient={module.color}
-      >
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger className="w-[180px]" data-testid="select-time-range">
-            <SelectValue placeholder="Select time range" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1m">Last month</SelectItem>
-            <SelectItem value="3m">Last 3 months</SelectItem>
-            <SelectItem value="6m">Last 6 months</SelectItem>
-            <SelectItem value="1y">Last year</SelectItem>
-          </SelectContent>
-        </Select>
-      </PageHeader>
+      />
 
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Total Employees" 
-          value={156} 
-          change={8}
+          value={data.kpis.totalEmployees} 
           icon={<Users className="h-4 w-4 text-primary" />}
-          description="vs last period"
+          description="hired candidates"
         />
         <StatCard 
           title="Open Positions" 
-          value={12}
-          change={-15}
+          value={data.kpis.openPositions}
           icon={<Briefcase className="h-4 w-4 text-primary" />}
           description="actively hiring"
         />
         <StatCard 
           title="Avg Time to Hire" 
-          value="22 days"
-          change={-12}
+          value={`${data.kpis.avgTimeToHire} days`}
           icon={<Clock className="h-4 w-4 text-primary" />}
-          description="improved efficiency"
+          description="from application"
         />
         <StatCard 
           title="Offer Acceptance" 
-          value="85%"
-          change={5}
+          value={`${data.kpis.offerAcceptanceRate}%`}
           icon={<Target className="h-4 w-4 text-primary" />}
           description="acceptance rate"
         />
@@ -161,24 +156,30 @@ export default function AnalyticsModule() {
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]" data-testid="chart-hiring-funnel">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={hiringData}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                      <XAxis dataKey="month" className="text-xs" />
-                      <YAxis className="text-xs" />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                      />
-                      <Legend />
-                      <Bar dataKey="applications" fill="#94a3b8" name="Applications" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="interviews" fill="#3b82f6" name="Interviews" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="hires" fill="#10b981" name="Hires" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  {data.hiringTrends.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={data.hiringTrends}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="month" className="text-xs" />
+                        <YAxis className="text-xs" />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="applications" fill="#94a3b8" name="Applications" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="interviews" fill="#3b82f6" name="Interviews" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="hires" fill="#10b981" name="Hires" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      No hiring data available
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -190,23 +191,16 @@ export default function AnalyticsModule() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { stage: "New Applications", count: 45, color: "bg-slate-500" },
-                    { stage: "Screening", count: 28, color: "bg-blue-500" },
-                    { stage: "Phone Interview", count: 15, color: "bg-purple-500" },
-                    { stage: "Technical", count: 8, color: "bg-orange-500" },
-                    { stage: "Final Round", count: 5, color: "bg-green-500" },
-                    { stage: "Offer", count: 3, color: "bg-emerald-500" },
-                  ].map((item) => (
+                  {data.pipelineStages.map((item) => (
                     <div key={item.stage} className="flex items-center gap-4">
                       <div className="w-32 text-sm font-medium">{item.stage}</div>
                       <div className="flex-1 h-4 bg-muted rounded-full overflow-hidden">
                         <div 
-                          className={`h-full ${item.color} rounded-full transition-all`}
-                          style={{ width: `${(item.count / 45) * 100}%` }}
+                          className={`h-full ${stageColors[item.stage] || 'bg-gray-500'} rounded-full transition-all`}
+                          style={{ width: `${(item.count / maxPipelineCount) * 100}%` }}
                         />
                       </div>
-                      <div className="w-8 text-right text-sm font-medium">{item.count}</div>
+                      <div className="w-8 text-right text-sm font-medium" data-testid={`text-stage-count-${item.stage.toLowerCase().replace(/\s/g, '-')}`}>{item.count}</div>
                     </div>
                   ))}
                 </div>
@@ -219,54 +213,68 @@ export default function AnalyticsModule() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Headcount by Department</CardTitle>
-                <CardDescription>Distribution of employees across teams</CardDescription>
+                <CardTitle>Headcount by Role</CardTitle>
+                <CardDescription>Distribution of hired employees across roles</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]" data-testid="chart-headcount-pie">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={departmentData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        {departmentData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {data.departmentData.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={data.departmentData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={100}
+                          paddingAngle={2}
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value}`}
+                        >
+                          {data.departmentData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      No hired employees yet
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Department Details</CardTitle>
-                <CardDescription>Team sizes and growth</CardDescription>
+                <CardTitle>Role Details</CardTitle>
+                <CardDescription>Team sizes</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {departmentData.map((dept) => (
-                    <div key={dept.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }} />
-                        <span className="font-medium">{dept.name}</span>
+                {data.departmentData.length > 0 ? (
+                  <div className="space-y-4">
+                    {data.departmentData.map((dept) => (
+                      <div key={dept.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept.color }} />
+                          <span className="font-medium">{dept.name}</span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <Badge variant="secondary">{dept.value} employee{dept.value !== 1 ? 's' : ''}</Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {data.kpis.totalEmployees > 0 ? Math.round((dept.value / data.kpis.totalEmployees) * 100) : 0}%
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <Badge variant="secondary">{dept.value} employees</Badge>
-                        <span className="text-sm text-muted-foreground">{Math.round((dept.value / 100) * 100)}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No hired employees yet
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -276,13 +284,16 @@ export default function AnalyticsModule() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Time to Hire Trend</CardTitle>
-                <CardDescription>Average days from application to offer acceptance</CardDescription>
+                <CardTitle>Hires Over Time</CardTitle>
+                <CardDescription>Number of hires per month</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px]" data-testid="chart-time-to-hire">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={timeToHireData}>
+                    <LineChart data={data.headcountOverTime.labels.map((label, i) => ({
+                      month: label,
+                      hires: data.headcountOverTime.data[i]
+                    }))}>
                       <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                       <XAxis dataKey="month" className="text-xs" />
                       <YAxis className="text-xs" />
@@ -295,11 +306,11 @@ export default function AnalyticsModule() {
                       />
                       <Line 
                         type="monotone" 
-                        dataKey="days" 
-                        stroke="#3b82f6" 
+                        dataKey="hires" 
+                        stroke="#10b981" 
                         strokeWidth={2}
-                        dot={{ fill: '#3b82f6', strokeWidth: 2 }}
-                        name="Days to Hire"
+                        dot={{ fill: '#10b981', strokeWidth: 2 }}
+                        name="Hires"
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -314,24 +325,26 @@ export default function AnalyticsModule() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Cost per Hire</p>
-                      <p className="text-2xl font-bold">$4,250</p>
-                    </div>
-                    <DollarSign className="h-8 w-8 text-green-500" />
-                  </div>
                   <div className="flex items-center justify-between p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <div>
-                      <p className="text-sm text-muted-foreground">Quality of Hire Score</p>
-                      <p className="text-2xl font-bold">8.5/10</p>
+                      <p className="text-sm text-muted-foreground">Avg Days to Fill Position</p>
+                      <p className="text-2xl font-bold" data-testid="text-avg-days-to-fill">{data.efficiency.avgDaysToFill} days</p>
                     </div>
-                    <Target className="h-8 w-8 text-blue-500" />
+                    <Clock className="h-8 w-8 text-blue-500" />
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Interview to Hire Ratio</p>
+                      <p className="text-2xl font-bold" data-testid="text-interview-hire-ratio">{data.efficiency.interviewToHireRatio}:1</p>
+                    </div>
+                    <Target className="h-8 w-8 text-green-500" />
                   </div>
                   <div className="flex items-center justify-between p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
                     <div>
-                      <p className="text-sm text-muted-foreground">90-Day Retention</p>
-                      <p className="text-2xl font-bold">94%</p>
+                      <p className="text-sm text-muted-foreground">Total Candidates in Pipeline</p>
+                      <p className="text-2xl font-bold" data-testid="text-total-pipeline">
+                        {data.pipelineStages.reduce((sum, s) => sum + s.count, 0)}
+                      </p>
                     </div>
                     <Calendar className="h-8 w-8 text-purple-500" />
                   </div>
@@ -349,56 +362,66 @@ export default function AnalyticsModule() {
             </CardHeader>
             <CardContent>
               <div className="h-[300px]" data-testid="chart-recruiting-sources">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sourceData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis type="number" className="text-xs" />
-                    <YAxis dataKey="source" type="category" className="text-xs" width={80} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Legend />
-                    <Bar dataKey="applications" fill="#94a3b8" name="Applications" radius={[0, 4, 4, 0]} />
-                    <Bar dataKey="hires" fill="#10b981" name="Hires" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {data.sourceData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.sourceData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis type="number" className="text-xs" />
+                      <YAxis dataKey="source" type="category" className="text-xs" width={80} />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <Legend />
+                      <Bar dataKey="applications" fill="#94a3b8" name="Applications" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="hires" fill="#10b981" name="Hires" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground">
+                    No source data available
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-3">
-            {sourceData.map((source) => {
-              const conversionRate = ((source.hires / source.applications) * 100).toFixed(1);
-              return (
-                <Card key={source.source}>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{source.source}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4 text-center">
-                      <div>
-                        <p className="text-2xl font-bold">{source.applications}</p>
-                        <p className="text-xs text-muted-foreground">Applications</p>
+          {data.sourceData.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-3">
+              {data.sourceData.map((source) => {
+                const conversionRate = source.applications > 0 
+                  ? ((source.hires / source.applications) * 100).toFixed(1) 
+                  : "0.0";
+                return (
+                  <Card key={source.source}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">{source.source}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4 text-center">
+                        <div>
+                          <p className="text-2xl font-bold" data-testid={`text-source-apps-${source.source.toLowerCase()}`}>{source.applications}</p>
+                          <p className="text-xs text-muted-foreground">Applications</p>
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold text-green-500" data-testid={`text-source-hires-${source.source.toLowerCase()}`}>{source.hires}</p>
+                          <p className="text-xs text-muted-foreground">Hires</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-2xl font-bold text-green-500">{source.hires}</p>
-                        <p className="text-xs text-muted-foreground">Hires</p>
+                      <div className="mt-4 pt-4 border-t text-center">
+                        <Badge variant="secondary" className="text-sm">
+                          {conversionRate}% conversion
+                        </Badge>
                       </div>
-                    </div>
-                    <div className="mt-4 pt-4 border-t text-center">
-                      <Badge variant="secondary" className="text-sm">
-                        {conversionRate}% conversion
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
