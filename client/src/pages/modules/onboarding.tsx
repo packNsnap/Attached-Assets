@@ -5,6 +5,7 @@ import * as z from "zod";
 import { Loader2, GraduationCap, Copy, Mail, ChevronDown, ChevronUp, CheckCircle2, Calendar, User, Target } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Textarea } from "@/components/ui/textarea";
 
 const formSchema = z.object({
+  candidateId: z.string().optional(),
   employeeName: z.string().min(2, "Employee name is required"),
   role: z.string().min(2, "Role is required"),
   department: z.string().min(1, "Department is required"),
@@ -40,6 +42,14 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+type Candidate = {
+  id: string;
+  name: string;
+  role: string;
+  stage: string;
+  email?: string;
+};
 
 type Task = {
   title: string;
@@ -85,9 +95,25 @@ export default function OnboardingModule() {
   const [openEmails, setOpenEmails] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
+  // Fetch candidates
+  const { data: candidatesData = [] } = useQuery({
+    queryKey: ["candidates"],
+    queryFn: async () => {
+      const res = await fetch("/api/candidates", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  // Filter active candidates (those not yet onboarded)
+  const activeCandidates = (candidatesData as Candidate[]).filter(
+    c => c.stage && !["Onboarded", "Rejected", "Withdrawn"].includes(c.stage)
+  );
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      candidateId: "",
       employeeName: "",
       role: "",
       department: "",
@@ -95,6 +121,16 @@ export default function OnboardingModule() {
       onboardingType: "",
     },
   });
+
+  // Handle candidate selection
+  const handleCandidateSelect = (candidateId: string) => {
+    const candidate = activeCandidates.find(c => c.id === candidateId);
+    if (candidate) {
+      form.setValue("candidateId", candidateId);
+      form.setValue("employeeName", candidate.name);
+      form.setValue("role", candidate.role);
+    }
+  };
 
   async function onSubmit(values: FormValues) {
     setIsGenerating(true);
@@ -184,6 +220,31 @@ export default function OnboardingModule() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="candidateId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select a Candidate (Optional)</FormLabel>
+                      <Select onValueChange={handleCandidateSelect} value={field.value || ""}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-candidate">
+                            <SelectValue placeholder="Pick an active candidate..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {activeCandidates.map((candidate) => (
+                            <SelectItem key={candidate.id} value={candidate.id}>
+                              {candidate.name} - {candidate.role}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="employeeName"
