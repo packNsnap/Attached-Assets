@@ -3374,5 +3374,297 @@ List the reference sources used in the sources array.`;
     }
   });
 
+  // Performance Goals API
+  
+  // Get all goals with optional employee filter
+  app.get("/api/performance/goals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const employeeId = req.query.employee_id as string | undefined;
+      const goals = await storage.getPerformanceGoals(userId, employeeId);
+      
+      // Recalculate at-risk status for each goal
+      const now = new Date();
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+      
+      const goalsWithRisk = goals.map(goal => {
+        let isAtRisk = "false";
+        if (goal.status !== "completed") {
+          const dueDate = new Date(goal.dueDate);
+          if (dueDate < now || dueDate <= sevenDaysFromNow) {
+            isAtRisk = "true";
+          }
+        }
+        return { ...goal, isAtRisk };
+      });
+
+      // Compute summary
+      const totalGoals = goalsWithRisk.length;
+      const completedGoals = goalsWithRisk.filter(g => g.status === "completed").length;
+      const atRiskGoals = goalsWithRisk.filter(g => g.isAtRisk === "true").length;
+      const overallProgress = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
+
+      res.json({
+        goals: goalsWithRisk,
+        summary: {
+          total_goals: totalGoals,
+          completed_goals: completedGoals,
+          at_risk_goals: atRiskGoals,
+          overall_progress: overallProgress
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching goals:", error);
+      res.status(500).json({ error: "Failed to fetch goals" });
+    }
+  });
+
+  // Generate AI goals for an employee
+  app.post("/api/performance/goals/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { employee_id, employee_name, role, industry, time_horizon } = req.body;
+
+      if (!employee_id || !employee_name || !role) {
+        res.status(400).json({ error: "Employee ID, name, and role are required" });
+        return;
+      }
+
+      const timeHorizonDays = parseInt(time_horizon) || 90;
+
+      // Generate goals using OpenAI
+      const systemPrompt = `You are an HR performance coach specializing in creating measurable SMART goals.
+Create practical, achievable performance goals that are:
+- Specific: Clear and well-defined
+- Measurable: With quantifiable outcomes
+- Achievable: Realistic for the role
+- Relevant: Aligned with job responsibilities
+- Time-bound: With clear deadlines
+
+Do NOT claim legal compliance or guarantee results. Use phrases like "recommended targets" and "typical benchmarks".`;
+
+      const userPrompt = `Generate 3-5 SMART performance goals for:
+- Employee: ${employee_name}
+- Role: ${role}
+- Industry: ${industry || "General"}
+- Time Horizon: ${timeHorizonDays} days
+
+Create goals that would be appropriate for someone in this role. Each goal should have a title, description with specific metrics or outcomes, and a due date within the time horizon.
+
+Return your response as a JSON object with this exact structure:
+{
+  "goals": [
+    {
+      "title": "Goal title here",
+      "description": "Detailed description with specific metrics or outcomes",
+      "due_in_days": 30
+    }
+  ]
+}
+
+Generate 3-5 diverse goals covering different aspects of the role.`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4.1-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      });
+
+      const content = response.choices[0]?.message?.content?.trim();
+      if (!content) {
+        res.status(500).json({ error: "No response from AI" });
+        return;
+      }
+
+      let parsed;
+      try {
+        let jsonContent = content;
+        if (jsonContent.startsWith("```")) {
+          jsonContent = jsonContent.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+        }
+        parsed = JSON.parse(jsonContent);
+      } catch (parseError) {
+        console.error("Failed to parse goals response:", content);
+        res.status(500).json({ error: "Failed to parse AI response. Please try again." });
+        return;
+      }
+
+      if (!parsed.goals || !Array.isArray(parsed.goals)) {
+        res.status(500).json({ error: "Invalid response structure from AI" });
+        return;
+      }
+
+      // Save goals to database
+      const createdGoals = [];
+      const now = new Date();
+
+      for (const goal of parsed.goals) {
+        const dueDate = new Date(now);
+        dueDate.setDate(dueDate.getDate() + (goal.due_in_days || timeHorizonDays));
+
+        const newGoal = await storage.createPerformanceGoal({
+          userId,
+          employeeId: employee_id,
+          employeeName: employee_name,
+          role,
+          goalTitle: goal.title,
+          goalDescription: goal.description,
+          status: "not_started",
+          dueDate,
+          isAtRisk: "false"
+        });
+        createdGoals.push(newGoal);
+      }
+
+      res.json({ goals: createdGoals });
+    } catch (error) {
+      console.error("Error generating goals:", error);
+      res.status(500).json({ error: "Failed to generate goals. Please try again." });
+    }
+  });
+
+  // Update a goal (status, due date)
+  app.patch("/api/performance/goals/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { status, dueDate } = req.body;
+      const updateData: any = {};
+
+      if (status) {
+        if (!["not_started", "in_progress", "completed"].includes(status)) {
+          res.status(400).json({ error: "Invalid status value" });
+          return;
+        }
+        updateData.status = status;
+      }
+
+      if (dueDate) {
+        updateData.dueDate = new Date(dueDate);
+      }
+
+      // Recalculate at-risk status
+      const goal = await storage.getPerformanceGoal(req.params.id, userId);
+      if (!goal) {
+        res.status(404).json({ error: "Goal not found" });
+        return;
+      }
+
+      const finalDueDate = updateData.dueDate || goal.dueDate;
+      const finalStatus = updateData.status || goal.status;
+      const now = new Date();
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+      if (finalStatus !== "completed") {
+        const dueDateObj = new Date(finalDueDate);
+        if (dueDateObj < now || dueDateObj <= sevenDaysFromNow) {
+          updateData.isAtRisk = "true";
+        } else {
+          updateData.isAtRisk = "false";
+        }
+      } else {
+        updateData.isAtRisk = "false";
+      }
+
+      const updated = await storage.updatePerformanceGoal(req.params.id, userId, updateData);
+      if (!updated) {
+        res.status(404).json({ error: "Goal not found" });
+        return;
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating goal:", error);
+      res.status(500).json({ error: "Failed to update goal" });
+    }
+  });
+
+  // Create manual goal
+  app.post("/api/performance/goals", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { employee_id, employee_name, role, goal_title, goal_description, due_date } = req.body;
+
+      if (!employee_id || !employee_name || !role || !goal_title || !goal_description || !due_date) {
+        res.status(400).json({ error: "All fields are required" });
+        return;
+      }
+
+      const dueDate = new Date(due_date);
+      const now = new Date();
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+      let isAtRisk = "false";
+      if (dueDate < now || dueDate <= sevenDaysFromNow) {
+        isAtRisk = "true";
+      }
+
+      const goal = await storage.createPerformanceGoal({
+        userId,
+        employeeId: employee_id,
+        employeeName: employee_name,
+        role,
+        goalTitle: goal_title,
+        goalDescription: goal_description,
+        status: "not_started",
+        dueDate,
+        isAtRisk
+      });
+
+      res.json(goal);
+    } catch (error) {
+      console.error("Error creating goal:", error);
+      res.status(500).json({ error: "Failed to create goal" });
+    }
+  });
+
+  // Delete a goal
+  app.delete("/api/performance/goals/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const deleted = await storage.deletePerformanceGoal(req.params.id, userId);
+      if (!deleted) {
+        res.status(404).json({ error: "Goal not found" });
+        return;
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting goal:", error);
+      res.status(500).json({ error: "Failed to delete goal" });
+    }
+  });
+
   return httpServer;
 }
