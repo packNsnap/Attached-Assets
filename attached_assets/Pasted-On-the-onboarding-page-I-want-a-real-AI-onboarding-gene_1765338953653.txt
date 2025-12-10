@@ -1,0 +1,170 @@
+On the /onboarding page I want a real AI onboarding generator using the OpenAI API.
+
+Current UI (keep layout + styles):
+
+Left panel: Employee Name, Role/Position, Department, Start Date, Onboarding Type, “Generate Onboarding Plan” button.
+
+Right panel: placeholder text.
+
+Replace the placeholder with a dynamic AI-generated plan.
+
+1. Backend: single OpenAI call
+
+Use the existing backend stack and OPENAI_API_KEY.
+
+Create an endpoint like:
+
+POST /api/onboarding/generate
+
+Input JSON:
+
+{
+  "employee_name": "Sarah Johnson",
+  "role": "Product Designer",
+  "department": "Design",
+  "start_date": "2025-01-15",
+  "onboarding_type": "Standard"
+}
+
+
+Call the OpenAI Chat Completions API (e.g. gpt-4.1 or similar) with a system prompt that tells it to output STRICT JSON only, no prose.
+
+Target output structure:
+
+{
+  "tasks_by_week": [
+    {
+      "week": 1,
+      "title": "Week 1: Orientation & Setup",
+      "tasks": [
+        {
+          "title": "Complete HR paperwork",
+          "owner": "HR",
+          "relative_day": 0,
+          "description": "Sign employment agreement, tax forms, direct deposit, and policy acknowledgements."
+        }
+      ]
+    }
+  ],
+  "thirty_sixty_ninety": {
+    "day_30": [
+      {
+        "goal": "Understand core tools and workflows",
+        "details": "Be comfortable using internal tools and basic processes."
+      }
+    ],
+    "day_60": [
+      {
+        "goal": "Own small projects",
+        "details": "Take responsibility for 1–2 low-risk projects with minimal supervision."
+      }
+    ],
+    "day_90": [
+      {
+        "goal": "Deliver measurable impact",
+        "details": "Ship work that clearly improves KPIs for the team/department."
+      }
+    ]
+  },
+  "emails": {
+    "welcome_email_hr": {
+      "subject": "Welcome to the team, {{employee_name}}!",
+      "body": "Hi {{employee_name}},\n\nWelcome to {{company_name}}... "
+    },
+    "manager_intro_email": {
+      "subject": "Kicking off your first weeks as {{role}}",
+      "body": "Hi {{employee_name}},\n\nI’m excited to have you join as our new {{role}}..."
+    },
+    "it_request_email": {
+      "subject": "New hire IT setup for {{employee_name}} ({{role}})",
+      "body": "Hi IT team,\n\nPlease set up accounts and access for {{employee_name}}..."
+    }
+  }
+}
+
+
+Notes:
+
+Replace {{employee_name}}, {{role}}, etc. in the final response before sending to the frontend.
+
+Validate JSON from OpenAI and handle failure with a simple error message to the UI.
+
+2. Frontend: wire button → endpoint → render plan
+
+On the /onboarding page:
+
+When user clicks “Generate Onboarding Plan”:
+
+Validate required fields (Name, Role, Department, Start Date, Onboarding Type).
+
+Disable the button + show loading state.
+
+POST to /api/onboarding/generate with the form data.
+
+On success, store the returned JSON in component state.
+
+On error, show an inline error message.
+
+Right panel should then show three sections:
+
+A. “Onboarding Checklist” (tasks_by_week)
+
+For each week:
+
+Card with title like: Week 1: Orientation & Setup.
+
+List the tasks:
+
+Title
+
+Owner (badge: HR / Manager / IT / Employee)
+
+Relative due day (e.g. “Day 0”, “Day 3” based on relative_day)
+
+Short description.
+
+B. “30 / 60 / 90 Day Plan”
+
+Three sub-sections:
+
+“First 30 Days”
+
+“First 60 Days”
+
+“First 90 Days”
+
+Under each, list goals with their details.
+
+C. “Email Templates”
+
+Three collapsible cards:
+
+Welcome Email (HR)
+
+Manager Intro Email
+
+IT Request Email
+
+For each:
+
+Show Subject + Body in a readonly textarea.
+
+Buttons:
+
+Copy → copies full email (subject + body) to clipboard.
+
+Open in Email (mailto) → builds a mailto: link with:
+
+subject param
+
+body param (URL-encoded)
+
+We don’t send email from the backend; we only open the user’s email client.
+
+3. No breaking changes
+
+Do not change the existing left-side form layout, styles, or routing.
+
+Keep the page name “Onboarding” and existing navigation intact.
+
+Keep everything responsive and matching current design system.

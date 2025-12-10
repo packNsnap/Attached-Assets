@@ -2979,5 +2979,98 @@ Return a JSON object with these exact fields:
     }
   });
 
+  // Generate AI-powered onboarding plan
+  app.post("/api/onboarding/generate", isAuthenticated, async (req: any, res) => {
+    try {
+      const { employee_name, role, department, start_date, onboarding_type } = req.body;
+
+      if (!employee_name || !role || !department || !start_date || !onboarding_type) {
+        res.status(400).json({ error: "All fields are required" });
+        return;
+      }
+
+      const systemPrompt = `You are an HR onboarding specialist. Generate a comprehensive onboarding plan in STRICT JSON format only. No prose or explanation - just valid JSON.
+
+The output must exactly follow this structure:
+{
+  "tasks_by_week": [
+    {
+      "week": 1,
+      "title": "Week 1: Orientation & Setup",
+      "tasks": [
+        {
+          "title": "Task name",
+          "owner": "HR" | "Manager" | "IT" | "Employee",
+          "relative_day": 0,
+          "description": "Brief description of the task"
+        }
+      ]
+    }
+  ],
+  "thirty_sixty_ninety": {
+    "day_30": [
+      { "goal": "Goal title", "details": "Details about this goal" }
+    ],
+    "day_60": [
+      { "goal": "Goal title", "details": "Details about this goal" }
+    ],
+    "day_90": [
+      { "goal": "Goal title", "details": "Details about this goal" }
+    ]
+  },
+  "emails": {
+    "welcome_email_hr": {
+      "subject": "Email subject",
+      "body": "Email body with proper line breaks"
+    },
+    "manager_intro_email": {
+      "subject": "Email subject",
+      "body": "Email body"
+    },
+    "it_request_email": {
+      "subject": "Email subject",
+      "body": "Email body"
+    }
+  }
+}
+
+Generate realistic, role-appropriate tasks. Include 2-4 weeks of tasks depending on onboarding type. Use the employee name, role, and department to customize the content.`;
+
+      const userPrompt = `Generate an onboarding plan for:
+- Employee Name: ${employee_name}
+- Role: ${role}
+- Department: ${department}
+- Start Date: ${start_date}
+- Onboarding Type: ${onboarding_type}
+
+Make sure all emails reference the employee by name (${employee_name}) and their role (${role}).`;
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.7,
+        response_format: { type: "json_object" }
+      });
+
+      const content = response.choices[0]?.message?.content || "";
+      let parsed;
+      try {
+        const cleanContent = content.replace(/```json\n?|\n?```/g, "").trim();
+        parsed = JSON.parse(cleanContent);
+      } catch {
+        res.status(500).json({ error: "Failed to parse AI response" });
+        return;
+      }
+
+      res.json(parsed);
+    } catch (error) {
+      console.error("Error generating onboarding plan:", error);
+      res.status(500).json({ error: "Failed to generate onboarding plan" });
+    }
+  });
+
   return httpServer;
 }
