@@ -849,6 +849,38 @@ export interface Pass5Result {
     mismatchScore: number;
     issues: Array<{ type: string; description: string; evidence: string }>;
   };
+  jobHoppingRisk: "low" | "medium" | "high";
+  shortTenureRolesCount: number;
+  shortTenureRolesNotes: string[];
+  roleAlignment: "strong" | "moderate" | "weak";
+  keyRequiredSkillsCovered: string[];
+  missingCriticalSkills: string[];
+  seniorityFit: "overqualified" | "appropriate" | "underqualified";
+  roleAlignmentNotes: string[];
+  educationExperienceConsistency: "consistent" | "minor_issues" | "major_issues";
+  educationExperienceNotes: string[];
+  skillsCredibility: "strong" | "moderate" | "weak";
+  skillsNotSupportedByExperience: string[];
+  buzzwordDensity: "low" | "medium" | "high";
+  buzzwordExamples: string[];
+  skillsNotes: string[];
+  contactCompleteness: "good" | "missing_core_info";
+  missingContactFields: string[];
+  emailProfessionalism: "professional" | "questionable" | "unprofessional";
+  emailProfessionalismReason: string;
+  atsFriendly: "yes" | "partial" | "no";
+  atsIssues: string[];
+  formattingCleanliness: "clean" | "noisy";
+  formattingNotes: string[];
+  writingClarity: "clear" | "mixed" | "poor";
+  achievementFocus: "strong" | "moderate" | "weak";
+  writingIssues: string[];
+  identityRisk: "low" | "medium" | "high";
+  timelineRisk: "low" | "medium" | "high";
+  stabilityRisk: "low" | "medium" | "high";
+  jobFit: "strong" | "moderate" | "weak";
+  atsUsability: "good" | "risky" | "bad";
+  overallResumeQuality: "strong" | "average" | "weak";
   timelineNotes: string;
   roleFitNotes: string;
   certEducationNotes: string;
@@ -1139,6 +1171,14 @@ Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
     }
   }
 
+  // Calculate job hopping risk
+  const shortTenureRoles = extractedData.jobs.filter(j => j.durationMonths && j.durationMonths < 8);
+  const jobHoppingRisk: "low" | "medium" | "high" = 
+    shortTenureRoles.length > 3 ? "high" : shortTenureRoles.length > 1 ? "medium" : "low";
+  const jobHoppingNotes = shortTenureRoles.length > 0 
+    ? [`${shortTenureRoles.length} roles with tenure under 8 months in recent history.`]
+    : [];
+
   return {
     authenticityScore,
     plausibilityScore: result.plausibility_score || authenticityScore,
@@ -1170,6 +1210,39 @@ Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
       suspiciousCertifications: []
     },
     mismatchDetection,
+    jobHoppingRisk,
+    shortTenureRolesCount: shortTenureRoles.length,
+    shortTenureRolesNotes: jobHoppingNotes,
+    roleAlignment: result.role_alignment || "moderate",
+    keyRequiredSkillsCovered: result.key_required_skills_covered || [],
+    missingCriticalSkills: result.missing_critical_skills || [],
+    seniorityFit: result.seniority_fit || "appropriate",
+    roleAlignmentNotes: result.role_alignment_notes || [],
+    educationExperienceConsistency: result.education_experience_consistency || "consistent",
+    educationExperienceNotes: result.education_experience_notes || [],
+    skillsCredibility: result.skills_credibility || "moderate",
+    skillsNotSupportedByExperience: result.skills_not_supported_by_experience || [],
+    buzzwordDensity: genericPhraseCount > 5 ? "high" : genericPhraseCount > 3 ? "medium" : "low",
+    buzzwordExamples: result.buzzword_examples || [],
+    skillsNotes: result.skills_notes || [],
+    contactCompleteness: result.contact_completeness || "good",
+    missingContactFields: result.missing_contact_fields || [],
+    emailProfessionalism: result.email_professionalism || "professional",
+    emailProfessionalismReason: result.email_professionalism_reason || "",
+    atsFriendly: result.ats_friendly || "yes",
+    atsIssues: result.ats_issues || [],
+    formattingCleanliness: result.formatting_cleanliness || "clean",
+    formattingNotes: result.formatting_notes || [],
+    writingClarity: result.writing_clarity || "clear",
+    achievementFocus: result.achievement_focus || "moderate",
+    writingIssues: result.writing_issues || [],
+    identityRisk: mismatchDetection.hasMismatch ? "high" : "low",
+    timelineRisk: timelineAnalysis.concerns.some(c => c.severity === "major_concern") ? "high" : 
+                  timelineAnalysis.concerns.some(c => c.severity === "mild_concern") ? "medium" : "low",
+    stabilityRisk: jobHoppingRisk,
+    jobFit: result.job_fit || "moderate",
+    atsUsability: result.ats_friendly === "no" ? "bad" : result.ats_friendly === "partial" ? "risky" : "good",
+    overallResumeQuality: authenticityScore >= 70 ? "strong" : authenticityScore >= 50 ? "average" : "weak",
     timelineNotes: result.timeline_notes || "",
     roleFitNotes: result.role_fit_notes || "",
     certEducationNotes: result.cert_education_notes || "",
