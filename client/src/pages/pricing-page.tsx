@@ -1,9 +1,12 @@
 import { motion } from "framer-motion";
-import { Check, Sparkles, Zap, Building2, Crown, ArrowRight, Users, FileText, Brain, ClipboardCheck, MessageSquare, Calendar, BookOpen, Mail, Briefcase } from "lucide-react";
+import { Check, Sparkles, Zap, Building2, Crown, ArrowRight, Users, FileText, Brain, ClipboardCheck, MessageSquare, Calendar, BookOpen, Mail, Briefcase, Loader2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
 
 const allFeatures = [
   { icon: Brain, text: "Resume Logic Analyzer" },
@@ -21,7 +24,8 @@ const allFeatures = [
 
 const pricingTiers = [
   {
-    name: "Starter",
+    name: "Free",
+    planKey: "free",
     subtitle: "Free Forever",
     price: "$0",
     period: "/ month",
@@ -30,34 +34,38 @@ const pricingTiers = [
     borderColor: "border-slate-200 dark:border-slate-700",
     bgColor: "bg-slate-50 dark:bg-slate-800/50",
     limits: [
-      "2 active job positions",
-      "4 candidates per month",
-      "2 AI actions per candidate per service",
+      "1 active job position",
+      "3 candidates per month",
+      "10 AI actions per candidate",
     ],
     cta: "Get Started Free",
     ctaVariant: "outline" as const,
     popular: false,
+    stripeProductName: null,
   },
   {
-    name: "Eco",
-    subtitle: "Small Business",
-    price: "$29.99",
+    name: "Growth",
+    planKey: "growth",
+    subtitle: "Growing Teams",
+    price: "$29",
     period: "/ month",
     description: "Ideal for small businesses hiring occasionally throughout the year.",
     color: "from-green-500 to-emerald-600",
     borderColor: "border-green-200 dark:border-green-800",
     bgColor: "bg-green-50 dark:bg-green-900/20",
     limits: [
-      "10 active job positions",
+      "5 active job positions",
       "25 candidates per month",
-      "3 AI actions per candidate per service",
+      "15 AI actions per candidate",
     ],
-    cta: "Start with Eco",
+    cta: "Start with Growth",
     ctaVariant: "outline" as const,
     popular: false,
+    stripeProductName: "Growth",
   },
   {
     name: "Pro",
+    planKey: "pro",
     subtitle: "Most Popular",
     price: "$49.99",
     period: "/ month",
@@ -66,18 +74,20 @@ const pricingTiers = [
     borderColor: "border-purple-300 dark:border-purple-700",
     bgColor: "bg-gradient-to-b from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20",
     limits: [
-      "25 active job positions",
-      "100 candidates per month",
-      "4 AI actions per candidate per service",
+      "20 active job positions",
+      "150 candidates per month",
+      "20 AI actions per candidate",
     ],
     cta: "Start with Pro",
     ctaVariant: "default" as const,
     popular: true,
+    stripeProductName: "Pro",
   },
   {
     name: "Enterprise",
+    planKey: "enterprise",
     subtitle: "Custom Solutions",
-    price: "$150+",
+    price: "$150",
     period: "/ month",
     description: "Unlimited scale with custom integrations and dedicated support.",
     color: "from-orange-500 to-red-600",
@@ -85,18 +95,141 @@ const pricingTiers = [
     bgColor: "bg-orange-50 dark:bg-orange-900/20",
     limits: [
       "Unlimited job positions",
-      "Unlimited candidates",
-      "Unlimited AI actions",
+      "1000+ candidates per month",
+      "10 AI actions per candidate",
       "SSO & Custom Integrations",
       "Priority Support & Onboarding",
     ],
-    cta: "Contact Sales",
+    cta: "Start with Enterprise",
     ctaVariant: "outline" as const,
     popular: false,
+    stripeProductName: "Enterprise",
   },
 ];
 
 export default function PricingPage() {
+  const { toast } = useToast();
+  const [location] = useLocation();
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+
+  const { data: productsData } = useQuery({
+    queryKey: ["/api/stripe/products"],
+    queryFn: async () => {
+      const res = await fetch("/api/stripe/products", { credentials: "include" });
+      if (!res.ok) return { products: [] };
+      return res.json();
+    },
+    retry: false,
+  });
+
+  const { data: subscriptionData, refetch: refetchSubscription } = useQuery({
+    queryKey: ["/api/stripe/subscription-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/stripe/subscription-status", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "true") {
+      toast({
+        title: "Subscription successful!",
+        description: "Thank you for subscribing. Your account has been upgraded.",
+      });
+      refetchSubscription();
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get("canceled") === "true") {
+      toast({
+        title: "Checkout canceled",
+        description: "You can try again whenever you're ready.",
+        variant: "destructive",
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [toast, refetchSubscription]);
+
+  const handleCheckout = async (tier: typeof pricingTiers[0]) => {
+    if (!tier.stripeProductName) {
+      window.location.href = "/api/login";
+      return;
+    }
+
+    const product = productsData?.products?.find(
+      (p: any) => p.product_name === tier.stripeProductName
+    );
+
+    if (!product?.price_id) {
+      toast({
+        title: "Product not available",
+        description: "Please try again later or contact support.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCheckoutLoading(tier.planKey);
+
+    try {
+      const res = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          priceId: product.price_id,
+          plan: tier.planKey,
+        }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          window.location.href = "/api/login";
+          return;
+        }
+        throw new Error("Failed to create checkout session");
+      }
+
+      const { url } = await res.json();
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      toast({
+        title: "Checkout failed",
+        description: "Please try again or contact support.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckoutLoading(null);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const res = await fetch("/api/stripe/create-portal-session", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to create portal session");
+
+      const { url } = await res.json();
+      if (url) {
+        window.location.href = url;
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to open billing portal. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const currentPlan = subscriptionData?.plan || "free";
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -112,6 +245,12 @@ export default function PricingPage() {
               </span>
             </Link>
             <div className="flex items-center gap-4">
+              {subscriptionData?.hasActiveSubscription && (
+                <Button variant="outline" onClick={handleManageSubscription} data-testid="button-manage-subscription">
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Manage Subscription
+                </Button>
+              )}
               <Button variant="ghost" asChild data-testid="link-login">
                 <a href="/api/login">Log In</a>
               </Button>
@@ -185,8 +324,8 @@ export default function PricingPage() {
                 <Card className={`h-full ${tier.bgColor} ${tier.borderColor} ${tier.popular ? 'border-2 shadow-xl shadow-purple-500/10' : ''}`}>
                   <CardHeader className="pb-4">
                     <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${tier.color} flex items-center justify-center mb-4`}>
-                      {tier.name === "Starter" && <Sparkles className="h-6 w-6 text-white" />}
-                      {tier.name === "Eco" && <Zap className="h-6 w-6 text-white" />}
+                      {tier.name === "Free" && <Sparkles className="h-6 w-6 text-white" />}
+                      {tier.name === "Growth" && <Zap className="h-6 w-6 text-white" />}
                       {tier.name === "Pro" && <Briefcase className="h-6 w-6 text-white" />}
                       {tier.name === "Enterprise" && <Building2 className="h-6 w-6 text-white" />}
                     </div>
@@ -216,13 +355,26 @@ export default function PricingPage() {
                     <Button
                       className={`w-full ${tier.popular ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700' : ''}`}
                       variant={tier.ctaVariant}
-                      asChild
+                      disabled={checkoutLoading === tier.planKey || currentPlan === tier.planKey}
+                      onClick={() => handleCheckout(tier)}
                       data-testid={`button-tier-${tier.name.toLowerCase()}`}
                     >
-                      <a href={tier.name === "Enterprise" ? "#contact" : "/api/login"}>
-                        {tier.cta}
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </a>
+                      {checkoutLoading === tier.planKey ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Processing...
+                        </>
+                      ) : currentPlan === tier.planKey ? (
+                        <>
+                          <Check className="mr-2 h-4 w-4" />
+                          Current Plan
+                        </>
+                      ) : (
+                        <>
+                          {tier.cta}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
