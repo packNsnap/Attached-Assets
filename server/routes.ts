@@ -2391,13 +2391,32 @@ Respond with ONLY a number between 0 and 100.`;
   });
 
   // Generate AI-powered interview questions based on resume, test results, and AI detection
-  app.post("/api/generate-interview-questions", async (req, res) => {
+  app.post("/api/generate-interview-questions", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
       const { candidateId, candidateName, jobTitle, testScore, strengths, weaknesses, recommendationId } = req.body;
       
       if (!candidateName || !jobTitle) {
         res.status(400).json({ error: "candidateName and jobTitle are required" });
         return;
+      }
+
+      // Check AI usage limit if candidateId is provided
+      if (candidateId) {
+        const canUse = await storage.checkCanUseAiAction(userId, candidateId, "interview_questions");
+        if (!canUse.allowed) {
+          res.status(403).json({
+            error: "AI usage limit reached",
+            message: `You've reached your limit of ${canUse.limit} AI actions for this candidate. Please upgrade your plan.`,
+            current: canUse.current,
+            limit: canUse.limit
+          });
+          return;
+        }
       }
 
       // Gather all available data about the candidate
@@ -2628,6 +2647,11 @@ Respond in this exact JSON format:
           weaknesses: derivedWeaknesses,
           status: "interview_started"
         });
+      }
+
+      // Track AI usage if candidateId was provided
+      if (candidateId) {
+        await storage.incrementAiActionUsage(userId, candidateId, "interview_questions");
       }
       
       res.json({
