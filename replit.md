@@ -273,3 +273,28 @@ The application uses Stripe for subscription management with automatic webhook s
 2. Managed webhooks are auto-configured with UUID-based routing
 3. Products/prices are synced from Stripe to local PostgreSQL
 4. User clicks checkout → redirects to Stripe → webhook updates subscription
+
+## Usage Limits Enforcement
+
+Limits are defined in `shared/schema.ts` under `PLAN_LIMITS` and enforced in the API routes:
+
+**Enforced Limits:**
+- **Job creation** - Checks active jobs count vs plan limit before creating
+- **Candidate creation** - Checks monthly candidates added vs plan limit
+- **AI Actions per Candidate** - Tracked and enforced for candidate-specific AI features:
+  - Resume analysis (`resume_analysis`)
+  - Interview question generation (`interview_questions`)
+  - Reference email generation (`reference_email`)
+  - Onboarding plan generation (`onboarding_plan`)
+
+**Non-Candidate AI Features (no per-candidate limits):**
+- Job description generation (general feature)
+- Policy document generation (company-level)
+- Performance goal generation (employee-level, not candidate)
+- Skills test generation (role-based, not candidate)
+
+**Limit Check Methods in `server/storage.ts`:**
+- `checkCanCreateJob(userId)` - Returns `{ allowed, current, limit }`
+- `checkCanAddCandidate(userId)` - Returns `{ allowed, current, limit }`
+- `checkCanUseAiAction(userId, candidateId, serviceType)` - Returns `{ allowed, current, limit }`
+- `getUserUsageSummary(userId)` - Returns full usage summary for display
