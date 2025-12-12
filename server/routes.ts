@@ -1303,11 +1303,13 @@ export async function registerRoutes(
         return;
       }
       
-      resumeText = await extractTextFromPdf(file.buffer);
-
-      if (!resumeText.trim()) {
-        res.status(400).json({ error: "Could not extract text from file" });
-        return;
+      // Try to extract text, but continue without it if extraction fails
+      try {
+        resumeText = await extractTextFromPdf(file.buffer);
+      } catch (extractError) {
+        console.warn("Could not extract text from PDF, proceeding without text extraction:", extractError);
+        // Continue with empty resume text - file will still be stored
+        resumeText = "";
       }
 
       // Store resume text in memory for quick access
