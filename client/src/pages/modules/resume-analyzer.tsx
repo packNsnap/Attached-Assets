@@ -460,11 +460,11 @@ export default function ResumeAnalyzerModule() {
     const riskScoreColor = analysis.logicScore < 30 ? '#16a34a' : analysis.logicScore < 60 ? '#ca8a04' : '#dc2626';
     
     const recommendationMap: Record<string, { text: string; color: string }> = {
-      'proceed_to_interview': { text: 'Proceed to Interview', color: '#16a34a' },
-      'skills_test_first': { text: 'Skills Test First', color: '#2563eb' },
-      'phone_screen': { text: 'Phone Screen', color: '#ca8a04' },
-      'reject': { text: 'Do Not Recommend', color: '#dc2626' },
-      'needs_review': { text: 'Needs Manual Review', color: '#ca8a04' },
+      'proceed_to_interview': { text: 'Review', color: '#ca8a04' },
+      'skills_test_first': { text: 'Review', color: '#ca8a04' },
+      'phone_screen': { text: 'Review', color: '#ca8a04' },
+      'reject': { text: 'Review', color: '#ca8a04' },
+      'needs_review': { text: 'Review', color: '#ca8a04' },
     };
     // Use overallRecommendation if available, otherwise fall back to pass4.recommendedAction
     const recAction = analysis.overallRecommendation?.action || analysis.pass4?.recommendedAction;
@@ -1069,17 +1069,8 @@ export default function ResumeAnalyzerModule() {
                     <div className="flex items-center gap-2">
                       <Flag className="h-4 w-4" />
                       <span className="text-sm font-medium">Final Recommendation:</span>
-                      <Badge className={cn(
-                        (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" ? "bg-green-600" :
-                        (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" ? "bg-red-600" :
-                        (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" ? "bg-blue-600" :
-                        "bg-yellow-600"
-                      )}>
-                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" && "Proceed to Interview"}
-                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" && "Do Not Recommend"}
-                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" && "Skills Test First"}
-                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "phone_screen" && "Phone Screen"}
-                        {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "needs_review" && "Needs Manual Review"}
+                      <Badge className="bg-yellow-600">
+                        Review
                       </Badge>
                     </div>
                     {result.overallRecommendation?.wasOverridden && (
@@ -1151,18 +1142,9 @@ export default function ResumeAnalyzerModule() {
                   <span>Risk: {result.logicScore}%</span>
                 </div>
                 {(result.overallRecommendation || result.pass4) && (
-                  <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ml-auto",
-                    (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" ? "bg-green-600 text-white" :
-                    (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" ? "bg-red-600 text-white" :
-                    (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" ? "bg-blue-600 text-white" :
-                    "bg-yellow-600 text-white"
-                  )}>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ml-auto bg-yellow-600 text-white">
                     <Flag className="h-3.5 w-3.5" />
-                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" && "Proceed to Interview"}
-                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" && "Do Not Recommend"}
-                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" && "Skills Test First"}
-                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "phone_screen" && "Phone Screen"}
-                    {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "needs_review" && "Needs Review"}
+                    Review
                   </div>
                 )}
               </div>
@@ -1189,21 +1171,13 @@ export default function ResumeAnalyzerModule() {
                         <div className="flex items-center gap-2 mb-3">
                           <Flag className="h-4 w-4" />
                           <span className="font-medium">Final Recommendation</span>
-                          <Badge className={cn(
-                            (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" ? "bg-green-600" :
-                            (result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" ? "bg-red-600" :
-                            "bg-yellow-600"
-                          )}>
-                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "proceed_to_interview" && "Proceed to Interview"}
-                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "reject" && "Do Not Recommend"}
-                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "skills_test_first" && "Skills Test First"}
-                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "phone_screen" && "Phone Screen"}
-                            {(result.overallRecommendation?.action || result.pass4?.recommendedAction) === "needs_review" && "Needs Review"}
+                          <Badge className="bg-yellow-600">
+                            Review
                           </Badge>
                         </div>
                         {result.overallRecommendation?.wasOverridden && (
-                          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                            <strong>Why not recommended:</strong> {result.overallRecommendation.reason}
+                          <div className="mb-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+                            <strong>Review Reasons:</strong> {result.overallRecommendation.reason}
                           </div>
                         )}
                         {result.pass4?.nextSteps && result.pass4.nextSteps.length > 0 && (

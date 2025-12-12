@@ -1090,9 +1090,9 @@ export async function analyzeResumeMultiPass(
     criticalIssues.push(`Critical authenticity issues: ${criticalFraudFlags.map(f => f.flag).join(", ")}`);
   }
   
-  // If there are critical issues, override to reject
+  // If there are critical issues, flag for review
   if (criticalIssues.length > 0) {
-    finalAction = "reject";
+    finalAction = "needs_review";
     wasOverridden = true;
     overrideReason = criticalIssues.join("; ");
   }
