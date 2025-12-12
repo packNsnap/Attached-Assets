@@ -1440,6 +1440,20 @@ export async function registerRoutes(
         return;
       }
 
+      // Check AI usage limit if candidateId is provided
+      if (candidateId) {
+        const canUse = await storage.checkCanUseAiAction(userId, candidateId, "resume_analysis");
+        if (!canUse.allowed) {
+          res.status(403).json({
+            error: "AI usage limit reached",
+            message: `You've reached your limit of ${canUse.limit} AI actions for this candidate. Please upgrade your plan.`,
+            current: canUse.current,
+            limit: canUse.limit
+          });
+          return;
+        }
+      }
+
       const skillsList = jobSkills || [];
       const jobContext = jobDescription || `Job: ${jobTitle || "Unknown"}, Level: ${jobLevel || "Unknown"}, Skills: ${skillsList.join(", ")}`;
 
@@ -1486,6 +1500,8 @@ export async function registerRoutes(
             fraudFlags: result.fraudFlags ? JSON.stringify(result.fraudFlags) : null,
             status: "completed"
           });
+          // Track AI usage after successful analysis
+          await storage.incrementAiActionUsage(userId, candidateId, "resume_analysis");
         } catch (saveError) {
           console.error("Failed to save analysis to database:", saveError);
         }
@@ -3192,6 +3208,20 @@ Return a JSON object with these exact fields:
         return;
       }
 
+      // Check AI usage limit if candidate_id is provided
+      if (candidate_id) {
+        const canUse = await storage.checkCanUseAiAction(userId, candidate_id, "onboarding_plan");
+        if (!canUse.allowed) {
+          res.status(403).json({
+            error: "AI usage limit reached",
+            message: `You've reached your limit of ${canUse.limit} AI actions for this candidate. Please upgrade your plan.`,
+            current: canUse.current,
+            limit: canUse.limit
+          });
+          return;
+        }
+      }
+
       const systemPrompt = `You are an HR onboarding specialist. Generate a comprehensive onboarding plan in STRICT JSON format only. No prose or explanation - just valid JSON.
 
 The output must exactly follow this structure:
@@ -3295,6 +3325,11 @@ Make sure all emails reference the employee by name (${employee_name}) and their
         planJson: parsed,
         completedTaskIds: [],
       });
+
+      // Track AI usage if candidate_id was provided
+      if (candidate_id) {
+        await storage.incrementAiActionUsage(userId, candidate_id, "onboarding_plan");
+      }
 
       res.json({ ...parsed, planId: plan.id });
     } catch (error) {
