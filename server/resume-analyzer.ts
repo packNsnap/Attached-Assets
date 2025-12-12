@@ -613,6 +613,198 @@ Base recommendedAction on:
   };
 }
 
+// ============ CONSISTENCY CHECK: Name, Email, Phone Verification ============
+export interface ConsistencyCheckResult {
+  nameMatch: "match" | "partial_match" | "mismatch" | "not_found";
+  emailMatch: "match" | "mismatch" | "not_found";
+  phoneMatch: "match" | "mismatch" | "not_found";
+  otherNameFound: boolean;
+  otherNameValue: string | null;
+  suspiciousCopyPaste: boolean;
+  suspiciousReasons: string[];
+  cleanlinessNotes: string[];
+  overallRiskLevel: "low" | "medium" | "high";
+  summaryForUser: string;
+}
+
+function extractContactInfo(resumeText: string): { 
+  names: string[]; 
+  emails: string[]; 
+  phones: string[] 
+} {
+  const names: string[] = [];
+  const emails: string[] = [];
+  const phones: string[] = [];
+
+  // Extract emails
+  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const emailMatches = resumeText.match(emailPattern) || [];
+  emails.push(...emailMatches.map(e => e.toLowerCase()));
+
+  // Extract phone numbers
+  const phonePattern = /(?:\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})/g;
+  let phoneMatch;
+  while ((phoneMatch = phonePattern.exec(resumeText)) !== null) {
+    phones.push(`${phoneMatch[1]}-${phoneMatch[2]}-${phoneMatch[3]}`);
+  }
+
+  // Extract names from common resume header patterns
+  const lines = resumeText.split('\n').slice(0, 10);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length > 0 && trimmed.length < 60) {
+      const words = trimmed.split(/\s+/);
+      if (words.length <= 4 && words.every(w => /^[a-zA-Z'-]+$/.test(w))) {
+        names.push(trimmed);
+      }
+    }
+  }
+
+  return { names, emails, phones };
+}
+
+function areNamesSimilar(name1: string, name2: string): boolean {
+  const normalize = (n: string) => n.toLowerCase().trim().split(/\s+/);
+  const parts1 = normalize(name1);
+  const parts2 = normalize(name2);
+
+  if (parts1.length === 0 || parts2.length === 0) return false;
+
+  const first1 = parts1[0], last1 = parts1[parts1.length - 1];
+  const first2 = parts2[0], last2 = parts2[parts2.length - 1];
+
+  // Check if first and last both match (allowing minor spelling)
+  const leven = (s1: string, s2: string) => {
+    const a = s1.length, b = s2.length;
+    if (a === 0) return b;
+    if (b === 0) return a;
+    const matrix: number[][] = [];
+    for (let i = 0; i <= b; i++) matrix[0] = matrix[0] || [];
+    for (let j = 0; j <= a; j++) matrix[j] = matrix[j] || [];
+    for (let i = 0; i <= a; i++) matrix[i][0] = i;
+    for (j = 0; j <= b; j++) matrix[0][j] = j;
+    for (let i = 1; i <= a; i++) {
+      for (let j = 1; j <= b; j++) {
+        matrix[i][j] = s1[i - 1] === s2[j - 1]
+          ? matrix[i - 1][j - 1]
+          : Math.min(matrix[i - 1][j - 1], matrix[i][j - 1], matrix[i - 1][j]) + 1;
+      }
+    }
+    return matrix[a][b];
+  };
+
+  const firstSim = leven(first1, first2) <= 1;
+  const lastSim = leven(last1, last2) <= 1;
+
+  return firstSim && lastSim;
+}
+
+async function checkResumeConsistency(
+  resumeText: string,
+  candidateName?: string | null,
+  candidateEmail?: string | null,
+  candidatePhone?: string | null
+): Promise<ConsistencyCheckResult> {
+  const contactInfo = extractContactInfo(resumeText);
+  
+  // Check for template/placeholder leftover
+  const suspiciousPatterns = [
+    /\[your name\]/i, /\[insert name\]/i, /\[candidate name\]/i,
+    /\[your email\]/i, /\[insert email\]/i,
+    /\[company name\]/i, /\[job title\]/i,
+    /lorem ipsum/i
+  ];
+  const hasSuspiciousPatterns = suspiciousPatterns.some(p => p.test(resumeText));
+
+  let nameMatch: "match" | "partial_match" | "mismatch" | "not_found" = "not_found";
+  let otherNameFound = false;
+  let otherNameValue: string | null = null;
+
+  if (candidateName && contactInfo.names.length > 0) {
+    const exactMatch = contactInfo.names.some(n => 
+      areNamesSimilar(n, candidateName)
+    );
+    if (exactMatch) {
+      nameMatch = "match";
+    } else {
+      const partialMatch = contactInfo.names.some(n => {
+        const n1parts = n.toLowerCase().split(/\s+/);
+        const n2parts = candidateName.toLowerCase().split(/\s+/);
+        return (n1parts[0] === n2parts[0]) || (n1parts[n1parts.length - 1] === n2parts[n2parts.length - 1]);
+      });
+      if (partialMatch) {
+        nameMatch = "partial_match";
+      } else {
+        nameMatch = "mismatch";
+        otherNameFound = true;
+        otherNameValue = contactInfo.names[0] || null;
+      }
+    }
+  } else if (contactInfo.names.length === 0) {
+    nameMatch = "not_found";
+  }
+
+  let emailMatch: "match" | "mismatch" | "not_found" = "not_found";
+  if (candidateEmail && contactInfo.emails.length > 0) {
+    const match = contactInfo.emails.some(e => {
+      const baseEmail = e.replace(/\./g, '').toLowerCase();
+      const baseCandidate = candidateEmail.replace(/\./g, '').toLowerCase();
+      return baseEmail === baseCandidate || e === candidateEmail.toLowerCase();
+    });
+    emailMatch = match ? "match" : "mismatch";
+  } else if (contactInfo.emails.length === 0 && candidateEmail) {
+    emailMatch = "not_found";
+  }
+
+  let phoneMatch: "match" | "mismatch" | "not_found" = "not_found";
+  if (candidatePhone && contactInfo.phones.length > 0) {
+    const normalizePhone = (p: string) => p.replace(/\D/g, '').slice(-10);
+    const normalized = normalizePhone(candidatePhone);
+    const match = contactInfo.phones.some(p => normalizePhone(p) === normalized);
+    phoneMatch = match ? "match" : "mismatch";
+  } else if (contactInfo.phones.length === 0 && candidatePhone) {
+    phoneMatch = "not_found";
+  }
+
+  const suspiciousReasons: string[] = [];
+  if (nameMatch === "mismatch") suspiciousReasons.push("Resume name does not match candidate");
+  if (emailMatch === "mismatch") suspiciousReasons.push("Resume email does not match candidate");
+  if (phoneMatch === "mismatch") suspiciousReasons.push("Resume phone does not match candidate");
+  if (hasSuspiciousPatterns) suspiciousReasons.push("Found template placeholder text");
+  if (contactInfo.names.length > 2) suspiciousReasons.push("Multiple different names found");
+
+  const cleanlinessNotes: string[] = [];
+  if (contactInfo.names.length > 1) cleanlinessNotes.push("Multiple names appear in resume");
+  if (!contactInfo.emails.length) cleanlinessNotes.push("No email found in resume");
+  if (!contactInfo.phones.length) cleanlinessNotes.push("No phone number found in resume");
+
+  let overallRiskLevel: "low" | "medium" | "high" = "low";
+  if (nameMatch === "mismatch" || emailMatch === "mismatch" || hasSuspiciousPatterns) {
+    overallRiskLevel = "high";
+  } else if (nameMatch === "partial_match" || phoneMatch === "mismatch") {
+    overallRiskLevel = "medium";
+  }
+
+  const suspiciousCopyPaste = suspiciousReasons.length > 0;
+
+  const summaryForUser = suspiciousCopyPaste
+    ? `Resume contains potential issues: ${suspiciousReasons.join("; ")}`
+    : `Resume contact information is consistent with candidate profile.`;
+
+  return {
+    nameMatch,
+    emailMatch,
+    phoneMatch,
+    otherNameFound,
+    otherNameValue,
+    suspiciousCopyPaste,
+    suspiciousReasons,
+    cleanlinessNotes,
+    overallRiskLevel,
+    summaryForUser
+  };
+}
+
 // ============ PASS 5: Enhanced Authenticity Detection ============
 export interface FraudFlag {
   category: "timeline" | "company" | "credentials" | "content" | "consistency" | "ai_generated";
@@ -995,6 +1187,9 @@ export async function analyzeResumeMultiPass(
   jobLevel: string,
   expectedCandidateName?: string | null
 ): Promise<MultiPassAnalysisResult> {
+  // Consistency Check: Name, Email, Phone verification
+  const consistencyCheck = await checkResumeConsistency(resumeText, expectedCandidateName);
+  
   // Pass 1: Extract structured data
   const pass1 = await pass1_extractStructuredData(resumeText);
   
@@ -1049,6 +1244,15 @@ export async function analyzeResumeMultiPass(
       details: flag.evidence
     });
   }
+
+  // Add consistency check findings
+  for (const reason of consistencyCheck.suspiciousReasons) {
+    findings.push({
+      type: "risk",
+      message: `[Resume Consistency] ${reason}`,
+      details: reason
+    });
+  }
   
   // Calculate final recommendation with critical issue overrides
   const originalAction = pass4.recommendedAction;
@@ -1059,8 +1263,10 @@ export async function analyzeResumeMultiPass(
   // Critical override conditions - any of these should block interview recommendation
   const criticalIssues: string[] = [];
   
-  // 1. Name mismatch is a critical blocker
-  if (pass5.mismatchDetection.hasMismatch) {
+  // 1. Name mismatch is a critical blocker (from consistency check)
+  if (consistencyCheck.nameMatch === "mismatch") {
+    criticalIssues.push(`Resume name does not match selected candidate. Resume shows: ${consistencyCheck.otherNameValue}`);
+  } else if (pass5.mismatchDetection.hasMismatch) {
     const nameMismatchIssue = pass5.mismatchDetection.issues.find(i => i.type === "name");
     if (nameMismatchIssue) {
       criticalIssues.push(`Resume name does not match selected candidate`);
