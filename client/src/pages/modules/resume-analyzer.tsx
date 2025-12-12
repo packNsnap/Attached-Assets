@@ -533,9 +533,9 @@ export default function ResumeAnalyzerModule() {
     .footer { text-align: center; padding-top: 24px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
     .print-btn { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
     .print-btn:hover { background: #2563eb; }
-    .name-mismatch-alert { background: #7f1d1d; border: 3px solid #dc2626; border-radius: 12px; padding: 24px; margin: 0 0 32px 0; }
-    .name-mismatch-title { font-size: 20px; font-weight: 700; color: #fca5a5; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 1px; }
-    .name-mismatch-text { font-size: 16px; color: #fecaca; margin: 0; font-weight: 600; }
+    .name-mismatch-alert { background: #991b1b; border: 6px solid #dc2626; border-radius: 16px; padding: 48px; margin: 0 0 40px 0; box-shadow: 0 10px 30px rgba(220, 38, 38, 0.4), inset 0 0 0 1px rgba(252, 165, 165, 0.2); }
+    .name-mismatch-title { font-size: 36px; font-weight: 900; color: #fff; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); }
+    .name-mismatch-text { font-size: 20px; color: #fecaca; margin: 0; font-weight: 700; line-height: 1.4; }
     @media print { .print-btn { display: none; } body { padding: 20px; } }
   </style>
 </head>
