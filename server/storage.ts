@@ -80,6 +80,8 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   upsertUser(userData: UpsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  updateUserFreeAccess(id: string, freeAccessUntil: Date | null): Promise<User | undefined>;
   
   createJob(job: InsertJob): Promise<Job>;
   getJobs(userId: string): Promise<Job[]>;
@@ -252,6 +254,19 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserFreeAccess(id: string, freeAccessUntil: Date | null): Promise<User | undefined> {
+    const result = await db
+      .update(users)
+      .set({ freeAccessUntil, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return result[0];
   }
 
   async createJob(job: InsertJob): Promise<Job> {
