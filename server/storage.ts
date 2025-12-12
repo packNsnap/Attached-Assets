@@ -163,8 +163,10 @@ export interface IStorage {
   
   // Subscription methods
   getSubscription(userId: string): Promise<Subscription | undefined>;
+  getSubscriptionByStripeCustomerId(stripeCustomerId: string): Promise<Subscription | undefined>;
   createSubscription(sub: InsertSubscription): Promise<Subscription>;
   updateSubscription(userId: string, data: Partial<InsertSubscription>): Promise<Subscription | undefined>;
+  updateSubscriptionByStripeId(stripeSubscriptionId: string, data: Partial<InsertSubscription>): Promise<Subscription | undefined>;
   
   // Usage tracking methods
   getUsageTracking(userId: string, periodStart: Date, periodEnd: Date): Promise<UsageTracking | undefined>;
@@ -635,6 +637,11 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async getSubscriptionByStripeCustomerId(stripeCustomerId: string): Promise<Subscription | undefined> {
+    const result = await db.select().from(subscriptions).where(eq(subscriptions.stripeCustomerId, stripeCustomerId)).limit(1);
+    return result[0];
+  }
+
   async createSubscription(sub: InsertSubscription): Promise<Subscription> {
     const result = await db.insert(subscriptions).values(sub).returning();
     return result[0];
@@ -642,6 +649,11 @@ export class DatabaseStorage implements IStorage {
 
   async updateSubscription(userId: string, data: Partial<InsertSubscription>): Promise<Subscription | undefined> {
     const result = await db.update(subscriptions).set(data).where(eq(subscriptions.userId, userId)).returning();
+    return result[0];
+  }
+
+  async updateSubscriptionByStripeId(stripeSubscriptionId: string, data: Partial<InsertSubscription>): Promise<Subscription | undefined> {
+    const result = await db.update(subscriptions).set(data).where(eq(subscriptions.stripeSubscriptionId, stripeSubscriptionId)).returning();
     return result[0];
   }
 
@@ -736,7 +748,7 @@ export class DatabaseStorage implements IStorage {
       const { start, end } = this.getCurrentPeriod();
       sub = await this.createSubscription({
         userId,
-        plan: "starter",
+        plan: "free",
         status: "active",
         currentPeriodStart: start,
         currentPeriodEnd: end,
@@ -747,7 +759,7 @@ export class DatabaseStorage implements IStorage {
 
   async checkCanCreateJob(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
     const sub = await this.getOrCreateSubscription(userId);
-    const plan = (sub.plan as PlanType) || "starter";
+    const plan = (sub.plan as PlanType) || "free";
     const limits = PLAN_LIMITS[plan];
     
     // Get active jobs count for this user
@@ -763,7 +775,7 @@ export class DatabaseStorage implements IStorage {
 
   async checkCanAddCandidate(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
     const sub = await this.getOrCreateSubscription(userId);
-    const plan = (sub.plan as PlanType) || "starter";
+    const plan = (sub.plan as PlanType) || "free";
     const limits = PLAN_LIMITS[plan];
     
     const usage = await this.getOrCreateCurrentUsageTracking(userId);
@@ -778,17 +790,24 @@ export class DatabaseStorage implements IStorage {
 
   async checkCanUseAiAction(userId: string, candidateId: string, serviceType: string): Promise<{ allowed: boolean; current: number; limit: number }> {
     const sub = await this.getOrCreateSubscription(userId);
-    const plan = (sub.plan as PlanType) || "starter";
+    const plan = (sub.plan as PlanType) || "free";
     const limits = PLAN_LIMITS[plan];
     
-    const usage = await this.getAiActionUsage(userId, candidateId, serviceType);
-    const current = usage?.actionCount || 0;
+    // Get total AI actions across all service types for this candidate
+    const allUsages = await db.select()
+      .from(aiActionUsage)
+      .where(and(
+        eq(aiActionUsage.userId, userId),
+        eq(aiActionUsage.candidateId, candidateId)
+      ));
     
-    if (limits.aiActionsPerService === -1) {
-      return { allowed: true, current, limit: -1 };
+    const totalActions = allUsages.reduce((sum, u) => sum + (u.actionCount || 0), 0);
+    
+    if (limits.aiActionsPerCandidate === -1) {
+      return { allowed: true, current: totalActions, limit: -1 };
     }
     
-    return { allowed: current < limits.aiActionsPerService, current, limit: limits.aiActionsPerService };
+    return { allowed: totalActions < limits.aiActionsPerCandidate, current: totalActions, limit: limits.aiActionsPerCandidate };
   }
 
   async getUserUsageSummary(userId: string): Promise<{
@@ -798,7 +817,7 @@ export class DatabaseStorage implements IStorage {
     periodEnd: Date;
   }> {
     const sub = await this.getOrCreateSubscription(userId);
-    const plan = (sub.plan as PlanType) || "starter";
+    const plan = (sub.plan as PlanType) || "free";
     const limits = PLAN_LIMITS[plan];
     
     const usage = await this.getOrCreateCurrentUsageTracking(userId);

@@ -282,12 +282,12 @@ export const insertSkillsTestResponseSchema = createInsertSchema(skillsTestRespo
 export type InsertSkillsTestResponse = z.infer<typeof insertSkillsTestResponseSchema>;
 export type SkillsTestResponse = typeof skillsTestResponses.$inferSelect;
 
-// Subscription plan types
+// Subscription plan types - Updated pricing tiers
 export const PLAN_LIMITS = {
-  starter: { jobs: 2, candidates: 4, aiActionsPerService: 2 },
-  eco: { jobs: 10, candidates: 25, aiActionsPerService: 3 },
-  pro: { jobs: 25, candidates: 100, aiActionsPerService: 4 },
-  enterprise: { jobs: -1, candidates: -1, aiActionsPerService: -1 }, // -1 = unlimited
+  free: { jobs: 1, candidates: 3, aiActionsPerCandidate: 10, price: 0 },
+  growth: { jobs: 5, candidates: 25, aiActionsPerCandidate: 15, price: 2900 }, // $29.00 in cents
+  pro: { jobs: 20, candidates: 150, aiActionsPerCandidate: 20, price: 4999 }, // $49.99 in cents
+  enterprise: { jobs: -1, candidates: 1000, aiActionsPerCandidate: 10, price: 15000 }, // $150+ in cents, -1 = unlimited
 } as const;
 
 export type PlanType = keyof typeof PLAN_LIMITS;
@@ -295,10 +295,14 @@ export type PlanType = keyof typeof PLAN_LIMITS;
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().unique(),
-  plan: text("plan").notNull().default("starter"),
+  plan: text("plan").notNull().default("free"),
   status: text("status").notNull().default("active"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  stripePriceId: text("stripe_price_id"),
   currentPeriodStart: timestamp("current_period_start").notNull().default(sql`now()`),
   currentPeriodEnd: timestamp("current_period_end").notNull().default(sql`now() + interval '1 month'`),
+  cancelAtPeriodEnd: text("cancel_at_period_end").default("false"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
