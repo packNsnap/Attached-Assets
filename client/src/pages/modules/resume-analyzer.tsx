@@ -393,6 +393,16 @@ export default function ResumeAnalyzerModule() {
         description: "Only PDF files are allowed for bulk upload.",
       });
     }
+    if (pdfFiles.length > 20) {
+      toast({
+        variant: "destructive",
+        title: "Too many files",
+        description: "You can upload a maximum of 20 resumes at a time.",
+      });
+      setBulkFiles(pdfFiles.slice(0, 20));
+      setBulkResults(pdfFiles.slice(0, 20).map(f => ({ fileName: f.name, status: "pending" })));
+      return;
+    }
     setBulkFiles(pdfFiles);
     setBulkResults(pdfFiles.map(f => ({ fileName: f.name, status: "pending" })));
   };
