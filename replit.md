@@ -69,8 +69,11 @@ Preferred communication style: Simple, everyday language.
 **Core Tables:**
 1. **users** - Authentication and user management
    - id (UUID primary key)
-   - username (unique)
+   - email (unique)
    - password (hashed)
+   - firstName, lastName
+   - isAdmin (text: "true" or "false")
+   - freeAccessUntil (timestamp for granting free access periods)
 
 2. **jobs** - Job postings and descriptions
    - id, title, level, location
@@ -207,3 +210,32 @@ The onboarding module provides AI-powered onboarding plan generation with persis
 - Mark Completed button moves plan to completed status
 
 **Note:** The application currently has placeholders for AI integration (job description generation, resume analysis, etc.). These features will require integration with AI services like OpenAI or Google's Generative AI, which are listed as dependencies but not yet implemented.
+
+## Admin Panel
+
+The admin panel allows administrators to manage users and grant free access periods.
+
+**Access:** Only users with `isAdmin = "true"` can access the admin panel at `/admin`. The admin link appears in the sidebar footer for admin users.
+
+**Features:**
+- View all registered users with their email, name, and signup date
+- See current access status (free access active or standard)
+- Grant free access for a specified number of days
+- Revoke free access from users
+- View admin statistics (total users, active free access, admin count)
+
+**API Endpoints:**
+- `GET /api/admin/users` - List all users (admin only)
+- `POST /api/admin/users/:userId/free-access` - Grant free access (body: `{ days: number }`)
+- `DELETE /api/admin/users/:userId/free-access` - Revoke free access
+
+**Making a User an Admin:**
+Run SQL: `UPDATE users SET is_admin = 'true' WHERE email = 'user@example.com';`
+
+## File Storage
+
+User uploads are stored in a per-account folder structure for security and organization:
+- Path format: `uploads/account_<userId>/candidate_<candidateId>/<filename>.pdf`
+- Only PDF files are accepted for document uploads
+- Files are validated against path traversal attacks using strict ID validation and path normalization
+- Legacy flat file structure is still supported for backward compatibility

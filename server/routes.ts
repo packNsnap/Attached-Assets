@@ -278,14 +278,17 @@ export async function registerRoutes(
   });
 
   // Admin middleware - checks if user is an admin
-  const isAdmin = async (req: any, res: any, next: any) => {
+  const isAdminMiddleware = async (req: any, res: any, next: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
+      // Always check from database for most up-to-date admin status
       const user = await storage.getUser(userId);
-      if (!user || user.isAdmin !== "true") {
+      // Handle both string "true" and boolean true values
+      const isAdminUser = user?.isAdmin === "true" || user?.isAdmin === true;
+      if (!user || !isAdminUser) {
         return res.status(403).json({ message: "Admin access required" });
       }
       next();
@@ -296,7 +299,7 @@ export async function registerRoutes(
   };
 
   // Admin routes
-  app.get('/api/admin/users', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.get('/api/admin/users', isAuthenticated, isAdminMiddleware, async (req: any, res) => {
     try {
       const users = await storage.getAllUsers();
       const safeUsers = users.map(u => ({
@@ -316,7 +319,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post('/api/admin/users/:userId/free-access', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.post('/api/admin/users/:userId/free-access', isAuthenticated, isAdminMiddleware, async (req: any, res) => {
     try {
       const { userId } = req.params;
       const { days } = req.body;
@@ -354,7 +357,7 @@ export async function registerRoutes(
     }
   });
 
-  app.delete('/api/admin/users/:userId/free-access', isAuthenticated, isAdmin, async (req: any, res) => {
+  app.delete('/api/admin/users/:userId/free-access', isAuthenticated, isAdminMiddleware, async (req: any, res) => {
     try {
       const { userId } = req.params;
       const user = await storage.updateUserFreeAccess(userId, null);

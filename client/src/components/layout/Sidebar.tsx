@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, User, ExternalLink, GripVertical, RotateCcw, X } from "lucide-react";
+import { LogOut, User, ExternalLink, GripVertical, RotateCcw, X, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Badge } from "@/components/ui/badge";
@@ -229,6 +229,19 @@ export function Sidebar({ onClose }: SidebarProps) {
           </div>
         </div>
         <div className="grid gap-2">
+          {user?.isAdmin === "true" && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="w-full justify-start gap-2 hover:bg-muted border-amber-500/30 text-amber-600 dark:text-amber-400"
+              asChild
+            >
+              <Link href="/admin" onClick={handleLinkClick} data-testid="sidebar-admin-link">
+                <Shield className="h-4 w-4" />
+                Admin Panel
+              </Link>
+            </Button>
+          )}
           <Button 
             variant="outline" 
             size="sm"

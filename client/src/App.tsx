@@ -22,6 +22,7 @@ import AnalyticsModule from "@/pages/modules/analytics";
 import CandidatesModule from "@/pages/modules/candidates";
 import SkillsTestPublic from "@/pages/public/SkillsTestPublic";
 import ReferenceLinkPage from "@/pages/reference-link";
+import AdminPage from "@/pages/admin";
 
 function Router() {
   return (
@@ -48,6 +49,7 @@ function Router() {
             <Route path="/onboarding" component={OnboardingModule} />
             <Route path="/performance" component={PerformanceModule} />
             <Route path="/analytics" component={AnalyticsModule} />
+            <Route path="/admin" component={AdminPage} />
             <Route component={NotFound} />
           </Switch>
         </Layout>
