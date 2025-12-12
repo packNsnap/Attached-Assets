@@ -6,15 +6,15 @@ import { Briefcase, Users, Zap, Crown, ArrowUpRight } from "lucide-react";
 import { Link } from "wouter";
 
 interface UsageSummary {
-  plan: "starter" | "eco" | "pro" | "enterprise";
+  plan: "free" | "growth" | "pro" | "enterprise";
   jobs: { current: number; limit: number };
   candidates: { current: number; limit: number };
   periodEnd: string;
 }
 
-const planLabels = {
-  starter: { label: "Starter", color: "bg-slate-500" },
-  eco: { label: "Eco", color: "bg-green-500" },
+const planLabels: Record<string, { label: string; color: string }> = {
+  free: { label: "Free", color: "bg-slate-500" },
+  growth: { label: "Growth", color: "bg-green-500" },
   pro: { label: "Pro", color: "bg-purple-500" },
   enterprise: { label: "Enterprise", color: "bg-orange-500" },
 };
@@ -34,7 +34,7 @@ export function UsageDisplay() {
     );
   }
 
-  const planInfo = planLabels[usage.plan];
+  const planInfo = planLabels[usage.plan] || { label: usage.plan, color: "bg-slate-500" };
   const jobsPercent = usage.jobs.limit === -1 ? 0 : (usage.jobs.current / usage.jobs.limit) * 100;
   const candidatesPercent = usage.candidates.limit === -1 ? 0 : (usage.candidates.current / usage.candidates.limit) * 100;
 
