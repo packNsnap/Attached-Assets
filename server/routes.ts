@@ -277,6 +277,107 @@ export async function registerRoutes(
     }
   });
 
+  // Admin middleware - checks if user is an admin
+  const isAdmin = async (req: any, res: any, next: any) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const user = await storage.getUser(userId);
+      if (!user || user.isAdmin !== "true") {
+        return res.status(403).json({ message: "Admin access required" });
+      }
+      next();
+    } catch (error) {
+      console.error("Admin check error:", error);
+      res.status(500).json({ message: "Failed to verify admin status" });
+    }
+  };
+
+  // Admin routes
+  app.get('/api/admin/users', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const safeUsers = users.map(u => ({
+        id: u.id,
+        email: u.email,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        isAdmin: u.isAdmin,
+        freeAccessUntil: u.freeAccessUntil,
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+      }));
+      res.json(safeUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.post('/api/admin/users/:userId/free-access', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { days } = req.body;
+      
+      if (!days || typeof days !== 'number' || days < 0) {
+        res.status(400).json({ message: "days must be a positive number" });
+        return;
+      }
+
+      let freeAccessUntil: Date | null = null;
+      if (days > 0) {
+        freeAccessUntil = new Date();
+        freeAccessUntil.setDate(freeAccessUntil.getDate() + days);
+      }
+
+      const user = await storage.updateUserFreeAccess(userId, freeAccessUntil);
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+
+      res.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isAdmin: user.isAdmin,
+        freeAccessUntil: user.freeAccessUntil,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      });
+    } catch (error) {
+      console.error("Error updating free access:", error);
+      res.status(500).json({ message: "Failed to update free access" });
+    }
+  });
+
+  app.delete('/api/admin/users/:userId/free-access', isAuthenticated, isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const user = await storage.updateUserFreeAccess(userId, null);
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      res.json({
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isAdmin: user.isAdmin,
+        freeAccessUntil: user.freeAccessUntil,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      });
+    } catch (error) {
+      console.error("Error removing free access:", error);
+      res.status(500).json({ message: "Failed to remove free access" });
+    }
+  });
+
   // Usage and subscription routes
   app.get('/api/usage', isAuthenticated, async (req: any, res) => {
     try {
