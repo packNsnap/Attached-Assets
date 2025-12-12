@@ -274,6 +274,38 @@ The application uses Stripe for subscription management with automatic webhook s
 3. Products/prices are synced from Stripe to local PostgreSQL
 4. User clicks checkout → redirects to Stripe → webhook updates subscription
 
+## Bulk Resume Upload (Pro+ Feature)
+
+The Resume Analyzer module includes a bulk upload feature available to Pro and Enterprise tier users:
+
+**Features:**
+- Upload multiple PDF resumes at once via the "Bulk Upload" tab
+- Automatic candidate profile creation from extracted resume data
+- Name extraction from first line of resume
+- Email extraction from resume text
+- Automatic job association with selected position
+- Progress tracking during upload
+- Bulk reject functionality for quick candidate management
+
+**API Endpoints:**
+- `POST /api/bulk-resume-upload` - Upload a single PDF, auto-create candidate profile
+  - Requires Pro or Enterprise subscription
+  - Validates job ownership before associating
+  - Extracts name and email from PDF text
+  - Creates candidate tagged with "Bulk Upload" source
+  - Stores resume file in per-account folder structure
+
+- `POST /api/bulk-reject-candidates` - Bulk reject multiple candidates
+  - Body: `{ candidateIds: string[] }`
+  - Validates candidate ownership before rejection
+  - Sets candidate stage to "Rejected"
+
+**Security:**
+- Plan verification enforced server-side (Pro/Enterprise required)
+- Job ownership verified before candidate association
+- Candidate ownership verified for bulk reject
+- File stored in secure per-account directory structure
+
 ## Usage Limits Enforcement
 
 Limits are defined in `shared/schema.ts` under `PLAN_LIMITS` and enforced in the API routes:

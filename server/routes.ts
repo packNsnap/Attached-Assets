@@ -605,6 +605,159 @@ export async function registerRoutes(
     }
   });
 
+  // Bulk resume upload - Pro+ only
+  app.post("/api/bulk-resume-upload", isAuthenticated, upload.single("resume"), async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      
+      // Check user's plan - must be Pro or Enterprise
+      const subscription = await storage.getSubscription(userId);
+      const plan = subscription?.planType || "free";
+      if (plan !== "pro" && plan !== "enterprise") {
+        res.status(403).json({ 
+          error: "Bulk upload requires Pro or Enterprise plan",
+          message: "Please upgrade to Pro or Enterprise to use bulk resume upload."
+        });
+        return;
+      }
+      
+      // Check candidate limit
+      const canAdd = await storage.checkCanAddCandidate(userId);
+      if (!canAdd.allowed) {
+        res.status(403).json({ 
+          error: "Candidate limit reached",
+          message: `You've reached your limit of ${canAdd.limit} candidates this month.`,
+          current: canAdd.current,
+          limit: canAdd.limit
+        });
+        return;
+      }
+
+      if (!req.file) {
+        res.status(400).json({ error: "No file uploaded" });
+        return;
+      }
+
+      const jobId = req.body.jobId;
+      if (!jobId) {
+        res.status(400).json({ error: "Job ID is required" });
+        return;
+      }
+
+      // Verify job belongs to user
+      const job = await storage.getJob(jobId, userId);
+      if (!job) {
+        res.status(404).json({ error: "Job not found" });
+        return;
+      }
+
+      // Extract text from PDF
+      let resumeText = "";
+      try {
+        const pdfData = new Uint8Array(req.file.buffer);
+        const pdfDoc = await pdfjs.getDocument({ data: pdfData }).promise;
+        const textParts: string[] = [];
+        for (let i = 1; i <= pdfDoc.numPages; i++) {
+          const page = await pdfDoc.getPage(i);
+          const content = await page.getTextContent();
+          const pageText = content.items.map((item: any) => item.str).join(" ");
+          textParts.push(pageText);
+        }
+        resumeText = textParts.join("\n\n");
+      } catch (err) {
+        res.status(400).json({ error: "Failed to parse PDF file" });
+        return;
+      }
+
+      // Extract candidate name from first line of resume
+      const lines = resumeText.split('\n').filter(l => l.trim());
+      let candidateName = lines[0]?.trim() || "Unknown Candidate";
+      
+      // Clean up name - remove common prefixes and limit length
+      candidateName = candidateName.replace(/^(resume|cv|curriculum vitae)[\s:-]*/i, '').trim();
+      if (candidateName.length > 100) {
+        candidateName = candidateName.substring(0, 100);
+      }
+      if (!candidateName || candidateName.length < 2) {
+        candidateName = "Unknown Candidate";
+      }
+
+      // Extract email if present
+      const emailMatch = resumeText.match(/[\w.-]+@[\w.-]+\.\w+/);
+      const email = emailMatch ? emailMatch[0] : `candidate_${Date.now()}@unknown.com`;
+
+      // Create candidate
+      const today = new Date().toISOString().split('T')[0];
+      const candidate = await storage.createCandidate({
+        userId,
+        name: candidateName,
+        email: email,
+        role: job.title,
+        stage: "Applied",
+        appliedDate: today,
+        jobId: jobId,
+        tags: ["Bulk Upload"],
+        source: "Bulk Upload"
+      });
+
+      await storage.incrementCandidatesAdded(userId);
+
+      // Save the resume file
+      const candidateDir = getUserCandidateDir(userId, candidate.id);
+      if (candidateDir) {
+        const fileName = `resume_${Date.now()}.pdf`;
+        const filePath = path.join(candidateDir, fileName);
+        fs.writeFileSync(filePath, req.file.buffer);
+        
+        // Update candidate with resume URL
+        await storage.updateCandidate(candidate.id, userId, {
+          resumeUrl: `/api/documents/${candidate.id}/${fileName}`
+        });
+      }
+
+      res.json({ 
+        candidateId: candidate.id, 
+        candidateName: candidate.name,
+        email: candidate.email
+      });
+    } catch (error) {
+      console.error("Bulk upload error:", error);
+      res.status(500).json({ error: "Failed to process resume upload" });
+    }
+  });
+
+  // Bulk reject candidates
+  app.post("/api/bulk-reject-candidates", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { candidateIds } = req.body;
+
+      if (!candidateIds || !Array.isArray(candidateIds) || candidateIds.length === 0) {
+        res.status(400).json({ error: "No candidate IDs provided" });
+        return;
+      }
+
+      let rejectedCount = 0;
+      for (const candidateId of candidateIds) {
+        try {
+          // Verify candidate belongs to user
+          const candidate = await storage.getCandidate(candidateId, userId);
+          if (candidate) {
+            await storage.updateCandidate(candidateId, userId, { stage: "Rejected" });
+            rejectedCount++;
+          }
+        } catch (err) {
+          console.error(`Failed to reject candidate ${candidateId}:`, err);
+        }
+      }
+
+      res.json({ rejectedCount, total: candidateIds.length });
+    } catch (error) {
+      console.error("Bulk reject error:", error);
+      res.status(500).json({ error: "Failed to reject candidates" });
+    }
+  });
+
   app.get("/api/candidates/unread-notes", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;

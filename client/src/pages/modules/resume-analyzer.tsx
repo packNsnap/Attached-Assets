@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, FileText, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns, Calendar, TrendingUp, Building, GraduationCap, ArrowRight, Clock, Flag, Download, Save, Eye } from "lucide-react";
+import { Loader2, FileText, AlertTriangle, CheckCircle, Search, XCircle, Briefcase, Target, ClipboardList, Bot, Sparkles, TrendingDown, Quote, Wrench, Info, Columns, Calendar, TrendingUp, Building, GraduationCap, ArrowRight, Clock, Flag, Download, Save, Eye, Upload, Users, Trash2, Crown, Lock } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import { useLocation } from "wouter";
@@ -242,15 +242,42 @@ type AnalysisResult = {
   };
 } | null;
 
+interface UsageSummary {
+  plan: "free" | "growth" | "pro" | "enterprise";
+  jobs: { current: number; limit: number };
+  candidates: { current: number; limit: number };
+  periodEnd: string;
+}
+
+interface BulkUploadResult {
+  fileName: string;
+  status: "pending" | "processing" | "success" | "error";
+  candidateId?: string;
+  candidateName?: string;
+  error?: string;
+}
+
 export default function ResumeAnalyzerModule() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult>(null);
   const [resumeText, setResumeText] = useState<string>("");
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
   const [isResultModalOpen, setIsResultModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("single");
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkResults, setBulkResults] = useState<BulkUploadResult[]>([]);
+  const [isBulkUploading, setIsBulkUploading] = useState(false);
+  const [selectedBulkCandidates, setSelectedBulkCandidates] = useState<Set<string>>(new Set());
+  const [bulkJobId, setBulkJobId] = useState<string>("");
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+
+  const { data: usage } = useQuery<UsageSummary>({
+    queryKey: ["/api/usage"],
+  });
+
+  const isProOrAbove = usage?.plan === "pro" || usage?.plan === "enterprise";
 
   const { data: candidates = [] } = useQuery<{ id: string; name: string; resumeUrl?: string }[]>({
     queryKey: ["candidates-with-resumes"],
@@ -355,6 +382,139 @@ export default function ResumeAnalyzerModule() {
   const { data: jobs = [], isLoading: jobsLoading } = useQuery<Job[]>({
     queryKey: ["/api/jobs"],
   });
+
+  const handleBulkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const pdfFiles = files.filter(f => f.type === "application/pdf");
+    if (pdfFiles.length !== files.length) {
+      toast({
+        variant: "destructive",
+        title: "Invalid files",
+        description: "Only PDF files are allowed for bulk upload.",
+      });
+    }
+    setBulkFiles(pdfFiles);
+    setBulkResults(pdfFiles.map(f => ({ fileName: f.name, status: "pending" })));
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkJobId) {
+      toast({
+        variant: "destructive",
+        title: "Job required",
+        description: "Please select a job to associate candidates with.",
+      });
+      return;
+    }
+
+    setIsBulkUploading(true);
+    const newResults = [...bulkResults];
+
+    for (let i = 0; i < bulkFiles.length; i++) {
+      newResults[i] = { ...newResults[i], status: "processing" };
+      setBulkResults([...newResults]);
+
+      try {
+        const formData = new FormData();
+        formData.append("resume", bulkFiles[i]);
+        formData.append("jobId", bulkJobId);
+
+        const res = await fetch("/api/bulk-resume-upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          newResults[i] = {
+            fileName: bulkFiles[i].name,
+            status: "success",
+            candidateId: data.candidateId,
+            candidateName: data.candidateName,
+          };
+        } else {
+          const error = await res.json();
+          newResults[i] = {
+            fileName: bulkFiles[i].name,
+            status: "error",
+            error: error.message || "Upload failed",
+          };
+        }
+      } catch (error) {
+        newResults[i] = {
+          fileName: bulkFiles[i].name,
+          status: "error",
+          error: "Network error",
+        };
+      }
+
+      setBulkResults([...newResults]);
+    }
+
+    setIsBulkUploading(false);
+    queryClient.invalidateQueries({ queryKey: ["candidates-with-resumes"] });
+    queryClient.invalidateQueries({ queryKey: ["/api/candidates"] });
+    toast({
+      title: "Bulk upload complete",
+      description: `Processed ${bulkFiles.length} resumes.`,
+    });
+  };
+
+  const handleBulkReject = async () => {
+    const candidateIds = Array.from(selectedBulkCandidates);
+    if (candidateIds.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No candidates selected",
+        description: "Please select candidates to reject.",
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/bulk-reject-candidates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ candidateIds }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast({
+          title: "Candidates rejected",
+          description: `${data.rejectedCount} candidates have been moved to rejected stage.`,
+        });
+        setSelectedBulkCandidates(new Set());
+        setBulkResults(prev => prev.filter(r => !candidateIds.includes(r.candidateId || "")));
+        queryClient.invalidateQueries({ queryKey: ["/api/candidates"] });
+      } else {
+        throw new Error("Bulk reject failed");
+      }
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to reject candidates.",
+      });
+    }
+  };
+
+  const toggleBulkSelection = (candidateId: string) => {
+    const newSet = new Set(selectedBulkCandidates);
+    if (newSet.has(candidateId)) {
+      newSet.delete(candidateId);
+    } else {
+      newSet.add(candidateId);
+    }
+    setSelectedBulkCandidates(newSet);
+  };
+
+  const selectAllBulkCandidates = () => {
+    const allIds = bulkResults
+      .filter(r => r.status === "success" && r.candidateId)
+      .map(r => r.candidateId!);
+    setSelectedBulkCandidates(new Set(allIds));
+  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -740,6 +900,34 @@ export default function ResumeAnalyzerModule() {
         badge={module.featured ? "AI" : undefined}
       />
 
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="single" className="gap-2" data-testid="tab-single-analysis">
+            <FileText className="h-4 w-4" />
+            Single Analysis
+          </TabsTrigger>
+          <TabsTrigger 
+            value="bulk" 
+            className="gap-2" 
+            disabled={!isProOrAbove}
+            data-testid="tab-bulk-upload"
+          >
+            {isProOrAbove ? (
+              <>
+                <Upload className="h-4 w-4" />
+                Bulk Upload
+              </>
+            ) : (
+              <>
+                <Lock className="h-4 w-4" />
+                Bulk Upload
+                <Badge variant="secondary" className="ml-1 text-[10px]">Pro+</Badge>
+              </>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="single" className="mt-6">
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="h-fit">
           <CardHeader>
@@ -1681,6 +1869,181 @@ export default function ResumeAnalyzerModule() {
           )}
         </DialogContent>
       </Dialog>
+      </TabsContent>
+
+      <TabsContent value="bulk" className="mt-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  Bulk Resume Upload
+                </CardTitle>
+                <CardDescription>
+                  Upload multiple PDF resumes at once. Candidate profiles will be created automatically from extracted names.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label>Select Job to Associate Candidates</Label>
+                  <Select value={bulkJobId} onValueChange={setBulkJobId}>
+                    <SelectTrigger data-testid="select-bulk-job">
+                      <SelectValue placeholder={jobsLoading ? "Loading jobs..." : "Choose a job for all candidates"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {jobs.map((job) => (
+                        <SelectItem key={job.id} value={job.id} data-testid={`option-bulk-job-${job.id}`}>
+                          {job.title} - {job.level}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Upload PDF Resumes</Label>
+                  <div className="border-2 border-dashed rounded-lg p-8 text-center hover:bg-muted/50 transition-colors">
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      multiple
+                      onChange={handleBulkFileChange}
+                      className="hidden"
+                      id="bulk-resume-input"
+                      data-testid="input-bulk-resumes"
+                    />
+                    <label htmlFor="bulk-resume-input" className="cursor-pointer">
+                      <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-sm font-medium">Click to select PDF files</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {bulkFiles.length > 0 ? `${bulkFiles.length} files selected` : "Select multiple PDF resumes"}
+                      </p>
+                    </label>
+                  </div>
+                </div>
+
+                {bulkFiles.length > 0 && (
+                  <Button 
+                    onClick={handleBulkUpload} 
+                    disabled={isBulkUploading || !bulkJobId}
+                    className="w-full"
+                    data-testid="button-start-bulk-upload"
+                  >
+                    {isBulkUploading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload {bulkFiles.length} Resumes
+                      </>
+                    )}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Upload Results
+                    </CardTitle>
+                    <CardDescription>
+                      Created candidates from uploaded resumes
+                    </CardDescription>
+                  </div>
+                  {bulkResults.some(r => r.status === "success") && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={selectAllBulkCandidates}
+                        data-testid="button-select-all"
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkReject}
+                        disabled={selectedBulkCandidates.size === 0}
+                        data-testid="button-bulk-reject"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Reject ({selectedBulkCandidates.size})
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {bulkResults.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-10 w-10 mx-auto mb-4 opacity-50" />
+                    <p className="text-sm">No resumes uploaded yet</p>
+                    <p className="text-xs mt-1">Upload PDFs to see results here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {bulkResults.map((result, index) => (
+                      <div
+                        key={index}
+                        className={`flex items-center gap-3 p-3 rounded-lg border ${
+                          result.status === "success" ? "bg-green-50 border-green-200" :
+                          result.status === "error" ? "bg-red-50 border-red-200" :
+                          result.status === "processing" ? "bg-blue-50 border-blue-200" :
+                          "bg-muted/50"
+                        }`}
+                        data-testid={`bulk-result-${index}`}
+                      >
+                        {result.status === "success" && result.candidateId && (
+                          <input
+                            type="checkbox"
+                            checked={selectedBulkCandidates.has(result.candidateId)}
+                            onChange={() => toggleBulkSelection(result.candidateId!)}
+                            className="h-4 w-4"
+                            data-testid={`checkbox-candidate-${result.candidateId}`}
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{result.fileName}</p>
+                          {result.candidateName && (
+                            <p className="text-xs text-muted-foreground">
+                              Created: {result.candidateName}
+                            </p>
+                          )}
+                          {result.error && (
+                            <p className="text-xs text-red-600">{result.error}</p>
+                          )}
+                        </div>
+                        <div>
+                          {result.status === "pending" && (
+                            <Badge variant="secondary">Pending</Badge>
+                          )}
+                          {result.status === "processing" && (
+                            <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+                          )}
+                          {result.status === "success" && (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          )}
+                          {result.status === "error" && (
+                            <XCircle className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
