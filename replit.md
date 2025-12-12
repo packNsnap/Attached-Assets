@@ -239,3 +239,37 @@ User uploads are stored in a per-account folder structure for security and organ
 - Only PDF files are accepted for document uploads
 - Files are validated against path traversal attacks using strict ID validation and path normalization
 - Legacy flat file structure is still supported for backward compatibility
+
+## Stripe Subscription Integration
+
+The application uses Stripe for subscription management with automatic webhook syncing via `stripe-replit-sync`.
+
+**Subscription Tiers:**
+| Plan | Price | Jobs | Candidates/mo | AI Actions/Candidate |
+|------|-------|------|---------------|---------------------|
+| Free | $0 | 1 | 3 | 10 |
+| Growth | $29 | 5 | 25 | 15 |
+| Pro | $49.99 | 20 | 150 | 20 |
+| Enterprise | $150 | Unlimited | 1000+ | 10 |
+
+**Key Files:**
+- `server/stripeClient.ts` - Stripe client and credential fetching from Replit connection
+- `server/webhookHandlers.ts` - Webhook processing
+- `scripts/seed-stripe-products.ts` - Script to create products in Stripe
+
+**Database:**
+- `stripe.*` schema - Managed automatically by stripe-replit-sync (products, prices, customers, subscriptions)
+- `subscriptions` table in public schema - Stores user subscription info with Stripe IDs
+
+**API Endpoints:**
+- `GET /api/stripe/publishable-key` - Get Stripe publishable key
+- `GET /api/stripe/products` - List available products from synced Stripe data
+- `POST /api/stripe/create-checkout-session` - Create checkout session for subscription
+- `POST /api/stripe/create-portal-session` - Create customer portal session for managing subscription
+- `GET /api/stripe/subscription-status` - Get current user's subscription status
+
+**Workflow:**
+1. Stripe schema is initialized on server startup via `runMigrations()`
+2. Managed webhooks are auto-configured with UUID-based routing
+3. Products/prices are synced from Stripe to local PostgreSQL
+4. User clicks checkout → redirects to Stripe → webhook updates subscription
