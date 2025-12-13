@@ -682,7 +682,7 @@ function areNamesSimilar(name1: string, name2: string): boolean {
     for (let i = 0; i <= b; i++) matrix[0] = matrix[0] || [];
     for (let j = 0; j <= a; j++) matrix[j] = matrix[j] || [];
     for (let i = 0; i <= a; i++) matrix[i][0] = i;
-    for (j = 0; j <= b; j++) matrix[0][j] = j;
+    for (let j = 0; j <= b; j++) matrix[0][j] = j;
     for (let i = 1; i <= a; i++) {
       for (let j = 1; j <= b; j++) {
         matrix[i][j] = s1[i - 1] === s2[j - 1]
