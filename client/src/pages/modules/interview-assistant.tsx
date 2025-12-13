@@ -423,7 +423,7 @@ export default function InterviewAssistantModule() {
   const module = getModuleByPath("/interviews");
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-4 sm:space-y-6 max-w-6xl">
       <PageHeader
         title="Interview Assistant"
         description="AI-generated structured interview questions with real-time scoring rubrics."
@@ -438,42 +438,47 @@ export default function InterviewAssistantModule() {
       </PageHeader>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5 lg:w-[700px]">
-          <TabsTrigger value="recommendations" data-testid="tab-recommendations">
-            Queue
+        <TabsList className="grid w-full grid-cols-5 lg:w-[700px] h-auto">
+          <TabsTrigger value="recommendations" data-testid="tab-recommendations" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5 sm:py-2">
+            <span className="hidden sm:inline">Queue</span>
+            <span className="sm:hidden">Q</span>
             {queueRecommendations.length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+              <Badge variant="secondary" className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[10px] sm:text-xs">
                 {queueRecommendations.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="schedule" data-testid="tab-schedule">
-            <Calendar className="h-4 w-4 mr-1" />
-            Schedule
+          <TabsTrigger value="schedule" data-testid="tab-schedule" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5 sm:py-2">
+            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Schedule</span>
           </TabsTrigger>
-          <TabsTrigger value="interview" disabled={!session} data-testid="tab-interview">
-            {session ? "Active" : "Interview"}
+          <TabsTrigger value="interview" disabled={!session} data-testid="tab-interview" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5 sm:py-2">
+            {session ? "Active" : <><span className="hidden sm:inline">Interview</span><span className="sm:hidden">Int</span></>}
           </TabsTrigger>
-          <TabsTrigger value="completed" data-testid="tab-completed">
-            Completed
+          <TabsTrigger value="completed" data-testid="tab-completed" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5 sm:py-2">
+            <span className="hidden sm:inline">Completed</span>
+            <span className="sm:hidden">Done</span>
             {completedRecommendations.length > 0 && (
-              <Badge variant="outline" className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+              <Badge variant="outline" className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[10px] sm:text-xs">
                 {completedRecommendations.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="manual" data-testid="tab-manual">Manual</TabsTrigger>
+          <TabsTrigger value="manual" data-testid="tab-manual" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5 sm:py-2">
+            <span className="hidden sm:inline">Manual</span>
+            <span className="sm:hidden">New</span>
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="recommendations" className="mt-6">
-          <div className="space-y-4">
+        <TabsContent value="recommendations" className="mt-4 sm:mt-6">
+          <div className="space-y-3 sm:space-y-4">
             {queueRecommendations.length === 0 ? (
               <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Inbox className="h-6 w-6 text-muted-foreground" />
+                <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-muted flex items-center justify-center mb-3 sm:mb-4">
+                    <Inbox className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-medium text-muted-foreground">No Candidates in Queue</h3>
+                  <h3 className="text-base sm:text-lg font-medium text-muted-foreground text-center">No Candidates in Queue</h3>
                   <p className="text-sm text-muted-foreground/70 max-w-sm text-center mt-2">
                     When candidates pass skills tests with a score of 70% or higher, they'll appear here with AI-tailored interview questions.
                   </p>
@@ -491,44 +496,44 @@ export default function InterviewAssistantModule() {
                     isLoading && "border-primary/50 bg-primary/5"
                   )}
                 >
-                  <CardContent className="pt-6">
+                  <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
                     {isLoading ? (
-                      <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                      <div className="flex flex-col items-center justify-center py-6 sm:py-8 space-y-3 sm:space-y-4">
                         <div className="relative">
-                          <div className="h-16 w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
-                          <Brain className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                          <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+                          <Brain className="h-4 w-4 sm:h-6 sm:w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                         </div>
-                        <div className="text-center space-y-2">
-                          <h3 className="font-medium">Preparing Interview for {rec.candidateName}</h3>
-                          <p className="text-sm text-muted-foreground">AI is analyzing resume, test results, and generating personalized questions...</p>
+                        <div className="text-center space-y-1 sm:space-y-2">
+                          <h3 className="font-medium text-sm sm:text-base">Preparing Interview for {rec.candidateName}</h3>
+                          <p className="text-xs sm:text-sm text-muted-foreground">AI is analyzing resume, test results, and generating personalized questions...</p>
                         </div>
-                        <div className="flex gap-2 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap justify-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground">
                           <span className="flex items-center gap-1"><FileSearch className="h-3 w-3" /> Analyzing resume</span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span className="flex items-center gap-1"><Target className="h-3 w-3" /> Identifying skill gaps</span>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> Creating AI detection probes</span>
                         </div>
                       </div>
                     ) : (
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-3 flex-1">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium" data-testid={`text-rec-name-${rec.id}`}>{rec.candidateName}</span>
-                          <Badge variant={rec.status === "pending" ? "default" : "secondary"}>
-                            {rec.status === "pending" ? "Ready for Interview" : "In Progress"}
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0">
+                      <div className="space-y-2 sm:space-y-3 flex-1">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                          <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                          <span className="font-medium text-sm sm:text-base" data-testid={`text-rec-name-${rec.id}`}>{rec.candidateName}</span>
+                          <Badge variant={rec.status === "pending" ? "default" : "secondary"} className="text-[10px] sm:text-xs">
+                            {rec.status === "pending" ? "Ready" : "In Progress"}
                           </Badge>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Briefcase className="h-4 w-4" />
-                          <span>{rec.jobTitle}</span>
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                          <Briefcase className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="truncate max-w-[150px] sm:max-w-none">{rec.jobTitle}</span>
                           <span className="font-medium">
-                            • <Trophy className="h-3 w-3 inline" /> Test Score: {rec.testScore}%
+                            • <Trophy className="h-3 w-3 inline" /> {rec.testScore}%
                           </span>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
                           <div>
                             <h4 className="text-xs font-medium text-green-600 mb-1 flex items-center gap-1">
                               <Check className="h-3 w-3" /> Strengths
@@ -561,8 +566,8 @@ export default function InterviewAssistantModule() {
                           </div>
                         </div>
 
-                        <div className="mt-4 p-3 bg-muted/50 rounded-lg">
-                          <h4 className="text-xs font-medium mb-2">AI-Recommended Questions ({rec.recommendedQuestions.length})</h4>
+                        <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-muted/50 rounded-lg">
+                          <h4 className="text-[10px] sm:text-xs font-medium mb-1 sm:mb-2">AI-Recommended Questions ({rec.recommendedQuestions.length})</h4>
                           <ul className="text-xs text-muted-foreground space-y-1">
                             {rec.recommendedQuestions.slice(0, 2).map((q, idx) => (
                               <li key={idx} className="flex gap-2">
@@ -576,8 +581,8 @@ export default function InterviewAssistantModule() {
                           </ul>
                         </div>
                       </div>
-                      <div className="flex flex-col gap-2 ml-4">
-                        <div className="flex gap-2">
+                      <div className="flex flex-col gap-2 sm:ml-4 mt-3 sm:mt-0">
+                        <div className="flex flex-wrap gap-2">
                           {rec.status === "pending" && rec.recommendedQuestions.length === 0 && (
                             <Button
                               size="sm"
@@ -585,16 +590,19 @@ export default function InterviewAssistantModule() {
                               data-testid={`button-generate-questions-${rec.id}`}
                               onClick={() => generateQuestionsOnly(rec)}
                               disabled={isGenerating}
+                              className="text-xs sm:text-sm h-8 sm:h-9"
                             >
                               {isGenerating && loadingRecommendationId === rec.id ? (
                                 <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Generating...
+                                  <Loader2 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                  <span className="hidden sm:inline">Generating...</span>
+                                  <span className="sm:hidden">...</span>
                                 </>
                               ) : (
                                 <>
-                                  <Sparkles className="mr-2 h-4 w-4" />
-                                  Generate Questions
+                                  <Sparkles className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                                  <span className="hidden sm:inline">Generate Questions</span>
+                                  <span className="sm:hidden">Generate</span>
                                 </>
                               )}
                             </Button>
@@ -605,16 +613,19 @@ export default function InterviewAssistantModule() {
                               data-testid={`button-start-interview-${rec.id}`}
                               onClick={() => startFromRecommendation(rec)}
                               disabled={isGenerating}
+                              className="text-xs sm:text-sm h-8 sm:h-9"
                             >
                               {isGenerating && loadingRecommendationId === rec.id ? (
                                 <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Preparing...
+                                  <Loader2 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                  <span className="hidden sm:inline">Preparing...</span>
+                                  <span className="sm:hidden">...</span>
                                 </>
                               ) : (
                                 <>
-                                  <ArrowRight className="mr-2 h-4 w-4" />
-                                  Start Interview
+                                  <ArrowRight className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                                  <span className="hidden sm:inline">Start Interview</span>
+                                  <span className="sm:hidden">Start</span>
                                 </>
                               )}
                             </Button>
@@ -626,11 +637,12 @@ export default function InterviewAssistantModule() {
                               data-testid={`button-continue-interview-${rec.id}`}
                               onClick={() => startFromRecommendation(rec)}
                               disabled={isGenerating}
+                              className="text-xs sm:text-sm h-8 sm:h-9"
                             >
                               {isGenerating && loadingRecommendationId === rec.id ? (
                                 <>
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                  Loading...
+                                  <Loader2 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                                  ...
                                 </>
                               ) : (
                                 "Continue"
@@ -640,12 +652,12 @@ export default function InterviewAssistantModule() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 sm:h-9 w-8 sm:w-9 p-0"
                             onClick={() => deleteRecommendation.mutate(rec.id)}
                             disabled={deleteRecommendation.isPending}
                             data-testid={`button-delete-rec-${rec.id}`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4" />
                           </Button>
                         </div>
                       </div>
@@ -658,34 +670,35 @@ export default function InterviewAssistantModule() {
           </div>
         </TabsContent>
 
-        <TabsContent value="schedule" className="mt-6">
-          <div className="grid gap-6 lg:grid-cols-3">
+        <TabsContent value="schedule" className="mt-4 sm:mt-6">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2">
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 p-3 sm:p-6">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <CalendarDays className="h-5 w-5" />
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5" />
                     Interview Calendar
                   </CardTitle>
-                  <CardDescription>Schedule and manage upcoming interviews</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">Schedule and manage upcoming interviews</CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-                    <ChevronDown className="h-4 w-4 rotate-90" />
+                <div className="flex items-center gap-1 sm:gap-2">
+                  <Button variant="outline" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="h-7 w-7 sm:h-9 sm:w-9">
+                    <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 rotate-90" />
                   </Button>
-                  <span className="text-sm font-medium min-w-[120px] text-center">
-                    {format(currentMonth, "MMMM yyyy")}
+                  <span className="text-xs sm:text-sm font-medium min-w-[90px] sm:min-w-[120px] text-center">
+                    {format(currentMonth, "MMM yyyy")}
                   </span>
-                  <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-                    <ChevronDown className="h-4 w-4 -rotate-90" />
+                  <Button variant="outline" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="h-7 w-7 sm:h-9 sm:w-9">
+                    <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 -rotate-90" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 sm:p-6">
                 <div className="grid grid-cols-7 gap-px bg-muted rounded-lg overflow-hidden">
-                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-                    <div key={day} className="bg-muted-foreground/10 p-2 text-center text-xs font-medium">
-                      {day}
+                  {["S", "M", "T", "W", "T", "F", "S"].map((day, idx) => (
+                    <div key={idx} className="bg-muted-foreground/10 p-1 sm:p-2 text-center text-[10px] sm:text-xs font-medium">
+                      <span className="sm:hidden">{day}</span>
+                      <span className="hidden sm:inline">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][idx]}</span>
                     </div>
                   ))}
                   {(() => {
@@ -697,7 +710,7 @@ export default function InterviewAssistantModule() {
                     
                     return paddedDays.map((day, idx) => {
                       if (!day) {
-                        return <div key={`pad-${idx}`} className="bg-background p-2 min-h-[80px]" />;
+                        return <div key={`pad-${idx}`} className="bg-background p-1 sm:p-2 min-h-[50px] sm:min-h-[80px]" />;
                       }
                       const dayInterviews = scheduledInterviews.filter((interview) => {
                         const interviewDate = new Date(interview.scheduledDate);
@@ -707,7 +720,7 @@ export default function InterviewAssistantModule() {
                         <div
                           key={day.toISOString()}
                           className={cn(
-                            "bg-background p-2 min-h-[80px] cursor-pointer hover:bg-muted/50 transition-colors",
+                            "bg-background p-1 sm:p-2 min-h-[50px] sm:min-h-[80px] cursor-pointer hover:bg-muted/50 transition-colors",
                             isToday(day) && "ring-2 ring-primary ring-inset",
                             !isSameMonth(day, currentMonth) && "opacity-50"
                           )}
@@ -718,36 +731,37 @@ export default function InterviewAssistantModule() {
                           data-testid={`calendar-day-${format(day, "yyyy-MM-dd")}`}
                         >
                           <span className={cn(
-                            "text-xs font-medium",
+                            "text-[10px] sm:text-xs font-medium",
                             isToday(day) && "text-primary"
                           )}>
                             {format(day, "d")}
                           </span>
-                          <div className="mt-1 space-y-1">
+                          <div className="mt-0.5 sm:mt-1 space-y-0.5 sm:space-y-1">
                             {dayInterviews.slice(0, 2).map((interview) => (
                               <div
                                 key={interview.id}
-                                className="text-xs p-1 bg-primary/10 text-primary rounded flex items-center justify-between"
+                                className="text-[8px] sm:text-xs p-0.5 sm:p-1 bg-primary/10 text-primary rounded flex items-center justify-between"
                                 title={`${interview.candidateName} - ${interview.jobTitle}`}
                               >
                                 <span className="truncate flex-1">
-                                  {format(new Date(interview.scheduledDate), "h:mm a")} {interview.candidateName.split(" ")[0]}
+                                  <span className="hidden sm:inline">{format(new Date(interview.scheduledDate), "h:mm a")} </span>
+                                  {interview.candidateName.split(" ")[0]}
                                 </span>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     deleteScheduledInterview.mutate(interview.id);
                                   }}
-                                  className="ml-1 text-primary hover:text-destructive transition-colors"
+                                  className="ml-0.5 sm:ml-1 text-primary hover:text-destructive transition-colors"
                                   title="Delete interview"
                                   data-testid={`calendar-delete-interview-${interview.id}`}
                                 >
-                                  <X className="h-3 w-3" />
+                                  <X className="h-2 w-2 sm:h-3 sm:w-3" />
                                 </button>
                               </div>
                             ))}
                             {dayInterviews.length > 2 && (
-                              <div className="text-xs text-muted-foreground">+{dayInterviews.length - 2} more</div>
+                              <div className="text-[8px] sm:text-xs text-muted-foreground">+{dayInterviews.length - 2}</div>
                             )}
                           </div>
                         </div>
@@ -759,32 +773,32 @@ export default function InterviewAssistantModule() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Upcoming Interviews</CardTitle>
-                <CardDescription>Next 7 days</CardDescription>
+              <CardHeader className="p-3 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Upcoming Interviews</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Next 7 days</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-3">
+              <CardContent className="p-3 sm:p-6 pt-0 sm:pt-0">
+                <ScrollArea className="h-[300px] sm:h-[400px]">
+                  <div className="space-y-2 sm:space-y-3">
                     {scheduledInterviews
                       .filter((i) => new Date(i.scheduledDate) >= new Date())
                       .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
                       .slice(0, 10)
                       .map((interview) => (
-                        <div key={interview.id} className="p-3 border rounded-lg" data-testid={`scheduled-interview-${interview.id}`}>
+                        <div key={interview.id} className="p-2 sm:p-3 border rounded-lg" data-testid={`scheduled-interview-${interview.id}`}>
                           <div className="flex items-start justify-between">
-                            <div className="space-y-2 flex-1">
-                              <p className="font-medium text-sm">{interview.candidateName}</p>
-                              <p className="text-xs text-muted-foreground">{interview.jobTitle}</p>
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
+                            <div className="space-y-1 sm:space-y-2 flex-1">
+                              <p className="font-medium text-xs sm:text-sm">{interview.candidateName}</p>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{interview.jobTitle}</p>
+                              <div className="flex items-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground">
+                                <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                 {format(new Date(interview.scheduledDate), "MMM d, h:mm a")}
-                                <span>({interview.duration}min)</span>
+                                <span className="hidden sm:inline">({interview.duration}min)</span>
                               </div>
-                              <Badge variant="outline" className="text-xs">
-                                {interview.interviewType === "video" && <Video className="h-3 w-3 mr-1" />}
-                                {interview.interviewType === "phone" && <Phone className="h-3 w-3 mr-1" />}
-                                {interview.interviewType === "in_person" && <Building className="h-3 w-3 mr-1" />}
+                              <Badge variant="outline" className="text-[10px] sm:text-xs">
+                                {interview.interviewType === "video" && <Video className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />}
+                                {interview.interviewType === "phone" && <Phone className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />}
+                                {interview.interviewType === "in_person" && <Building className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />}
                                 {interview.interviewType}
                               </Badge>
                               <div className="flex gap-1 pt-1">
@@ -870,16 +884,16 @@ export default function InterviewAssistantModule() {
           </div>
 
           <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Schedule Interview</DialogTitle>
-                <DialogDescription>
-                  {selectedDate && `Schedule an interview for ${format(selectedDate, "EEEE, MMMM d, yyyy")}`}
+                <DialogTitle className="text-base sm:text-lg">Schedule Interview</DialogTitle>
+                <DialogDescription className="text-xs sm:text-sm">
+                  {selectedDate && `Schedule for ${format(selectedDate, "EEE, MMM d, yyyy")}`}
                 </DialogDescription>
               </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Candidate</label>
+              <div className="grid gap-3 sm:gap-4 py-3 sm:py-4">
+                <div className="grid gap-1 sm:gap-2">
+                  <label className="text-xs sm:text-sm font-medium">Candidate</label>
                   <Select
                     value={scheduleForm.candidateId}
                     onValueChange={(value) => {
@@ -904,9 +918,9 @@ export default function InterviewAssistantModule() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Time</label>
+                <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                  <div className="grid gap-1 sm:gap-2">
+                    <label className="text-xs sm:text-sm font-medium">Time</label>
                     <Input
                       type="time"
                       value={scheduleForm.scheduledTime}
@@ -914,8 +928,8 @@ export default function InterviewAssistantModule() {
                       data-testid="input-time"
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <label className="text-sm font-medium">Duration</label>
+                  <div className="grid gap-1 sm:gap-2">
+                    <label className="text-xs sm:text-sm font-medium">Duration</label>
                     <Select
                       value={String(scheduleForm.duration)}
                       onValueChange={(value) => setScheduleForm((prev) => ({ ...prev, duration: parseInt(value) }))}
@@ -932,8 +946,8 @@ export default function InterviewAssistantModule() {
                     </Select>
                   </div>
                 </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Interview Type</label>
+                <div className="grid gap-1 sm:gap-2">
+                  <label className="text-xs sm:text-sm font-medium">Interview Type</label>
                   <Select
                     value={scheduleForm.interviewType}
                     onValueChange={(value) => setScheduleForm((prev) => ({ ...prev, interviewType: value }))}
@@ -948,8 +962,8 @@ export default function InterviewAssistantModule() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Interviewer Name</label>
+                <div className="grid gap-1 sm:gap-2">
+                  <label className="text-xs sm:text-sm font-medium">Interviewer Name</label>
                   <Input
                     value={scheduleForm.interviewerName}
                     onChange={(e) => setScheduleForm((prev) => ({ ...prev, interviewerName: e.target.value }))}
@@ -957,8 +971,8 @@ export default function InterviewAssistantModule() {
                     data-testid="input-interviewer"
                   />
                 </div>
-                <div className="grid gap-2">
-                  <label className="text-sm font-medium">Notes (optional)</label>
+                <div className="grid gap-1 sm:gap-2">
+                  <label className="text-xs sm:text-sm font-medium">Notes (optional)</label>
                   <Textarea
                     value={scheduleForm.notes}
                     onChange={(e) => setScheduleForm((prev) => ({ ...prev, notes: e.target.value }))}
@@ -1006,11 +1020,11 @@ export default function InterviewAssistantModule() {
           </Dialog>
         </TabsContent>
 
-        <TabsContent value="manual" className="mt-6">
+        <TabsContent value="manual" className="mt-4 sm:mt-6">
           <Card className="max-w-2xl">
-            <CardHeader>
-              <CardTitle>Start New Interview</CardTitle>
-              <CardDescription>
+            <CardHeader className="p-3 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Start New Interview</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
                 Enter details to generate a tailored interview script manually.
               </CardDescription>
             </CardHeader>
@@ -1069,16 +1083,16 @@ export default function InterviewAssistantModule() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="completed" className="mt-6">
-          <div className="space-y-4">
+        <TabsContent value="completed" className="mt-4 sm:mt-6">
+          <div className="space-y-3 sm:space-y-4">
             {completedRecommendations.length === 0 ? (
               <Card className="border-dashed">
-                <CardContent className="flex flex-col items-center justify-center py-12">
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    <Check className="h-6 w-6 text-muted-foreground" />
+                <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 px-4">
+                  <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-full bg-muted flex items-center justify-center mb-3 sm:mb-4">
+                    <Check className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-medium text-muted-foreground">No Completed Interviews</h3>
-                  <p className="text-sm text-muted-foreground/70 max-w-sm text-center mt-2">
+                  <h3 className="text-base sm:text-lg font-medium text-muted-foreground text-center">No Completed Interviews</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground/70 max-w-sm text-center mt-2">
                     Completed interviews will appear here with scores and notes summary.
                   </p>
                 </CardContent>
@@ -1089,29 +1103,29 @@ export default function InterviewAssistantModule() {
                 const interviewSummary = rec.interviewSummary ? JSON.parse(rec.interviewSummary) : [];
                 return (
                 <Card key={rec.id} data-testid={`completed-interview-${rec.id}`} className="border-green-200 bg-green-50/30 dark:border-green-800 dark:bg-green-900/10">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-3 flex-1">
-                        <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{rec.candidateName}</span>
-                          <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400">
-                            <Check className="h-3 w-3 mr-1" /> Completed
+                  <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-0">
+                      <div className="space-y-2 sm:space-y-3 flex-1">
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                          <User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                          <span className="font-medium text-sm sm:text-base">{rec.candidateName}</span>
+                          <Badge variant="outline" className="border-green-500 text-green-700 dark:text-green-400 text-[10px] sm:text-xs">
+                            <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" /> Done
                           </Badge>
                           {rec.interviewScore !== null && rec.interviewScore !== undefined && (
-                            <Badge variant={rec.interviewScore >= 70 ? "default" : rec.interviewScore >= 50 ? "secondary" : "destructive"}>
-                              <Star className="h-3 w-3 mr-1" /> Interview: {rec.interviewScore}%
+                            <Badge variant={rec.interviewScore >= 70 ? "default" : rec.interviewScore >= 50 ? "secondary" : "destructive"} className="text-[10px] sm:text-xs">
+                              <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" /> {rec.interviewScore}%
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Briefcase className="h-4 w-4" />
-                          <span>{rec.jobTitle}</span>
+                        <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                          <Briefcase className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="truncate max-w-[150px] sm:max-w-none">{rec.jobTitle}</span>
                           <span className="font-medium">
-                            • <Trophy className="h-3 w-3 inline" /> Test Score: {rec.testScore}%
+                            • <Trophy className="h-2.5 w-2.5 sm:h-3 sm:w-3 inline" /> {rec.testScore}%
                           </span>
                           {rec.completedAt && (
-                            <span className="text-xs">• Completed: {new Date(rec.completedAt).toLocaleDateString()}</span>
+                            <span className="text-[10px] sm:text-xs hidden sm:inline">• {new Date(rec.completedAt).toLocaleDateString()}</span>
                           )}
                         </div>
                         
@@ -1187,25 +1201,25 @@ export default function InterviewAssistantModule() {
                           </Collapsible>
                         )}
                         
-                        <div className="grid grid-cols-2 gap-4 mt-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3 sm:mt-4">
                           <div>
-                            <h4 className="text-xs font-medium text-green-600 mb-1 flex items-center gap-1">
-                              <Check className="h-3 w-3" /> Strengths
+                            <h4 className="text-[10px] sm:text-xs font-medium text-green-600 mb-1 flex items-center gap-1">
+                              <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Strengths
                             </h4>
                             <div className="flex flex-wrap gap-1">
                               {rec.strengths.map((skill) => (
-                                <Badge key={skill} variant="outline" className="text-xs border-green-200 text-green-700 bg-green-50">
+                                <Badge key={skill} variant="outline" className="text-[10px] sm:text-xs border-green-200 text-green-700 bg-green-50">
                                   {skill}
                                 </Badge>
                               ))}
                               {rec.strengths.length === 0 && (
-                                <span className="text-xs text-muted-foreground italic">None identified</span>
+                                <span className="text-[10px] sm:text-xs text-muted-foreground italic">None identified</span>
                               )}
                             </div>
                           </div>
                           <div>
-                            <h4 className="text-xs font-medium text-muted-foreground mb-1">Questions Asked</h4>
-                            <span className="text-xs text-muted-foreground">{rec.recommendedQuestions.length} questions</span>
+                            <h4 className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-1">Questions Asked</h4>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">{rec.recommendedQuestions.length} questions</span>
                           </div>
                         </div>
                       </div>
@@ -1219,14 +1233,14 @@ export default function InterviewAssistantModule() {
           </div>
         </TabsContent>
 
-        <TabsContent value="interview" className="mt-6">
+        <TabsContent value="interview" className="mt-4 sm:mt-6">
           {session ? (
-        <div className="grid gap-6 lg:grid-cols-3 h-[600px]">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 lg:h-[600px]">
           {/* Sidebar Navigation */}
           <Card className="lg:col-span-1 flex flex-col">
-            <CardHeader className="border-b">
-              <CardTitle className="text-lg">{session.candidateName}</CardTitle>
-              <CardDescription>Interview Progress</CardDescription>
+            <CardHeader className="border-b p-3 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">{session.candidateName}</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Interview Progress</CardDescription>
               {session.candidateContext?.aiDetectionLevel !== null && session.candidateContext?.aiDetectionLevel !== undefined && (
                 <div className="mt-2">
                   <Badge 
@@ -1239,11 +1253,11 @@ export default function InterviewAssistantModule() {
                 </div>
               )}
             </CardHeader>
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-2">
+            <ScrollArea className="flex-1 max-h-[200px] lg:max-h-none">
+              <div className="p-2 sm:p-4 space-y-1 sm:space-y-2">
                 {session.overallGuidance && (
-                  <div className="p-3 mb-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                    <p className="text-xs text-amber-800 dark:text-amber-200">{session.overallGuidance}</p>
+                  <div className="p-2 sm:p-3 mb-2 sm:mb-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-[10px] sm:text-xs text-amber-800 dark:text-amber-200">{session.overallGuidance}</p>
                   </div>
                 )}
                 {session.questions.map((q, idx) => (
@@ -1251,30 +1265,30 @@ export default function InterviewAssistantModule() {
                     key={q.id}
                     onClick={() => setCurrentQuestionIndex(idx)}
                     className={cn(
-                      "w-full text-left p-3 rounded-lg text-sm transition-colors flex items-start gap-3",
+                      "w-full text-left p-2 sm:p-3 rounded-lg text-xs sm:text-sm transition-colors flex items-start gap-2 sm:gap-3",
                       currentQuestionIndex === idx 
                         ? "bg-primary text-primary-foreground shadow-sm" 
                         : "hover:bg-muted"
                     )}
                   >
                     <div className={cn(
-                      "h-5 w-5 rounded-full flex items-center justify-center text-xs shrink-0 border",
+                      "h-4 w-4 sm:h-5 sm:w-5 rounded-full flex items-center justify-center text-[10px] sm:text-xs shrink-0 border",
                       currentQuestionIndex === idx ? "border-primary-foreground" : "border-muted-foreground"
                     )}>
-                      {scores[idx] ? <Check className="h-3 w-3" /> : idx + 1}
+                      {scores[idx] ? <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> : idx + 1}
                     </div>
                     <div className="min-w-0">
-                      <span className="font-semibold block mb-0.5 text-xs capitalize">
+                      <span className="font-semibold block mb-0.5 text-[10px] sm:text-xs capitalize">
                         {getCategoryIcon(q.category)} {formatCategoryName(q.category)}
                       </span>
-                      <span className="opacity-90 line-clamp-1 text-xs">{q.text}</span>
+                      <span className="opacity-90 line-clamp-1 text-[10px] sm:text-xs">{q.text}</span>
                     </div>
                   </button>
                 ))}
               </div>
             </ScrollArea>
-            <div className="p-4 border-t bg-muted/20">
-              <Button variant="outline" className="w-full" onClick={() => setSession(null)}>
+            <div className="p-2 sm:p-4 border-t bg-muted/20">
+              <Button variant="outline" className="w-full text-xs sm:text-sm h-8 sm:h-9" onClick={() => setSession(null)}>
                 End Session
               </Button>
             </div>
@@ -1282,38 +1296,38 @@ export default function InterviewAssistantModule() {
 
           {/* Active Question Area */}
           <Card className="lg:col-span-2 flex flex-col">
-            <CardHeader>
-              <div className="flex justify-between items-center mb-2">
-                <Badge variant={getCategoryBadgeVariant(session.questions[currentQuestionIndex].category)}>
+            <CardHeader className="p-3 sm:p-6">
+              <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
+                <Badge variant={getCategoryBadgeVariant(session.questions[currentQuestionIndex].category)} className="text-[10px] sm:text-xs">
                   {getCategoryIcon(session.questions[currentQuestionIndex].category)} {formatCategoryName(session.questions[currentQuestionIndex].category)}
                 </Badge>
-                <span className="text-sm text-muted-foreground">
-                  Question {currentQuestionIndex + 1} of {session.questions.length}
+                <span className="text-[10px] sm:text-sm text-muted-foreground">
+                  Q{currentQuestionIndex + 1}/{session.questions.length}
                 </span>
               </div>
-              <CardTitle className="text-xl leading-relaxed">
+              <CardTitle className="text-base sm:text-xl leading-relaxed">
                 {session.questions[currentQuestionIndex].text}
               </CardTitle>
             </CardHeader>
             
-            <CardContent className="flex-1 space-y-4 overflow-y-auto">
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-100 dark:border-blue-800">
-                <h4 className="font-semibold text-sm text-blue-900 dark:text-blue-100 mb-2 flex items-center gap-2">
-                  <Star className="h-4 w-4" />
-                  What to look for (Rubric)
+            <CardContent className="flex-1 space-y-3 sm:space-y-4 overflow-y-auto p-3 sm:p-6 pt-0 sm:pt-0">
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-2 sm:p-4 rounded-lg border border-blue-100 dark:border-blue-800">
+                <h4 className="font-semibold text-xs sm:text-sm text-blue-900 dark:text-blue-100 mb-1 sm:mb-2 flex items-center gap-1 sm:gap-2">
+                  <Star className="h-3 w-3 sm:h-4 sm:w-4" />
+                  What to look for
                 </h4>
-                <p className="text-sm text-blue-800 dark:text-blue-200">
+                <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-200">
                   {session.questions[currentQuestionIndex].rubric}
                 </p>
               </div>
 
               {session.questions[currentQuestionIndex].redFlags && (
-                <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-100 dark:border-red-800">
-                  <h4 className="font-semibold text-sm text-red-900 dark:text-red-100 mb-2 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Red Flags to Watch For
+                <div className="bg-red-50 dark:bg-red-900/20 p-2 sm:p-4 rounded-lg border border-red-100 dark:border-red-800">
+                  <h4 className="font-semibold text-xs sm:text-sm text-red-900 dark:text-red-100 mb-1 sm:mb-2 flex items-center gap-1 sm:gap-2">
+                    <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                    Red Flags
                   </h4>
-                  <p className="text-sm text-red-800 dark:text-red-200">
+                  <p className="text-xs sm:text-sm text-red-800 dark:text-red-200">
                     {session.questions[currentQuestionIndex].redFlags}
                   </p>
                 </div>
@@ -1321,11 +1335,11 @@ export default function InterviewAssistantModule() {
 
               <Separator />
 
-              <div className="space-y-4">
-                <div className="space-y-2">
+              <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-1 sm:space-y-2">
                   <div className="flex justify-between">
-                    <label className="text-sm font-medium">Candidate Score</label>
-                    <span className="text-sm font-bold text-primary">
+                    <label className="text-xs sm:text-sm font-medium">Candidate Score</label>
+                    <span className="text-xs sm:text-sm font-bold text-primary">
                       {scores[currentQuestionIndex] ? scores[currentQuestionIndex] + "/5" : "Not scored"}
                     </span>
                   </div>
@@ -1344,11 +1358,11 @@ export default function InterviewAssistantModule() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Interviewer Notes</label>
+                <div className="space-y-1 sm:space-y-2">
+                  <label className="text-xs sm:text-sm font-medium">Interviewer Notes</label>
                   <Textarea
-                    placeholder="Record key points from the candidate's answer..."
-                    className="min-h-[100px]"
+                    placeholder="Record key points..."
+                    className="min-h-[80px] sm:min-h-[100px] text-xs sm:text-sm"
                     value={notes[currentQuestionIndex] || ""}
                     onChange={handleNote}
                   />
@@ -1356,32 +1370,37 @@ export default function InterviewAssistantModule() {
               </div>
             </CardContent>
 
-            <CardFooter className="border-t bg-muted/10 flex justify-between">
+            <CardFooter className="border-t bg-muted/10 flex justify-between p-2 sm:p-6">
               <Button 
                 variant="ghost" 
                 onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
                 disabled={currentQuestionIndex === 0}
+                className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-4"
               >
-                Previous
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Prev</span>
               </Button>
               {currentQuestionIndex === session.questions.length - 1 ? (
-                <Button onClick={completeInterview} disabled={isCompleting} className="bg-green-600 hover:bg-green-700">
+                <Button onClick={completeInterview} disabled={isCompleting} className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-4">
                   {isCompleting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
+                      <Loader2 className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                      <span className="hidden sm:inline">Saving...</span>
+                      <span className="sm:hidden">...</span>
                     </>
                   ) : (
                     <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Complete Interview
+                      <Check className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Complete Interview</span>
+                      <span className="sm:hidden">Complete</span>
                     </>
                   )}
                 </Button>
               ) : (
-                <Button onClick={nextQuestion}>
-                  Next Question
-                  <ChevronRight className="ml-2 h-4 w-4" />
+                <Button onClick={nextQuestion} className="text-xs sm:text-sm h-8 sm:h-9 px-2 sm:px-4">
+                  <span className="hidden sm:inline">Next Question</span>
+                  <span className="sm:hidden">Next</span>
+                  <ChevronRight className="ml-1 sm:ml-2 h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               )}
             </CardFooter>

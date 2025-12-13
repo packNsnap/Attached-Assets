@@ -353,15 +353,15 @@ export default function JobDescriptionModule() {
         gradient={module.color}
       />
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         {/* Left Column: Form + Output */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
         <Card>
-          <CardHeader>
-            <CardTitle>Role Details</CardTitle>
-            <CardDescription>Fill in the position requirements</CardDescription>
+          <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
+            <CardTitle className="text-base sm:text-lg">Role Details</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Fill in the position requirements</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
@@ -378,7 +378,7 @@ export default function JobDescriptionModule() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="level"
@@ -462,41 +462,42 @@ export default function JobDescriptionModule() {
                   )}
                 />
 
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Button 
                     type="button" 
                     variant="outline"
-                    className="flex-1" 
+                    className="flex-1 text-xs sm:text-sm" 
+                    size="sm"
                     disabled={researchMutation.isPending || generateMutation.isPending} 
                     onClick={handleResearch}
                     data-testid="button-research"
                   >
                     {researchMutation.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                         Researching...
                       </>
                     ) : (
                       <>
-                        <Search className="mr-2 h-4 w-4" />
+                        <Search className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                         Research from Web
                       </>
                     )}
                   </Button>
-                  <Button type="submit" className="flex-1" disabled={generateMutation.isPending || createJobMutation.isPending} data-testid="button-generate">
+                  <Button type="submit" className="flex-1 text-xs sm:text-sm" size="sm" disabled={generateMutation.isPending || createJobMutation.isPending} data-testid="button-generate">
                     {generateMutation.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                         AI Generating...
                       </>
                     ) : createJobMutation.isPending ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                         Saving...
                       </>
                     ) : (
                       <>
-                        <Wand2 className="mr-2 h-4 w-4" />
+                        <Wand2 className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                         Generate with AI
                       </>
                     )}
@@ -511,15 +512,15 @@ export default function JobDescriptionModule() {
         {researchResults && (
           <Collapsible open={researchOpen} onOpenChange={setResearchOpen}>
             <Card className="border-blue-500/30 bg-blue-500/5">
-              <CardHeader className="pb-2">
+              <CardHeader className="p-3 sm:p-4 pb-2">
                 <CollapsibleTrigger className="flex items-center justify-between w-full">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5 text-blue-500" />
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-1.5 sm:gap-2">
+                    <Lightbulb className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
                     Research Insights
                   </CardTitle>
-                  {researchOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  {researchOpen ? <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" /> : <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />}
                 </CollapsibleTrigger>
-                <CardDescription>From real job postings for similar roles</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">From real job postings for similar roles</CardDescription>
               </CardHeader>
               <CollapsibleContent>
                 <CardContent className="space-y-4">
@@ -593,20 +594,20 @@ export default function JobDescriptionModule() {
           {result ? (
             <>
               <Card className="border-primary/20">
-                <CardHeader className="pb-3">
+                <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">Market Salary Range</CardTitle>
-                    <Button variant="outline" size="sm" onClick={copyToClipboard}>
-                      <Copy className="h-4 w-4 mr-2" />
+                    <CardTitle className="text-base sm:text-lg">Market Salary Range</CardTitle>
+                    <Button variant="outline" size="sm" className="text-xs h-7 sm:h-8" onClick={copyToClipboard}>
+                      <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                       Copy
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
-                    <div className="text-3xl font-bold">
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 sm:p-4">
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold">
                       ${result.salaryRange.min.toLocaleString()} - ${result.salaryRange.max.toLocaleString()}
-                      <span className="text-sm font-normal text-muted-foreground ml-2">/ year</span>
+                      <span className="text-xs sm:text-sm font-normal text-muted-foreground ml-1 sm:ml-2">/ year</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       Based on {form.getValues("level")} level, {form.getValues("location")} location
@@ -616,44 +617,46 @@ export default function JobDescriptionModule() {
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Job Description</CardTitle>
+                <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
+                  <CardTitle className="text-base sm:text-lg">Job Description</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="prose prose-sm max-w-none dark:prose-invert text-sm">
-                    <div className="whitespace-pre-wrap leading-relaxed font-mono bg-muted/30 p-4 rounded border max-h-72 overflow-y-auto">
+                <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+                  <div className="prose prose-sm max-w-none dark:prose-invert text-xs sm:text-sm">
+                    <div className="whitespace-pre-wrap leading-relaxed font-mono bg-muted/30 p-3 sm:p-4 rounded border max-h-48 sm:max-h-72 overflow-y-auto">
                       {result.description}
                     </div>
                   </div>
-                  <div className="flex gap-2 mt-4">
+                  <div className="flex flex-col sm:flex-row gap-2 mt-3 sm:mt-4">
                     <Button 
                       variant="outline" 
-                      className="flex-1"
+                      className="flex-1 text-xs sm:text-sm"
+                      size="sm"
                       onClick={regenerateDescription}
                       disabled={generateMutation.isPending}
                       data-testid="button-regenerate"
                     >
                       {generateMutation.isPending ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                           Regenerating...
                         </>
                       ) : (
                         <>
-                          <Wand2 className="mr-2 h-4 w-4" />
+                          <Wand2 className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                           Regenerate
                         </>
                       )}
                     </Button>
                     <Button 
-                      className="flex-1"
+                      className="flex-1 text-xs sm:text-sm"
+                      size="sm"
                       onClick={saveGeneratedJob}
                       disabled={createJobMutation.isPending}
                       data-testid="button-save-position"
                     >
                       {createJobMutation.isPending ? (
                         <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          <Loader2 className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                           Saving...
                         </>
                       ) : (
@@ -665,10 +668,10 @@ export default function JobDescriptionModule() {
               </Card>
             </>
           ) : (
-            <Card className="bg-muted/10 border-dashed h-96 flex items-center justify-center">
-              <CardContent className="text-center">
-                <Wand2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground">Fill the form and generate</p>
+            <Card className="bg-muted/10 border-dashed h-48 sm:h-64 lg:h-96 flex items-center justify-center">
+              <CardContent className="text-center p-4">
+                <Wand2 className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-muted-foreground/30 mx-auto mb-2 sm:mb-3" />
+                <p className="text-xs sm:text-sm text-muted-foreground">Fill the form and generate</p>
               </CardContent>
             </Card>
           )}
@@ -677,15 +680,15 @@ export default function JobDescriptionModule() {
 
         {/* Right Column: Saved Positions */}
         <Card>
-          <CardHeader className="pb-3">
+          <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Briefcase className="h-5 w-5" />
+              <CardTitle className="text-base sm:text-lg flex items-center gap-1.5 sm:gap-2">
+                <Briefcase className="h-4 w-4 sm:h-5 sm:w-5" />
                 Saved Positions
               </CardTitle>
-              <Badge variant="secondary" data-testid="badge-job-count">{savedJobs.length}</Badge>
+              <Badge variant="secondary" className="text-xs" data-testid="badge-job-count">{savedJobs.length}</Badge>
             </div>
-            <CardDescription>All open positions you're hiring for</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">All open positions you're hiring for</CardDescription>
             {totalCandidateCount > 0 && (
               <div className="flex gap-2 mt-2 text-xs">
                 <span className="text-muted-foreground">{totalCandidateCount} total candidates</span>
@@ -698,7 +701,7 @@ export default function JobDescriptionModule() {
             )}
           </CardHeader>
           <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
+            <ScrollArea className="h-[350px] sm:h-[450px] lg:h-[500px]">
               {savedJobs.length === 0 ? (
                 <div className="p-6 text-center text-muted-foreground">
                   <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -713,20 +716,20 @@ export default function JobDescriptionModule() {
                       open={expandedJobId === job.id}
                       onOpenChange={(open) => setExpandedJobId(open ? job.id : null)}
                     >
-                      <div className="p-4 hover:bg-muted/50 transition-colors" data-testid={`job-item-${job.id}`}>
+                      <div className="p-3 sm:p-4 hover:bg-muted/50 transition-colors" data-testid={`job-item-${job.id}`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="space-y-1 min-w-0 flex-1">
-                            <h4 className="font-medium text-sm truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h4>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Badge variant="outline" className="text-xs px-1.5 py-0">{job.level}</Badge>
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
+                            <h4 className="font-medium text-xs sm:text-sm truncate" data-testid={`text-job-title-${job.id}`}>{job.title}</h4>
+                            <div className="flex items-center gap-1.5 sm:gap-2 text-xs text-muted-foreground flex-wrap">
+                              <Badge variant="outline" className="text-xs px-1 sm:px-1.5 py-0">{job.level}</Badge>
+                              <span className="flex items-center gap-0.5 sm:gap-1">
+                                <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                 {job.location}
                               </span>
                             </div>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <DollarSign className="h-3 w-3" />
-                              {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
+                            <div className="flex items-center gap-0.5 sm:gap-1 text-xs text-muted-foreground">
+                              <DollarSign className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                              <span className="text-[10px] sm:text-xs">{job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}</span>
                             </div>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {job.skills.slice(0, 3).map((skill, i) => (
@@ -741,38 +744,38 @@ export default function JobDescriptionModule() {
                               )}
                             </div>
                           </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <div className="flex items-center gap-1">
+                          <div className="flex flex-col items-end gap-0.5 sm:gap-1 shrink-0">
+                            <div className="flex items-center gap-0.5 sm:gap-1">
                               <CollapsibleTrigger asChild>
                                 <Button 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="h-7 w-7"
+                                  className="h-6 w-6 sm:h-7 sm:w-7"
                                   data-testid={`button-view-job-${job.id}`}
                                 >
                                   {expandedJobId === job.id ? (
-                                    <ChevronUp className="h-3 w-3" />
+                                    <ChevronUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                   ) : (
-                                    <ChevronDown className="h-3 w-3" />
+                                    <ChevronDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                   )}
                                 </Button>
                               </CollapsibleTrigger>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-7 w-7"
+                                className="h-6 w-6 sm:h-7 sm:w-7"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   openEditDialog(job);
                                 }}
                                 data-testid={`button-edit-job-${job.id}`}
                               >
-                                <Pencil className="h-3 w-3" />
+                                <Pencil className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                               </Button>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-7 w-7 text-destructive hover:text-destructive"
+                                className="h-6 w-6 sm:h-7 sm:w-7 text-destructive hover:text-destructive"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (window.confirm("Are you sure you want to delete this job?")) {
@@ -781,55 +784,55 @@ export default function JobDescriptionModule() {
                                 }}
                                 data-testid={`button-delete-job-${job.id}`}
                               >
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                               </Button>
                             </div>
-                            <Badge variant={job.status === "active" ? "default" : "secondary"} className="text-xs">
+                            <Badge variant={job.status === "active" ? "default" : "secondary"} className="text-[10px] sm:text-xs">
                               {job.status}
                             </Badge>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`text-candidate-count-${job.id}`}>
-                              <Users className="h-3 w-3" />
+                            <div className="flex items-center gap-0.5 sm:gap-1 text-[10px] sm:text-xs text-muted-foreground" data-testid={`text-candidate-count-${job.id}`}>
+                              <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                               {job.candidateCount} candidates
                             </div>
                           </div>
                         </div>
-                        <CollapsibleContent className="mt-3">
-                          <div className="border-t pt-3 space-y-3">
+                        <CollapsibleContent className="mt-2 sm:mt-3">
+                          <div className="border-t pt-2 sm:pt-3 space-y-2 sm:space-y-3">
                             <div>
-                              <h5 className="text-xs font-medium text-muted-foreground mb-1">All Skills</h5>
-                              <div className="flex flex-wrap gap-1">
+                              <h5 className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-1">All Skills</h5>
+                              <div className="flex flex-wrap gap-0.5 sm:gap-1">
                                 {job.skills.map((skill, i) => (
-                                  <Badge key={i} variant="outline" className="text-xs">
+                                  <Badge key={i} variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-1.5">
                                     {skill}
                                   </Badge>
                                 ))}
                               </div>
                             </div>
                             <div>
-                              <h5 className="text-xs font-medium text-muted-foreground mb-1">Job Description</h5>
-                              <div className="text-xs bg-muted/30 p-3 rounded border max-h-48 overflow-y-auto whitespace-pre-wrap">
+                              <h5 className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-1">Job Description</h5>
+                              <div className="text-[10px] sm:text-xs bg-muted/30 p-2 sm:p-3 rounded border max-h-32 sm:max-h-48 overflow-y-auto whitespace-pre-wrap">
                                 {job.description}
                               </div>
                             </div>
-                            <div className="flex gap-2 pt-2">
+                            <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2 pt-1 sm:pt-2">
                               <Button 
                                 size="sm" 
                                 variant="outline"
-                                className="flex-1"
+                                className="flex-1 text-[10px] sm:text-xs h-7 sm:h-8"
                                 onClick={() => {
                                   navigator.clipboard.writeText(job.description);
                                   toast({ title: "Copied", description: "Job description copied to clipboard" });
                                 }}
                               >
-                                <Copy className="h-3 w-3 mr-1" />
+                                <Copy className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
                                 Copy Description
                               </Button>
                               <Button 
                                 size="sm" 
-                                className="flex-1"
+                                className="flex-1 text-[10px] sm:text-xs h-7 sm:h-8"
                                 onClick={() => openEditDialog(job)}
                               >
-                                <Pencil className="h-3 w-3 mr-1" />
+                                <Pencil className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
                                 Edit Position
                               </Button>
                             </div>
@@ -847,11 +850,11 @@ export default function JobDescriptionModule() {
 
       {/* Edit Job Dialog */}
       <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Edit Job Position</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Edit Job Position</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-3 sm:gap-4 py-3 sm:py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-title">Job Title</Label>
               <Input
@@ -861,9 +864,9 @@ export default function JobDescriptionModule() {
                 data-testid="input-edit-job-title"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-level">Level</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="edit-level" className="text-xs sm:text-sm">Level</Label>
                 <Select
                   value={editForm.level}
                   onValueChange={(v) => setEditForm(p => ({ ...p, level: v }))}
@@ -879,8 +882,8 @@ export default function JobDescriptionModule() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-location">Location</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="edit-location" className="text-xs sm:text-sm">Location</Label>
                 <Select
                   value={editForm.location}
                   onValueChange={(v) => setEditForm(p => ({ ...p, location: v }))}
@@ -905,9 +908,9 @@ export default function JobDescriptionModule() {
                 data-testid="input-edit-job-skills"
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-salary-min">Minimum Salary</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="edit-salary-min" className="text-xs sm:text-sm">Minimum Salary</Label>
                 <Input
                   id="edit-salary-min"
                   type="number"
@@ -916,8 +919,8 @@ export default function JobDescriptionModule() {
                   data-testid="input-edit-job-salary-min"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-salary-max">Maximum Salary</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="edit-salary-max" className="text-xs sm:text-sm">Maximum Salary</Label>
                 <Input
                   id="edit-salary-max"
                   type="number"
@@ -943,33 +946,35 @@ export default function JobDescriptionModule() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Job Description</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-description" className="text-xs sm:text-sm">Job Description</Label>
               <Textarea
                 id="edit-description"
                 value={editForm.description}
                 onChange={(e) => setEditForm(p => ({ ...p, description: e.target.value }))}
-                className="min-h-[200px] font-mono text-xs"
+                className="min-h-[150px] sm:min-h-[200px] font-mono text-xs"
                 data-testid="textarea-edit-job-description"
               />
             </div>
-            <div className="flex gap-2 pt-4">
+            <div className="flex flex-col sm:flex-row gap-2 pt-3 sm:pt-4">
               <Button
                 variant="outline"
-                className="flex-1"
+                className="flex-1 text-xs sm:text-sm"
+                size="sm"
                 onClick={() => setEditingJob(null)}
               >
                 Cancel
               </Button>
               <Button
-                className="flex-1"
+                className="flex-1 text-xs sm:text-sm"
+                size="sm"
                 onClick={handleUpdateJob}
                 disabled={updateJobMutation.isPending}
                 data-testid="button-save-job-edit"
               >
                 {updateJobMutation.isPending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-1.5 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                     Saving...
                   </>
                 ) : (

@@ -901,7 +901,7 @@ export default function ResumeAnalyzerModule() {
   const module = getModuleByPath("/resume-analyzer");
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-4 sm:space-y-6 max-w-6xl px-1 sm:px-0">
       <PageHeader
         title="Resume Logic Analyzer"
         description="Detect inconsistencies, gaps, and logic risks in resumes. Compare against job requirements."
@@ -911,34 +911,34 @@ export default function ResumeAnalyzerModule() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="single" className="gap-2" data-testid="tab-single-analysis">
-            <FileText className="h-4 w-4" />
-            Single Analysis
+        <TabsList className="grid w-full grid-cols-2 max-w-full sm:max-w-md">
+          <TabsTrigger value="single" className="gap-1 sm:gap-2 text-xs sm:text-sm" data-testid="tab-single-analysis">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Single</span> Analysis
           </TabsTrigger>
           <TabsTrigger 
             value="bulk" 
-            className="gap-2" 
+            className="gap-1 sm:gap-2 text-xs sm:text-sm" 
             disabled={!isProOrAbove}
             data-testid="tab-bulk-upload"
           >
             {isProOrAbove ? (
               <>
-                <Upload className="h-4 w-4" />
-                Bulk Upload
+                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Bulk</span> Upload
               </>
             ) : (
               <>
-                <Lock className="h-4 w-4" />
-                Bulk Upload
-                <Badge variant="secondary" className="ml-1 text-[10px]">Pro+</Badge>
+                <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Bulk</span> Upload
+                <Badge variant="secondary" className="ml-1 text-[10px] hidden sm:inline-flex">Pro+</Badge>
               </>
             )}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="single" className="mt-6">
-      <div className="grid gap-6 lg:grid-cols-2">
+        <TabsContent value="single" className="mt-4 sm:mt-6">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         <Card className="h-fit">
           <CardHeader>
             <CardTitle>Upload & Context</CardTitle>
@@ -1087,25 +1087,25 @@ export default function ResumeAnalyzerModule() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex-1 p-4 rounded-lg bg-muted/50 border">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                  <div className="flex-1 p-3 sm:p-4 rounded-lg bg-muted/50 border">
                     <p className="text-xs text-muted-foreground mb-1">Fit Score</p>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("text-2xl font-bold", result.fitScore >= 70 ? "text-green-600" : result.fitScore >= 50 ? "text-yellow-600" : "text-red-600")} data-testid="text-fit-score">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={cn("text-xl sm:text-2xl font-bold", result.fitScore >= 70 ? "text-green-600" : result.fitScore >= 50 ? "text-yellow-600" : "text-red-600")} data-testid="text-fit-score">
                         {result.fitScore}%
                       </span>
-                      <Badge variant={result.fitScore >= 70 ? "default" : "secondary"} className={result.fitScore >= 70 ? "bg-green-600" : ""}>
+                      <Badge variant={result.fitScore >= 70 ? "default" : "secondary"} className={cn("text-xs", result.fitScore >= 70 ? "bg-green-600" : "")}>
                         {result.fitScore >= 70 ? "Good Fit" : result.fitScore >= 50 ? "Partial Fit" : "Low Fit"}
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex-1 p-4 rounded-lg bg-muted/50 border">
+                  <div className="flex-1 p-3 sm:p-4 rounded-lg bg-muted/50 border">
                     <p className="text-xs text-muted-foreground mb-1">Risk Score</p>
-                    <div className="flex items-center gap-2">
-                      <span className={cn("text-2xl font-bold", result.logicScore < 30 ? "text-green-600" : result.logicScore < 60 ? "text-yellow-600" : "text-red-600")} data-testid="text-logic-score">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={cn("text-xl sm:text-2xl font-bold", result.logicScore < 30 ? "text-green-600" : result.logicScore < 60 ? "text-yellow-600" : "text-red-600")} data-testid="text-logic-score">
                         {result.logicScore}%
                       </span>
-                      <Badge variant="secondary" className={result.logicScore < 30 ? "bg-green-100 text-green-700" : result.logicScore < 60 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"}>
+                      <Badge variant="secondary" className={cn("text-xs", result.logicScore < 30 ? "bg-green-100 text-green-700" : result.logicScore < 60 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700")}>
                         {result.logicScore < 30 ? "Low Risk" : result.logicScore < 60 ? "Medium Risk" : "High Risk"}
                       </Badge>
                     </div>
@@ -1113,25 +1113,25 @@ export default function ResumeAnalyzerModule() {
                 </div>
                 
                 {result.authenticityScore !== undefined && (
-                  <div className={cn("p-4 rounded-lg border", 
+                  <div className={cn("p-3 sm:p-4 rounded-lg border", 
                     result.overallVerdict === "LIKELY_REAL" ? "bg-green-50/50 border-green-200" :
                     result.overallVerdict === "SUSPICIOUS" ? "bg-yellow-50/50 border-yellow-200" :
                     "bg-red-50/50 border-red-200"
                   )}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn("p-2 rounded-lg", 
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className={cn("p-1.5 sm:p-2 rounded-lg", 
                           result.overallVerdict === "LIKELY_REAL" ? "bg-green-100" :
                           result.overallVerdict === "SUSPICIOUS" ? "bg-yellow-100" :
                           "bg-red-100"
                         )}>
-                          {result.overallVerdict === "LIKELY_REAL" ? <CheckCircle className="h-5 w-5 text-green-600" /> :
-                           result.overallVerdict === "SUSPICIOUS" ? <AlertTriangle className="h-5 w-5 text-yellow-600" /> :
-                           <XCircle className="h-5 w-5 text-red-600" />}
+                          {result.overallVerdict === "LIKELY_REAL" ? <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" /> :
+                           result.overallVerdict === "SUSPICIOUS" ? <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" /> :
+                           <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />}
                         </div>
                         <div>
-                          <p className="text-sm font-medium">Plausibility Score</p>
-                          <p className={cn("text-2xl font-bold",
+                          <p className="text-xs sm:text-sm font-medium">Plausibility Score</p>
+                          <p className={cn("text-xl sm:text-2xl font-bold",
                             result.authenticityScore >= 70 ? "text-green-600" :
                             result.authenticityScore >= 40 ? "text-yellow-600" :
                             "text-red-600"
@@ -1174,27 +1174,27 @@ export default function ResumeAnalyzerModule() {
                 )}
                 
                 {result.tooPerfectScore !== undefined && result.tooPerfectScore > 30 && (
-                  <div className={cn("p-4 rounded-lg border", 
+                  <div className={cn("p-3 sm:p-4 rounded-lg border", 
                     result.tooPerfectScore > 80 ? "bg-red-50/50 border-red-200" :
                     result.tooPerfectScore > 60 ? "bg-orange-50/50 border-orange-200" :
                     "bg-yellow-50/50 border-yellow-200"
                   )}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={cn("p-2 rounded-lg", 
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className={cn("p-1.5 sm:p-2 rounded-lg", 
                           result.tooPerfectScore > 80 ? "bg-red-100" :
                           result.tooPerfectScore > 60 ? "bg-orange-100" :
                           "bg-yellow-100"
                         )}>
-                          <Sparkles className={cn("h-5 w-5",
+                          <Sparkles className={cn("h-4 w-4 sm:h-5 sm:w-5",
                             result.tooPerfectScore > 80 ? "text-red-600" :
                             result.tooPerfectScore > 60 ? "text-orange-600" :
                             "text-yellow-600"
                           )} />
                         </div>
                         <div>
-                          <p className="text-sm font-medium">Too Perfect Score</p>
-                          <p className={cn("text-2xl font-bold",
+                          <p className="text-xs sm:text-sm font-medium">Too Perfect Score</p>
+                          <p className={cn("text-xl sm:text-2xl font-bold",
                             result.tooPerfectScore > 80 ? "text-red-600" :
                             result.tooPerfectScore > 60 ? "text-orange-600" :
                             "text-yellow-600"
@@ -1233,15 +1233,15 @@ export default function ResumeAnalyzerModule() {
                 )}
                 
                 {result.mismatchDetection && result.mismatchDetection.hasMismatch && (
-                  <div className="p-4 rounded-lg border bg-red-50/50 border-red-200">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-lg bg-red-100">
-                          <XCircle className="h-5 w-5 text-red-600" />
+                  <div className="p-3 sm:p-4 rounded-lg border bg-red-50/50 border-red-200">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 rounded-lg bg-red-100">
+                          <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-red-800">Resume Mismatch Detected</p>
-                          <p className="text-xs text-red-600">Wrong names, inconsistent details, or template errors found</p>
+                          <p className="text-xs sm:text-sm font-medium text-red-800">Resume Mismatch Detected</p>
+                          <p className="text-[10px] sm:text-xs text-red-600">Wrong names, inconsistent details, or template errors found</p>
                         </div>
                       </div>
                       <Badge className="bg-red-600">
@@ -1316,11 +1316,11 @@ export default function ResumeAnalyzerModule() {
       </div>
 
       <Dialog open={isResultModalOpen} onOpenChange={setIsResultModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0" data-testid="dialog-analysis-results">
-          <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-primary/5 via-primary/10 to-transparent p-6 pb-4 border-b">
-            <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-primary" />
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-0" data-testid="dialog-analysis-results">
+          <DialogHeader className="flex-shrink-0 bg-gradient-to-r from-primary/5 via-primary/10 to-transparent p-4 sm:p-6 pb-3 sm:pb-4 border-b">
+            <DialogTitle className="flex items-center gap-2 sm:gap-3 text-lg sm:text-xl">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
               <div>
                 <span>Resume Analysis Report</span>
@@ -1336,7 +1336,7 @@ export default function ResumeAnalyzerModule() {
 
           {result && (
             <>
-              <div className="flex gap-3 px-6 py-4 bg-muted/30 border-b flex-shrink-0">
+              <div className="flex flex-wrap gap-2 sm:gap-3 px-3 sm:px-6 py-3 sm:py-4 bg-muted/30 border-b flex-shrink-0">
                 <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium", 
                   result.fitScore >= 70 ? "bg-green-100 text-green-700" : result.fitScore >= 50 ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
                 )}>
@@ -1358,17 +1358,17 @@ export default function ResumeAnalyzerModule() {
               </div>
 
               <Tabs defaultValue="overview" className="flex-1 flex flex-col min-h-0">
-                <TabsList className="flex-shrink-0 w-full justify-start overflow-x-auto bg-transparent border-b rounded-none h-auto p-0 px-6">
-                  <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-overview">Overview</TabsTrigger>
-                  <TabsTrigger value="profile" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-profile">Profile</TabsTrigger>
-                  <TabsTrigger value="timeline" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-timeline">Timeline</TabsTrigger>
-                  <TabsTrigger value="flags" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-flags">Flags</TabsTrigger>
-                  <TabsTrigger value="skills" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-skills">Skills</TabsTrigger>
-                  <TabsTrigger value="authenticity" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-authenticity">Authenticity</TabsTrigger>
-                  <TabsTrigger value="report" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3" data-testid="tab-report">Report</TabsTrigger>
+                <TabsList className="flex-shrink-0 w-full justify-start overflow-x-auto bg-transparent border-b rounded-none h-auto p-0 px-3 sm:px-6 scrollbar-hide">
+                  <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 sm:py-3 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-overview">Overview</TabsTrigger>
+                  <TabsTrigger value="profile" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 sm:py-3 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-profile">Profile</TabsTrigger>
+                  <TabsTrigger value="timeline" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 sm:py-3 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-timeline">Timeline</TabsTrigger>
+                  <TabsTrigger value="flags" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 sm:py-3 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-flags">Flags</TabsTrigger>
+                  <TabsTrigger value="skills" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 sm:py-3 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-skills">Skills</TabsTrigger>
+                  <TabsTrigger value="authenticity" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 sm:py-3 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-authenticity">Authenticity</TabsTrigger>
+                  <TabsTrigger value="report" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-2 sm:py-3 text-xs sm:text-sm px-2 sm:px-4" data-testid="tab-report">Report</TabsTrigger>
                 </TabsList>
 
-                <div className="flex-1 overflow-y-auto min-h-0 p-6">
+                <div className="flex-1 overflow-y-auto min-h-0 p-3 sm:p-6">
                   <TabsContent value="overview" className="mt-0 space-y-4">
                     {(result.overallRecommendation || result.pass4) && (
                       <div className={cn("p-4 rounded-lg border",
@@ -1881,21 +1881,21 @@ export default function ResumeAnalyzerModule() {
       </Dialog>
       </TabsContent>
 
-      <TabsContent value="bulk" className="mt-6">
-          <div className="grid gap-6 lg:grid-cols-2">
+      <TabsContent value="bulk" className="mt-4 sm:mt-6">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Upload className="h-5 w-5" />
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Upload className="h-4 w-4 sm:h-5 sm:w-5" />
                   Bulk Resume Upload
                 </CardTitle>
-                <CardDescription>
-                  Upload multiple PDF resumes at once. Candidate profiles will be created automatically from extracted names.
+                <CardDescription className="text-xs sm:text-sm">
+                  Upload multiple PDF resumes at once. Candidate profiles will be created automatically.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
                 <div className="space-y-2">
-                  <Label>Select Job to Associate Candidates</Label>
+                  <Label className="text-xs sm:text-sm">Select Job to Associate Candidates</Label>
                   <Select value={bulkJobId} onValueChange={setBulkJobId}>
                     <SelectTrigger data-testid="select-bulk-job">
                       <SelectValue placeholder={jobsLoading ? "Loading jobs..." : "Choose a job for all candidates"} />
@@ -1911,8 +1911,8 @@ export default function ResumeAnalyzerModule() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Upload PDF Resumes</Label>
-                  <div className="border-2 border-dashed rounded-lg p-8 text-center hover:bg-muted/50 transition-colors">
+                  <Label className="text-xs sm:text-sm">Upload PDF Resumes</Label>
+                  <div className="border-2 border-dashed rounded-lg p-4 sm:p-8 text-center hover:bg-muted/50 transition-colors">
                     <input
                       type="file"
                       accept=".pdf"
@@ -1923,7 +1923,7 @@ export default function ResumeAnalyzerModule() {
                       data-testid="input-bulk-resumes"
                     />
                     <label htmlFor="bulk-resume-input" className="cursor-pointer">
-                      <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                      <Upload className="h-8 w-8 sm:h-10 sm:w-10 mx-auto text-muted-foreground mb-3 sm:mb-4" />
                       <p className="text-sm font-medium">Click to select PDF files</p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {bulkFiles.length > 0 ? `${bulkFiles.length} files selected` : "Select multiple PDF resumes"}
@@ -1956,14 +1956,14 @@ export default function ResumeAnalyzerModule() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
+              <CardHeader className="p-4 sm:p-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                   <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="h-5 w-5" />
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                       Upload Results
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs sm:text-sm">
                       Created candidates from uploaded resumes
                     </CardDescription>
                   </div>
@@ -1973,6 +1973,7 @@ export default function ResumeAnalyzerModule() {
                         variant="outline"
                         size="sm"
                         onClick={selectAllBulkCandidates}
+                        className="text-xs sm:text-sm h-8"
                         data-testid="button-select-all"
                       >
                         Select All
@@ -1982,9 +1983,10 @@ export default function ResumeAnalyzerModule() {
                         size="sm"
                         onClick={handleBulkReject}
                         disabled={selectedBulkCandidates.size === 0}
+                        className="text-xs sm:text-sm h-8"
                         data-testid="button-bulk-reject"
                       >
-                        <Trash2 className="h-4 w-4 mr-1" />
+                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
                         Reject ({selectedBulkCandidates.size})
                       </Button>
                     </div>

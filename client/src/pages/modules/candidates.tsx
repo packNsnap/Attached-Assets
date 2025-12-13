@@ -64,6 +64,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -123,6 +125,7 @@ export default function CandidatesModule() {
   const searchString = useSearch();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   const [newCandidate, setNewCandidate] = useState({
     name: "",
@@ -675,7 +678,7 @@ export default function CandidatesModule() {
 
   return (
     <div className="h-[calc(100vh-140px)] flex flex-col">
-      <div className="shrink-0 mb-6 flex items-center justify-between">
+      <div className="shrink-0 mb-4 sm:mb-6 flex items-center justify-between">
         <PageHeader
           title="Candidates"
           description="View and manage all candidates in your hiring process."
@@ -684,9 +687,9 @@ export default function CandidatesModule() {
         >
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button data-testid="button-add-candidate">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Candidate
+                <Button size={isMobile ? "sm" : "default"} data-testid="button-add-candidate">
+                  <Plus className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Add Candidate</span>
                 </Button>
               </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -817,22 +820,22 @@ export default function CandidatesModule() {
         </PageHeader>
       </div>
 
-      <div className="flex gap-6 flex-1 min-h-0">
+      <div className="flex gap-4 sm:gap-6 flex-1 min-h-0">
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex gap-2 mb-4 shrink-0">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap gap-2 mb-3 sm:mb-4 shrink-0">
+            <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Search candidates..." 
+                placeholder="Search..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-9 sm:h-10"
                 data-testid="input-search-candidates"
               />
             </div>
             <Select value={stageFilter} onValueChange={setStageFilter}>
-              <SelectTrigger className="w-[150px]" data-testid="select-stage-filter">
-                <SelectValue placeholder="All Stages" />
+              <SelectTrigger className="w-[110px] sm:w-[150px] h-9 sm:h-10 text-xs sm:text-sm" data-testid="select-stage-filter">
+                <SelectValue placeholder="Stage" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Stages</SelectItem>
@@ -842,8 +845,8 @@ export default function CandidatesModule() {
               </SelectContent>
             </Select>
             <Select value={jobFilter} onValueChange={setJobFilter}>
-              <SelectTrigger className="w-[180px]" data-testid="select-job-filter">
-                <SelectValue placeholder="All Positions" />
+              <SelectTrigger className="w-[110px] sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm" data-testid="select-job-filter">
+                <SelectValue placeholder="Position" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Positions</SelectItem>
@@ -854,7 +857,7 @@ export default function CandidatesModule() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[140px]" data-testid="select-status-filter">
+              <SelectTrigger className="w-[100px] sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm" data-testid="select-status-filter">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -887,37 +890,37 @@ export default function CandidatesModule() {
                       onClick={() => { setSelectedCandidate(candidate); setActiveTab("profile"); }}
                       data-testid={`card-candidate-${candidate.id}`}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+                            <div className="h-8 w-8 sm:h-10 sm:w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs sm:text-sm">
                               {candidate.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                             </div>
-                            <div>
-                              <h3 className="font-semibold" data-testid={`text-candidate-name-${candidate.id}`}>
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-sm sm:text-base truncate" data-testid={`text-candidate-name-${candidate.id}`}>
                                 {candidate.name}
                               </h3>
-                              <p className="text-sm text-muted-foreground">{candidate.role}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground truncate">{candidate.role}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Badge className={cn("rounded-full", getStageColor(candidate.stage))} data-testid={`badge-stage-${candidate.id}`}>
+                          <div className="flex items-center gap-1 sm:gap-3 shrink-0">
+                            <Badge className={cn("rounded-full text-xs", getStageColor(candidate.stage))} data-testid={`badge-stage-${candidate.id}`}>
                               {candidate.stage}
                             </Badge>
                             {(candidate as any).isArchived === "true" && (
-                              <Badge variant="secondary" className="bg-slate-500 text-white text-xs">
+                              <Badge variant="secondary" className="bg-slate-500 text-white text-xs hidden sm:flex">
                                 <Archive className="h-3 w-3 mr-1" />
                                 Archived
                               </Badge>
                             )}
                             {(candidate as any).isActive === "deactivated" && (candidate as any).isArchived !== "true" && (
-                              <Badge variant="secondary" className="bg-red-500 text-white text-xs">
+                              <Badge variant="secondary" className="bg-red-500 text-white text-xs hidden sm:flex">
                                 <UserX className="h-3 w-3 mr-1" />
                                 Deactivated
                               </Badge>
                             )}
                             {job && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <div className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground">
                                 <Briefcase className="h-3 w-3" />
                                 {job.title}
                               </div>
@@ -925,7 +928,7 @@ export default function CandidatesModule() {
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="h-6 w-6 ml-auto"
+                              className="h-6 w-6 hidden sm:flex"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 deleteCandidateMutation.mutate(candidate.id);
@@ -947,7 +950,163 @@ export default function CandidatesModule() {
           </ScrollArea>
         </div>
 
-        {selectedCandidate ? (
+        {/* Mobile Sheet for candidate detail */}
+        {isMobile && selectedCandidate && (
+          <Sheet open={!!selectedCandidate} onOpenChange={(open) => !open && setSelectedCandidate(null)}>
+            <SheetContent side="right" className="w-full sm:max-w-lg p-0 flex flex-col">
+              <SheetHeader className="p-4 pb-2 border-b">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                      {selectedCandidate.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </div>
+                    <div>
+                      <SheetTitle className="text-base" data-testid="text-profile-name-mobile">{selectedCandidate.name}</SheetTitle>
+                      <p className="text-xs text-muted-foreground">{selectedCandidate.role}</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      deleteCandidateMutation.mutate(selectedCandidate.id);
+                    }}
+                    disabled={deleteCandidateMutation.isPending}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </SheetHeader>
+              
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+                <div className="px-2 overflow-x-auto">
+                  <TabsList className="w-full grid grid-cols-5 h-9">
+                    <TabsTrigger value="profile" className="text-xs px-2" data-testid="tab-profile-mobile">
+                      <User className="h-3 w-3" />
+                    </TabsTrigger>
+                    <TabsTrigger value="analysis" className="text-xs px-2" data-testid="tab-analysis-mobile">
+                      <BarChart3 className="h-3 w-3" />
+                    </TabsTrigger>
+                    <TabsTrigger value="tests" className="text-xs px-2 relative" data-testid="tab-tests-mobile">
+                      <ListChecks className="h-3 w-3" />
+                      {skillsTestInvitations.length > 0 && (
+                        <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center">
+                          {skillsTestInvitations.length}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger value="notes" className="text-xs px-2" data-testid="tab-notes-mobile">
+                      <StickyNote className="h-3 w-3" />
+                    </TabsTrigger>
+                    <TabsTrigger value="documents" className="text-xs px-2" data-testid="tab-documents-mobile">
+                      <FolderOpen className="h-3 w-3" />
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+
+                <ScrollArea className="flex-1">
+                  <TabsContent value="profile" className="px-4 pb-4 space-y-4 mt-3">
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-medium text-muted-foreground">Pipeline Progress</h4>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span>{selectedCandidate.stage}</span>
+                          <span className="text-muted-foreground">{getStageProgress(selectedCandidate.stage)}%</span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className={cn(
+                              "h-full transition-all",
+                              selectedCandidate.stage === "Rejected" ? "bg-red-500" : "bg-primary"
+                            )}
+                            style={{ width: `${getStageProgress(selectedCandidate.stage)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-medium text-muted-foreground">Update Stage</h4>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {STAGES.map(stage => (
+                          <Button
+                            key={stage}
+                            variant={selectedCandidate.stage === stage ? "default" : "outline"}
+                            size="sm"
+                            className="h-8 text-xs justify-start px-2"
+                            onClick={() => {
+                              if (selectedCandidate.stage !== stage) {
+                                updateStageMutation.mutate({ id: selectedCandidate.id, stage });
+                              }
+                            }}
+                            disabled={updateStageMutation.isPending}
+                          >
+                            <div className={cn("w-1.5 h-1.5 rounded-full mr-1.5", getStageColor(stage).split(' ')[0])} />
+                            {stage}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-medium text-muted-foreground">Contact</h4>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs">
+                          <Mail className="h-3 w-3 text-muted-foreground" />
+                          <span className="truncate">{selectedCandidate.email}</span>
+                        </div>
+                        {selectedCandidate.phone && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                            <span>{selectedCandidate.phone}</span>
+                          </div>
+                        )}
+                        {selectedCandidate.location && (
+                          <div className="flex items-center gap-2 text-xs">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            <span>{selectedCandidate.location}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="analysis" className="px-4 pb-4 mt-3">
+                    <div className="text-center py-6 text-muted-foreground text-sm">
+                      View analysis on desktop for full details
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="tests" className="px-4 pb-4 mt-3">
+                    <div className="text-center py-6 text-muted-foreground text-sm">
+                      View tests on desktop for full details
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="notes" className="px-4 pb-4 mt-3">
+                    <div className="text-center py-6 text-muted-foreground text-sm">
+                      View notes on desktop for full details
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="documents" className="px-4 pb-4 mt-3">
+                    <div className="text-center py-6 text-muted-foreground text-sm">
+                      View documents on desktop for full details
+                    </div>
+                  </TabsContent>
+                </ScrollArea>
+              </Tabs>
+            </SheetContent>
+          </Sheet>
+        )}
+
+        {/* Desktop Card panel for candidate detail */}
+        {!isMobile && selectedCandidate ? (
           <Card className="w-[450px] shrink-0 flex flex-col">
             <CardHeader className="shrink-0 pb-2">
               <div className="flex items-start justify-between">
