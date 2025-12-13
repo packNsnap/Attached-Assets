@@ -707,11 +707,22 @@ export async function registerRoutes(
       if (candidateDir) {
         const fileName = `resume_${Date.now()}.pdf`;
         const filePath = path.join(candidateDir, fileName);
+        const relativeFilePath = path.relative(process.cwd(), filePath);
         fs.writeFileSync(filePath, req.file.buffer);
+        
+        // Save to the documents table with resume text
+        const doc = await storage.createCandidateDocument({
+          candidateId: candidate.id,
+          fileName: fileName,
+          fileType: "pdf",
+          fileUrl: relativeFilePath,
+          documentType: "Resume",
+          resumeText: resumeText
+        });
         
         // Update candidate with resume URL
         await storage.updateCandidate(candidate.id, userId, {
-          resumeUrl: `/api/documents/${candidate.id}/${fileName}`
+          resumeUrl: `/api/resume/${candidate.id}`
         });
       }
 
