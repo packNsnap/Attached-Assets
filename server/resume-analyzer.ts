@@ -237,7 +237,7 @@ Rules:
 - Calculate total experience from job durations
 - extractionConfidence: 0-100 based on how complete/clear the resume was`;
 
-  const completion = await callAI("resume_analysis", {
+  const completion = await callAI("resume_extraction", {
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.1,
@@ -410,7 +410,7 @@ Guidelines:
 - 5+ jobs in 4 years = major_concern for job hopping
 - Always provide balanced, professional assessments`;
 
-  const labelingCompletion = await callAI("resume_analysis", {
+  const labelingCompletion = await callAI("resume_timeline", {
     messages: [{ role: "user", content: labelingPrompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
@@ -502,7 +502,7 @@ Scoring Guidelines:
 - industry_match: Relevance of candidate's industry background to target role
 - Be specific about which skills are must-have vs nice-to-have based on job description`;
 
-  const completion = await callAI("resume_analysis", {
+  const completion = await callAI("resume_job_fit", {
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
@@ -586,7 +586,7 @@ Base recommendedAction on:
 - Fit Score > 50 + skill gaps → skills_test_first
 - Fit Score < 50 or high risk → reject or needs_review`;
 
-  const completion = await callAI("resume_analysis", {
+  const completion = await callAI("resume_hr_summary", {
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.3,
@@ -1084,7 +1084,7 @@ MISMATCH DETECTION GUIDELINES:
 
 Be aggressive and skeptical. Find the problems. Return ONLY the JSON object.`;
 
-  const completion = await callAI("ai_detection", {
+  const completion = await callAI("resume_fraud_detection", {
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
