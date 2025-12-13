@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Resume Analysis Report - Gabriela Santos</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; color: #1f2937; padding: 40px; max-width: 900px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb; }
+    .header h1 { font-size: 28px; color: #111827; margin-bottom: 8px; }
+    .header .subtitle { color: #6b7280; font-size: 14px; }
+    .meta { display: flex; justify-content: space-between; margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px; }
+    .meta-item { text-align: center; }
+    .meta-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: 14px; font-weight: 600; color: #111827; margin-top: 4px; }
+    .scores { display: flex; gap: 24px; margin-bottom: 32px; }
+    .score-card { flex: 1; padding: 20px; border-radius: 12px; text-align: center; }
+    .score-card.fit { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #a7f3d0; }
+    .score-card.risk { background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); border: 1px solid #fca5a5; }
+    .score-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .score-value { font-size: 36px; font-weight: 700; }
+    .score-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-top: 8px; }
+    .recommendation { padding: 16px 24px; border-radius: 8px; margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
+    .recommendation-icon { font-size: 20px; }
+    .recommendation-text { font-weight: 600; }
+    .section { margin-bottom: 32px; }
+    .section-title { font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ''; width: 4px; height: 20px; border-radius: 2px; }
+    .section-title.skills::before { background: #3b82f6; }
+    .section-title.timeline::before { background: #8b5cf6; }
+    .section-title.flags::before { background: #f59e0b; }
+    .section-title.authenticity::before { background: #ec4899; }
+    .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .skills-box { padding: 12px; border-radius: 8px; }
+    .skills-box.matched { background: #ecfdf5; border: 1px solid #a7f3d0; }
+    .skills-box.missing { background: #fef2f2; border: 1px solid #fca5a5; }
+    .skills-box.extra { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .skills-box-title { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .skill-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; }
+    .skill-tag.matched { background: #d1fae5; color: #047857; }
+    .skill-tag.missing { background: #fecaca; color: #b91c1c; }
+    .skill-tag.extra { background: #dbeafe; color: #1d4ed8; }
+    .finding { display: flex; gap: 12px; padding: 12px; border-radius: 8px; margin-bottom: 8px; }
+    .finding.risk { background: #fef2f2; border-left: 3px solid #dc2626; }
+    .finding.warning { background: #fffbeb; border-left: 3px solid #f59e0b; }
+    .finding.good { background: #ecfdf5; border-left: 3px solid #16a34a; }
+    .finding-icon { font-size: 16px; }
+    .finding-content { flex: 1; }
+    .finding-message { font-weight: 500; font-size: 14px; }
+    .finding-details { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .authenticity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .auth-item { padding: 12px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; }
+    .auth-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .auth-value { font-size: 20px; font-weight: 600; }
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; }
+    .summary { padding: 20px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 32px; }
+    .summary p { font-size: 14px; color: #374151; }
+    .footer { text-align: center; padding-top: 24px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
+    .print-btn { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+    .print-btn:hover { background: #2563eb; }
+    .name-mismatch-alert { background: #991b1b; border: 6px solid #dc2626; border-radius: 16px; padding: 48px; margin: 0 0 40px 0; box-shadow: 0 10px 30px rgba(220, 38, 38, 0.4), inset 0 0 0 1px rgba(252, 165, 165, 0.2); }
+    .name-mismatch-title { font-size: 36px; font-weight: 900; color: #fff; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); }
+    .name-mismatch-text { font-size: 20px; color: #fecaca; margin: 0; font-weight: 700; line-height: 1.4; }
+    @media print { .print-btn { display: none; } body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Resume Analysis Report</h1>
+    <p class="subtitle">Generated by Resume Logik AI</p>
+  </div>
+
+  
+  <div class="name-mismatch-alert">
+    <div class="name-mismatch-title">⚠️ NAME MISMATCH DETECTED</div>
+    <div class="name-mismatch-text">Resume name does not match candidate name. Manual verification required.</div>
+  </div>
+  
+
+  <div class="meta">
+    <div class="meta-item">
+      <div class="meta-label">Candidate</div>
+      <div class="meta-value">Gabriela Santos</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Position</div>
+      <div class="meta-value">verification specialist </div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Date</div>
+      <div class="meta-value">December 12, 2025</div>
+    </div>
+  </div>
+
+  <div class="scores">
+    <div class="score-card fit">
+      <div class="score-label">Fit Score</div>
+      <div class="score-value" style="color: #dc2626">49%</div>
+      <span class="score-badge" style="background: #dc262620; color: #dc2626">
+        Low Fit
+      </span>
+    </div>
+    <div class="score-card risk">
+      <div class="score-label">Risk Score</div>
+      <div class="score-value" style="color: #ca8a04">47%</div>
+      <span class="score-badge" style="background: #ca8a0420; color: #ca8a04">
+        Medium Risk
+      </span>
+    </div>
+  </div>
+
+  
+  <div class="recommendation" style="background: #ca8a0410; border: 1px solid #ca8a0440;">
+    <span class="recommendation-icon">📋</span>
+    <span class="recommendation-text" style="color: #ca8a04">Final Recommendation: Review</span>
+  </div>
+  
+  <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px; margin-bottom: 24px;">
+    <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>⚠️ Recommendation Override:</strong> Resume name does not match selected candidate; Low plausibility score (20%) - resume may contain false or exaggerated claims; Resume appears over-optimized (85%) - may be heavily AI-generated or fabricated; Resume authenticity analysis indicates likely fake or heavily fabricated content; Critical authenticity issues: Impossible timeline with overlapping job dates, Mismatch in names and contact information</p>
+  </div>
+  
+  
+
+  <!-- Authenticity Assessment Section -->
+  
+  <div class="section">
+    <h2 class="section-title authenticity">Resume Authenticity Assessment</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px;">
+      
+      <div class="auth-item" style="background: #fef2f2; border: 1px solid #fca5a5;">
+        <div class="auth-label">Plausibility Score</div>
+        <div class="auth-value" style="color: #dc2626">20%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 20%; background: #dc2626"></div></div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">Suspicious</div>
+      </div>
+      
+      
+      <div class="auth-item" style="background: #fef2f2; border: 1px solid #fca5a5;">
+        <div class="auth-label">Too Perfect Score</div>
+        <div class="auth-value" style="color: #dc2626">85%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 85%; background: #dc2626"></div></div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">Very Polished / Suspicious</div>
+      </div>
+      
+    </div>
+    
+    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+      <p style="font-size: 12px; font-weight: 600; color: #92400e; margin-bottom: 8px;">Over-Optimization Indicators:</p>
+      <ul style="margin: 0; padding-left: 16px; font-size: 12px; color: #78350f;">
+        <li>Language is heavily buzzword-driven and formulaic</li><li>Every role shows significant wins with no neutral or weak periods</li><li>Career progression is perfectly linear with constant promotions</li><li>Achievements are generic, with metrics but little concrete context</li><li>Style and sentence structure are extremely uniform throughout</li>
+      </ul>
+    </div>
+    
+    
+    <div style="background: #fef2f2; border: 2px solid #dc2626; border-radius: 8px; padding: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="font-size: 20px;">🚨</span>
+        <span style="font-weight: 600; color: #b91c1c; font-size: 16px;">Resume Mismatch Detected</span>
+        <span style="background: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;">CRITICAL</span>
+      </div>
+      <div style="space-y: 8px;">
+        
+          <div style="background: #fecaca; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>[name]</strong> Different names used in the resume</p>
+            <p style="font-size: 12px; color: #991b1b; margin-top: 4px; font-style: italic;">"Gabriela Santos vs Maya Thompson"</p>
+          </div>
+        
+          <div style="background: #fecaca; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>[contact]</strong> Inconsistent email addresses</p>
+            <p style="font-size: 12px; color: #991b1b; margin-top: 4px; font-style: italic;">"mayathompson@resumelogik-test.com vs gabrielasant@gmail.com"</p>
+          </div>
+        
+      </div>
+    </div>
+    
+  </div>
+  
+
+  
+  <div class="summary">
+    <p>The candidate, Gabriela Santos, presents a diverse and extensive background with over 18 years of experience primarily in healthcare and aerospace sectors. Her roles have involved significant leadership responsibilities, including managing cross-functional teams across multiple continents and implementing advanced security and machine learning systems. Despite her impressive experience, there are notable concerns regarding overlapping job tenures that require clarification. Additionally, while her technical skills are robust, there is a mismatch with the target industry and required skills for the current role under consideration.</p>
+  </div>
+  
+
+  <div class="section">
+    <h2 class="section-title skills">Skills Match</h2>
+    <div class="skills-grid">
+      <div class="skills-box matched">
+        <div class="skills-box-title">Matched Skills (1)</div>
+        <span class="skill-tag matched">communication</span>
+      </div>
+      <div class="skills-box missing">
+        <div class="skills-box-title">Missing Skills (4)</div>
+        <span class="skill-tag missing">data analysis tools</span><span class="skill-tag missing">verification</span><span class="skill-tag missing">compliance</span><span class="skill-tag missing">quality assurance</span>
+      </div>
+      <div class="skills-box extra">
+        <div class="skills-box-title">Extra Skills (4)</div>
+        <span class="skill-tag extra">Python</span><span class="skill-tag extra">Java</span><span class="skill-tag extra">C++</span><span class="skill-tag extra">Rust</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2 class="section-title flags">Findings</h2>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">Significant job overlap</div>
+          <div class="finding-details">There is a 25-month overlap between the roles of Senior Nurse Practitioner at Global FreightWorks and Director of Nurse Practitioners at HelixCloud Systems. This is a significant overlap that may require further explanation to understand how both roles were managed simultaneously.</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">Significant job overlap</div>
+          <div class="finding-details">There is a 14-month overlap between the roles of Nurse Practitioner at Zenith Medical Center and Senior Nurse Practitioner at Global FreightWorks. This overlap is substantial and should be clarified to ensure there were no conflicts in responsibilities.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Normal promotion speed</div>
+          <div class="finding-details">The transition from Senior Nurse Practitioner to Director of Nurse Practitioners took 40 months, which is a reasonable timeframe for such a promotion.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Normal promotion speed</div>
+          <div class="finding-details">The transition from Nurse Practitioner to Senior Nurse Practitioner took 25 months, which is a typical duration for this career progression.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Average tenure</div>
+          <div class="finding-details">The average tenure across jobs is 27 months, which is above the threshold of concern and indicates a stable employment history.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Stable job count</div>
+          <div class="finding-details">With 3 jobs over 18 years, there is no indication of job hopping, suggesting a stable career path.</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">Significant job overlap</div>
+          <div class="finding-details">The candidate's timeline shows a 25-month overlap between two senior roles and a 14-month overlap between another set of roles, raising concerns about the feasibility of managing these responsibilities simultaneously.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Extensive experience</div>
+          <div class="finding-details">The candidate has 18 years of experience, which exceeds the required experience for the role, indicating a deep well of professional knowledge.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Strong technical skills</div>
+          <div class="finding-details">Proficiency in multiple programming languages and advanced technologies like Kubernetes and Terraform suggests strong technical capabilities.</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Impossible timeline with overlapping job dates</div>
+          <div class="finding-details">Nurse Practitioner at Zenith Medical Center from Aug 2023 to Nov 2024 overlaps with Senior Nurse Practitioner at Global FreightWorks from Sep 2023 to Oct 2025</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Unrealistic education timeline</div>
+          <div class="finding-details">B.A. in Communication Studies from University of Texas at Austin in 2026 while holding senior roles</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Responsibilities and achievements are unrealistic for the roles</div>
+          <div class="finding-details">Led a cross-functional team of 75 across 6 continents; reduced costs by 63% in 30 days</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Mismatch in names and contact information</div>
+          <div class="finding-details">Gabriela Santos vs Maya Thompson; email: mayathompson@resumelogik-test.com</div>
+        </div>
+      </div>
+    
+  </div>
+  
+
+  
+  <div class="section">
+    <h2 class="section-title authenticity">Authenticity Signals</h2>
+    <div class="authenticity-grid">
+      <div class="auth-item">
+        <div class="auth-label">Generic Writing Score</div>
+        <div class="auth-value" style="color: #ca8a04">85%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 85%; background: #ca8a04"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Specificity Score</div>
+        <div class="auth-value" style="color: #16a34a">40%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 40%; background: #16a34a"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Fluff Ratio</div>
+        <div class="auth-value" style="color: #ca8a04">70%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 70%; background: #ca8a04"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">AI-Style Likelihood</div>
+        <div class="auth-value" style="color: #ea580c">75%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 75%; background: #ea580c"></div></div>
+      </div>
+    </div>
+    
+    <div style="margin-top: 16px; padding: 12px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px;">
+      <p style="font-size: 13px; color: #7c3aed;"><strong>Recommendation:</strong> likely_fraudulent</p>
+    </div>
+    
+  </div>
+  
+
+  <div class="footer">
+    <p>This report was generated automatically by Resume Logik AI analysis.</p>
+    <p style="margin-top: 4px;">This is an internal consistency analysis only and is not a background check or verification of claims.</p>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</body>
+</html>

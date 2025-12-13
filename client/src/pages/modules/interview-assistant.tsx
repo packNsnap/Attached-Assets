@@ -3,11 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as z from "zod";
-import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, ChevronDown, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch, Eye, StickyNote, Calendar, Clock, MapPin, Video, Phone, Building, Plus, X, CalendarDays, Trash2, Sparkles } from "lucide-react";
+import { Loader2, MessageSquare, Mic, Play, Save, Star, ChevronRight, ChevronDown, Check, Inbox, User, Briefcase, ArrowRight, Trophy, AlertCircle, Brain, Shield, Target, Users, FileSearch, Eye, StickyNote, Calendar, Clock, MapPin, Video, Phone, Building, Plus, X, CalendarDays, Trash2, Sparkles, Download } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import type { InterviewRecommendation, ScheduledInterview, Candidate } from "@shared/schema";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, isToday, parseISO } from "date-fns";
+import { getGoogleCalendarUrl, getOutlookCalendarUrl, downloadCalendarFile } from "@/lib/calendar";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -759,7 +760,7 @@ export default function InterviewAssistantModule() {
                       .map((interview) => (
                         <div key={interview.id} className="p-3 border rounded-lg" data-testid={`scheduled-interview-${interview.id}`}>
                           <div className="flex items-start justify-between">
-                            <div className="space-y-1">
+                            <div className="space-y-2 flex-1">
                               <p className="font-medium text-sm">{interview.candidateName}</p>
                               <p className="text-xs text-muted-foreground">{interview.jobTitle}</p>
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -773,6 +774,61 @@ export default function InterviewAssistantModule() {
                                 {interview.interviewType === "in_person" && <Building className="h-3 w-3 mr-1" />}
                                 {interview.interviewType}
                               </Badge>
+                              <div className="flex gap-1 pt-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => {
+                                    const eventUrl = getGoogleCalendarUrl({
+                                      title: `Interview: ${interview.candidateName} - ${interview.jobTitle}`,
+                                      description: `Interview Type: ${interview.interviewType}`,
+                                      startDate: new Date(interview.scheduledDate),
+                                      duration: interview.duration,
+                                    });
+                                    window.open(eventUrl, '_blank');
+                                  }}
+                                  data-testid={`button-google-calendar-${interview.id}`}
+                                >
+                                  Google
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => {
+                                    const eventUrl = getOutlookCalendarUrl({
+                                      title: `Interview: ${interview.candidateName} - ${interview.jobTitle}`,
+                                      description: `Interview Type: ${interview.interviewType}`,
+                                      startDate: new Date(interview.scheduledDate),
+                                      duration: interview.duration,
+                                    });
+                                    window.open(eventUrl, '_blank');
+                                  }}
+                                  data-testid={`button-outlook-calendar-${interview.id}`}
+                                >
+                                  Outlook
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 text-xs"
+                                  onClick={() => {
+                                    downloadCalendarFile(
+                                      {
+                                        title: `Interview: ${interview.candidateName} - ${interview.jobTitle}`,
+                                        description: `Interview Type: ${interview.interviewType}`,
+                                        startDate: new Date(interview.scheduledDate),
+                                        duration: interview.duration,
+                                      },
+                                      `${interview.candidateName}-interview.ics`
+                                    );
+                                  }}
+                                  data-testid={`button-download-calendar-${interview.id}`}
+                                >
+                                  <Download className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
                             <Button
                               variant="ghost"
