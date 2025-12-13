@@ -689,8 +689,16 @@ export async function registerRoutes(
       const lines = resumeText.split('\n').filter(l => l.trim());
       let candidateName = lines[0]?.trim() || "Unknown Candidate";
       
-      // Clean up name - remove common prefixes and limit length
+      // Clean up name - remove common prefixes
       candidateName = candidateName.replace(/^(resume|cv|curriculum vitae)[\s:-]*/i, '').trim();
+      
+      // Remove everything after common delimiters (|, -, •, etc.) to get just the name part
+      candidateName = candidateName.split(/[\|•\-]/)[0].trim();
+      
+      // Keep only letters, spaces, and hyphens (for hyphenated names)
+      candidateName = candidateName.replace(/[^a-zA-Z\s\-']/g, '').trim();
+      
+      // Limit length
       if (candidateName.length > 100) {
         candidateName = candidateName.substring(0, 100);
       }
