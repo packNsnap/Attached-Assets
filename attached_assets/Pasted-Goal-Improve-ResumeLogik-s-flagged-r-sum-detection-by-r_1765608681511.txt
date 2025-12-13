@@ -1,0 +1,123 @@
+Goal: Improve ResumeLogik’s “flagged” résumé detection by running a premium, high-judgment model only when earlier passes indicate risk. Use gpt-4.1 for this flagged pass. Keep everything else on the cheaper model(s).
+
+1) Where this runs in the pipeline
+
+We already do multiple passes (extraction, timeline, fit, summary). Add/replace the FLAGGED PASS as the final “skeptical plausibility/fraud” review.
+
+Always-on passes: keep current cheap model (ex: 4o-mini) for extraction, timeline explanation, fit scoring, HR summary.
+
+Flagged-only pass: run gpt-4.1 ONLY when risk triggers fire.
+
+2) Gating logic (when to call gpt-4.1)
+
+Only call the flagged pass if 2 or more of these conditions are true:
+
+too_perfect_score >= 75
+
+plausibility_score <= 40 (from earlier checks if present)
+
+timeline.overlapMonthsTotal > 6 OR any overlap > 6 months
+
+timeline.gapMonthsMax >= 12
+
+promotion_velocity_months < 18 to reach senior/leadership
+
+skills_mismatch_score >= threshold (ex: missing must-haves + senior title)
+
+skill_soup_detected == true (too many unrelated domains)
+
+name/email/contact inconsistencies detected
+
+If fewer than 2 triggers, skip this call and mark flagged_pass as “not_run”.
+
+3) What to send into the flagged pass
+
+Send a compact JSON payload (NOT full raw resume again unless needed). Include:
+
+candidate_profile (structured resume extraction)
+
+timeline_analysis (computed overlaps/gaps/promo speed as numbers)
+
+job_fit_summary (matched/missing skills, title/industry mismatch)
+
+previous_flags (name mismatch, email mismatch, inconsistent contact info, etc.)
+
+too_perfect_indicators if available
+
+Keep this payload small to reduce tokens.
+
+4) What gpt-4.1 must do (behavior)
+
+The flagged pass is NOT a writing/formatting review. It is ONLY:
+
+Career progression plausibility
+
+Timeline consistency realism
+
+Education/certification realism
+
+Role responsibility realism vs tenure
+
+Achievement realism (metrics vs context)
+
+Skill/industry coherence
+
+“too perfect” / templated / buzzword-driven fraud signals
+
+It must be skeptical by default. No praise. No hedging.
+
+5) Required output schema (JSON only)
+
+The model must return strict JSON with exactly:
+
+{
+  "plausibility_verdict": "low_risk | medium_risk | high_risk",
+  "confidence_score": 0,
+  "primary_red_flags": [],
+  "secondary_red_flags": [],
+  "what_requires_clarification": [],
+  "hire_risk_summary": ""
+}
+
+
+hire_risk_summary: 2–3 sentences, internal hiring-team tone.
+
+primary_red_flags: the biggest credibility problems (specific).
+
+what_requires_clarification: questions to ask candidate to verify.
+
+6) Implementation details
+
+Add a new function like runFlaggedPlausibilityPass(inputPayload) that:
+
+checks gating conditions
+
+if triggered, calls OpenAI with model: "gpt-4.1" and response_format: { type: "json_object" }
+
+validates JSON output; if invalid, auto-repair once and retry
+
+stores results to candidate record as flagged_pass_result
+
+Add flagged_pass_status: "not_run" | "run" | "error"
+
+Add flagged_pass_triggers: array of which rules fired (for auditability)
+
+7) UI expectations
+
+On the Resume Analysis page:
+
+Show Flagged Pass section only if it ran
+
+Display verdict with color coding:
+
+low_risk = green
+
+medium_risk = orange/yellow
+
+high_risk = red
+
+Show primary red flags + clarification questions
+
+8) Why this is required
+
+Using gpt-4.1 only on flagged cases gives higher judgment quality where it matters, while keeping costs low because most resumes never hit this expensive call.
