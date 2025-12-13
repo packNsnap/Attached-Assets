@@ -397,7 +397,7 @@ export default function PoliciesDocsModule() {
   const module = getModuleByPath("/policies");
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-4 sm:space-y-6 max-w-6xl">
       <PageHeader
         title="Policies & Documents"
         description="Generate professional HR policies and document templates for your organization."
@@ -405,13 +405,13 @@ export default function PoliciesDocsModule() {
         gradient={module.color}
       />
 
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-        <p className="text-sm text-amber-900 dark:text-amber-100">
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 sm:p-4">
+        <p className="text-xs sm:text-sm text-amber-900 dark:text-amber-100">
           <span className="font-semibold">⚖️ Legal Notice</span> — Policies generated here are based on general best practices and should be reviewed by qualified legal counsel before implementation.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Policy Details</CardTitle>
@@ -487,7 +487,7 @@ export default function PoliciesDocsModule() {
                   )}
                 />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="state"

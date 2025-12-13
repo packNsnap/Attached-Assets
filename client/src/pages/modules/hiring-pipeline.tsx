@@ -279,26 +279,26 @@ export default function HiringPipelineModule() {
       </div>
 
       <div className="flex-1 overflow-x-auto pb-4">
-        <div className="flex h-full gap-4 min-w-[1200px]">
+        <div className="flex h-full gap-2 sm:gap-4 min-w-[900px] sm:min-w-[1200px]">
           {STAGES.map((stage) => (
-            <div key={stage} className="flex-1 min-w-[280px] flex flex-col rounded-lg bg-muted/40 border">
-              <div className="p-3 border-b bg-muted/40 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
+            <div key={stage} className="flex-1 min-w-[140px] sm:min-w-[280px] flex flex-col rounded-lg bg-muted/40 border">
+              <div className="p-2 sm:p-3 border-b bg-muted/40 flex items-center justify-between sticky top-0 backdrop-blur-sm z-10">
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className={cn("rounded-full px-2 font-semibold", getStageColor(stage))} data-testid={`badge-count-${stage.toLowerCase()}`}>
+                  <Badge variant="secondary" className={cn("rounded-full px-1.5 sm:px-2 text-xs sm:text-sm font-semibold", getStageColor(stage))} data-testid={`badge-count-${stage.toLowerCase()}`}>
                     {filteredCandidates.filter(c => c.stage === stage).length}
                   </Badge>
-                  <span className="font-medium text-sm">{stage}</span>
+                  <span className="font-medium text-xs sm:text-sm">{stage}</span>
                 </div>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground cursor-pointer" />
               </div>
               
-              <ScrollArea className="flex-1 p-3">
-                <div className="space-y-3">
+              <ScrollArea className="flex-1 p-2 sm:p-3">
+                <div className="space-y-2 sm:space-y-3">
                   {filteredCandidates.filter(c => c.stage === stage).map((candidate) => {
                     const job = jobs.find(j => j.id === candidate.jobId);
                     return (
                     <Card key={candidate.id} className="cursor-pointer hover:shadow-md transition-shadow group relative bg-card" data-testid={`card-candidate-${candidate.id}`}>
-                      <CardContent className="p-4 space-y-3">
+                      <CardContent className="p-2 sm:p-4 space-y-2 sm:space-y-3">
                         <div className="flex justify-between items-start">
                           <div>
                             <h3 className="font-semibold text-sm" data-testid={`text-candidate-name-${candidate.id}`}>{candidate.name}</h3>

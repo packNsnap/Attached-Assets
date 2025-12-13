@@ -411,55 +411,55 @@ export default function SkillsTestModule() {
       </PageHeader>
 
       {/* Status Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-orange-600" />
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold" data-testid="count-pending">{pendingCount}</p>
-                <p className="text-sm text-muted-foreground">Need Tests</p>
+                <p className="text-lg sm:text-2xl font-bold" data-testid="count-pending">{pendingCount}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Need Tests</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-blue-600" />
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold" data-testid="count-ready">{readyCount}</p>
-                <p className="text-sm text-muted-foreground">Ready to Send</p>
+                <p className="text-lg sm:text-2xl font-bold" data-testid="count-ready">{readyCount}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Ready to Send</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-purple-600" />
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold" data-testid="count-sent">{awaitingInvitations.length}</p>
-                <p className="text-sm text-muted-foreground">Awaiting</p>
+                <p className="text-lg sm:text-2xl font-bold" data-testid="count-sent">{awaitingInvitations.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Awaiting</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
+          <CardContent className="p-3 sm:pt-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-2xl font-bold" data-testid="count-completed">{completedInvitations.length}</p>
-                <p className="text-sm text-muted-foreground">Completed</p>
+                <p className="text-lg sm:text-2xl font-bold" data-testid="count-completed">{completedInvitations.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Completed</p>
               </div>
             </div>
           </CardContent>
@@ -467,10 +467,10 @@ export default function SkillsTestModule() {
       </div>
 
       {/* Main Content */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Candidate Queue */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold">Candidate Queue</h2>
+        <div className="lg:col-span-2 space-y-3 sm:space-y-4">
+          <h2 className="text-base sm:text-lg font-semibold">Candidate Queue</h2>
           
           {activeRecommendations.length === 0 ? (
             <Card className="border-dashed">
@@ -539,8 +539,8 @@ export default function SkillsTestModule() {
         </div>
 
         {/* Completed Tests */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Completed Tests</h2>
+        <div className="space-y-3 sm:space-y-4">
+          <h2 className="text-base sm:text-lg font-semibold">Completed Tests</h2>
           
           {recentCompletedInvitations.length === 0 ? (
             <Card className="border-dashed">

@@ -309,7 +309,7 @@ export default function OnboardingModule() {
   const currentProgress = currentTotalTasks > 0 ? Math.round((completedTaskIds.length / currentTotalTasks) * 100) : 0;
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-4 sm:space-y-6 max-w-6xl">
       <PageHeader
         title="Onboarding"
         description="Create personalized onboarding checklists and plans for new hires."
@@ -317,8 +317,8 @@ export default function OnboardingModule() {
         gradient={module.color}
       />
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <p className="text-sm text-blue-900 dark:text-blue-100">
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 sm:p-4">
+        <p className="text-xs sm:text-sm text-blue-900 dark:text-blue-100">
           <span className="font-semibold">✨ AI-Generated</span> — Onboarding plans are personalized by AI based on the candidate's role and profile.
         </p>
       </div>
@@ -376,7 +376,7 @@ export default function OnboardingModule() {
         </Card>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>New Hire Details</CardTitle>
@@ -512,10 +512,10 @@ export default function OnboardingModule() {
                 </div>
               )}
               <Tabs defaultValue="checklist" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="checklist" data-testid="tab-checklist">Checklist</TabsTrigger>
-                  <TabsTrigger value="306090" data-testid="tab-306090">30/60/90</TabsTrigger>
-                  <TabsTrigger value="emails" data-testid="tab-emails">Emails</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 h-9 sm:h-10">
+                  <TabsTrigger value="checklist" className="text-xs sm:text-sm" data-testid="tab-checklist">Checklist</TabsTrigger>
+                  <TabsTrigger value="306090" className="text-xs sm:text-sm" data-testid="tab-306090">30/60/90</TabsTrigger>
+                  <TabsTrigger value="emails" className="text-xs sm:text-sm" data-testid="tab-emails">Emails</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="checklist" className="mt-4">

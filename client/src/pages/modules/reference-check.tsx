@@ -216,7 +216,7 @@ Best regards`;
   const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader
         title={module?.title || "Reference Check"}
         description={module?.description || "Manage reference checks for candidates"}
@@ -225,9 +225,9 @@ Best regards`;
       />
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Users className="h-4 w-4 sm:h-5 sm:w-5" />
             Select Candidate
           </CardTitle>
           <CardDescription>Choose a candidate to manage their references</CardDescription>
@@ -249,7 +249,7 @@ Best regards`;
       </Card>
 
       {selectedCandidateId && (
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between gap-4">
@@ -425,25 +425,28 @@ Best regards`;
                   <div className="flex gap-2 flex-wrap">
                     <Button
                       size="sm"
+                      className="text-xs sm:text-sm h-8 sm:h-9"
                       onClick={handleCopyLinkEmail}
                       data-testid="button-copy-template"
                     >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copy Email Template
+                      <Copy className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Copy Email
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
+                      className="text-xs sm:text-sm h-8 sm:h-9"
                       onClick={handleOpenLinkEmail}
                       disabled={!activeLinkEmail.to}
                       data-testid="button-open-email-client"
                     >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open Email Client
+                      <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                      Open Client
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
+                      className="text-xs sm:text-sm h-8 sm:h-9"
                       onClick={() => setActiveLinkEmail(null)}
                       data-testid="button-dismiss-template"
                     >

@@ -37,15 +37,15 @@ type StatCardProps = {
 function StatCard({ title, value, icon, description }: StatCardProps) {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-3 sm:p-4 pb-2">
+        <CardTitle className="text-xs sm:text-sm font-medium">{title}</CardTitle>
+        <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center">
           {icon}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold" data-testid={`text-${title.toLowerCase().replace(/\s/g, '-')}`}>{value}</div>
-        {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+      <CardContent className="p-3 sm:p-4 pt-0">
+        <div className="text-lg sm:text-2xl font-bold" data-testid={`text-${title.toLowerCase().replace(/\s/g, '-')}`}>{value}</div>
+        {description && <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">{description}</p>}
       </CardContent>
     </Card>
   );
@@ -103,7 +103,7 @@ export default function AnalyticsModule() {
   const maxPipelineCount = Math.max(...data.pipelineStages.map(s => s.count), 1);
 
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl">
       <PageHeader
         title="HR Analytics"
         description="Track key metrics and performance indicators across your HR operations."
@@ -112,7 +112,7 @@ export default function AnalyticsModule() {
       />
 
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <StatCard 
           title="Total Employees" 
           value={data.kpis.totalEmployees} 
@@ -140,15 +140,15 @@ export default function AnalyticsModule() {
       </div>
 
       <Tabs defaultValue="hiring" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="hiring" data-testid="tab-hiring">Hiring Pipeline</TabsTrigger>
-          <TabsTrigger value="headcount" data-testid="tab-headcount">Headcount</TabsTrigger>
-          <TabsTrigger value="efficiency" data-testid="tab-efficiency">Efficiency</TabsTrigger>
-          <TabsTrigger value="sources" data-testid="tab-sources">Recruiting Sources</TabsTrigger>
+        <TabsList className="w-full sm:w-auto flex overflow-x-auto">
+          <TabsTrigger value="hiring" className="text-xs sm:text-sm flex-1 sm:flex-none" data-testid="tab-hiring">Pipeline</TabsTrigger>
+          <TabsTrigger value="headcount" className="text-xs sm:text-sm flex-1 sm:flex-none" data-testid="tab-headcount">Headcount</TabsTrigger>
+          <TabsTrigger value="efficiency" className="text-xs sm:text-sm flex-1 sm:flex-none" data-testid="tab-efficiency">Efficiency</TabsTrigger>
+          <TabsTrigger value="sources" className="text-xs sm:text-sm flex-1 sm:flex-none" data-testid="tab-sources">Sources</TabsTrigger>
         </TabsList>
 
         <TabsContent value="hiring" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Hiring Funnel</CardTitle>
@@ -210,7 +210,7 @@ export default function AnalyticsModule() {
         </TabsContent>
 
         <TabsContent value="headcount" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Headcount by Role</CardTitle>
@@ -281,7 +281,7 @@ export default function AnalyticsModule() {
         </TabsContent>
 
         <TabsContent value="efficiency" className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-2">
             <Card>
               <CardHeader>
                 <CardTitle>Hires Over Time</CardTitle>
@@ -390,7 +390,7 @@ export default function AnalyticsModule() {
           </Card>
 
           {data.sourceData.length > 0 && (
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {data.sourceData.map((source) => {
                 const conversionRate = source.applications > 0 
                   ? ((source.hires / source.applications) * 100).toFixed(1) 

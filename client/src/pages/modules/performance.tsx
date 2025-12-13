@@ -285,7 +285,7 @@ export default function PerformanceModule() {
   const module = getModuleByPath("/performance");
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-4 sm:space-y-6 max-w-6xl">
       <PageHeader
         title="Performance & Goals"
         description="Set, track, and manage employee performance goals with AI assistance."
@@ -299,7 +299,7 @@ export default function PerformanceModule() {
               Add Goal
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add Performance Goal</DialogTitle>
               <DialogDescription>
@@ -494,10 +494,10 @@ export default function PerformanceModule() {
       </PageHeader>
 
       {/* Employee Filter */}
-      <div className="flex items-center gap-4">
-        <label className="text-sm font-medium">Filter by Employee:</label>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+        <label className="text-xs sm:text-sm font-medium">Filter by Employee:</label>
         <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-          <SelectTrigger className="w-[250px]" data-testid="select-employee-filter">
+          <SelectTrigger className="w-full sm:w-[250px]" data-testid="select-employee-filter">
             <SelectValue placeholder="All Employees" />
           </SelectTrigger>
           <SelectContent>
@@ -510,32 +510,32 @@ export default function PerformanceModule() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Goals</CardDescription>
-            <CardTitle className="text-3xl" data-testid="text-total-goals">{summary.total_goals}</CardTitle>
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardDescription className="text-xs sm:text-sm">Total Goals</CardDescription>
+            <CardTitle className="text-xl sm:text-3xl" data-testid="text-total-goals">{summary.total_goals}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Overall Progress</CardDescription>
-            <CardTitle className="text-3xl" data-testid="text-overall-progress">{summary.overall_progress}%</CardTitle>
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardDescription className="text-xs sm:text-sm">Overall Progress</CardDescription>
+            <CardTitle className="text-xl sm:text-3xl" data-testid="text-overall-progress">{summary.overall_progress}%</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 pt-0">
             <Progress value={summary.overall_progress} className="h-2" />
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Completed</CardDescription>
-            <CardTitle className="text-3xl text-green-500" data-testid="text-completed">{summary.completed_goals}</CardTitle>
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardDescription className="text-xs sm:text-sm">Completed</CardDescription>
+            <CardTitle className="text-xl sm:text-3xl text-green-500" data-testid="text-completed">{summary.completed_goals}</CardTitle>
           </CardHeader>
         </Card>
         <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>At Risk</CardDescription>
-            <CardTitle className="text-3xl text-orange-500" data-testid="text-at-risk">{summary.at_risk_goals}</CardTitle>
+          <CardHeader className="p-3 sm:p-4 pb-2">
+            <CardDescription className="text-xs sm:text-sm">At Risk</CardDescription>
+            <CardTitle className="text-xl sm:text-3xl text-orange-500" data-testid="text-at-risk">{summary.at_risk_goals}</CardTitle>
           </CardHeader>
         </Card>
       </div>
