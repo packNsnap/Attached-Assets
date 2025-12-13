@@ -1,0 +1,113 @@
+TASK: Rewrite ResumeLogik “Resume Analysis Report” UI + PDF wording so it reads as resume QA / interview prep (candidate-provided document review) and NOT like a hiring “risk report” or fraud verdict.
+
+SCOPE (do not refactor the whole app):
+- Only touch the Resume Analysis modal/screens shown in the screenshots:
+  Tabs: Overview, Profile, Timeline, Flags, Skills, Authenticity, Report
+  Buttons: Save to Candidate, Download Report
+  Badges: Fit %, Risk %, Risk: 80% etc
+  Any PDF/export template used by “Download Report”
+- Keep existing data fields from backend if needed (fitScore, riskScore, etc). We are only changing presentation labels/copy and how scores are shown.
+
+GOALS:
+- Remove or avoid these words everywhere in UI + PDF:
+  “Risk”, “Fraud”, “Fake”, “Fabricated”, “Clear/Consider”, “Pass/Fail”, “Final Recommendation”
+- Avoid “verdict” language. Convert to “items to verify / needs clarification”.
+- Keep the product useful: still show flags, overlaps, missing skills, writing signals. Just reframe.
+- PDF must be titled as “worksheet/notes”, not “report”, and include a strong disclaimer at top.
+
+IMPLEMENTATION PLAN:
+1) Create a centralized copy map (constants) and replace hardcoded strings in the Resume Analysis components + PDF generator with the new copy.
+2) Replace top badges:
+   - “Fit: XX%” => “Job Match Coverage: XX%”
+   - “Risk: XX%” => “Review Priority: Low / Medium / High” (NO percentage)
+     Use thresholds based on existing riskScore:
+       0–33 => Low
+       34–66 => Medium
+       67–100 => High
+     Display the word only, plus optional small helper text: “Based on resume consistency signals”
+3) Replace “Final Recommendation” section:
+   - Rename section title to “Suggested Follow-ups”
+   - Replace the “Review” label/button with “Open Follow-ups”
+   - Replace “Review Reasons:” with “Why this needs follow-up:”
+   - Replace “Next Steps:” with “Suggested questions:”
+4) Timeline tab:
+   - Rename “Timeline Risk” => “Timeline Consistency”
+   - Rename “Job Hop Risk” => “Tenure Pattern”
+   - Rename “Promotion Risk” => “Progression Pattern”
+   - Replace any “Risk: 80%” badges on cards with “Severity: High / Medium / Low”
+     Use same thresholds as above.
+   - Replace language like “raises concerns about ability to manage responsibilities” with neutral wording like “needs clarification due to overlap”.
+5) Flags tab:
+   - Rename “Green Flags” => “Strengths”
+   - Rename “Red Flags” => “Needs Follow-up”
+   - Remove phrases implying character judgment (ex: “lack of commitment”).
+6) Authenticity tab:
+   - Rename “AI-Style Likelihood” => “AI-like Writing Signals”
+   - Replace “Recommendation: likely_fraudulent” with:
+       Title: “Suggested follow-up”
+       Body: “Multiple inconsistency indicators detected. Not proof of deception or AI use.”
+7) Skills tab:
+   - Rename “Missing Skills” stays, but change tone to job-match:
+     “Missing Skills” => “Not found in resume”
+8) Report tab:
+   - Replace “Analysis Findings” subtitle with:
+     “Candidate-provided resume review only. Not a background check. Not a verification of claims.”
+9) Buttons:
+   - “Save to Candidate” => “Save Notes”
+   - “Download Report” => “Download Interview Prep Notes”
+10) PDF export:
+   - Title: “Resume Review Worksheet”
+   - Top disclaimer block (must appear on first page):
+     “Candidate-provided document review only. Not a background check. Not a verification of claims. Do not use as the sole basis for an employment decision.”
+   - Remove “Final Recommendation” and “risk” words in PDF.
+   - Replace “Recommendation” with “Suggested Follow-ups”
+   - File name: “Resume_Review_Worksheet_<CandidateName>.pdf”
+
+NEW COPY MAP (use these exact strings):
+- Modal title: “Resume Review Worksheet”
+- Top badges:
+  - “Job Match Coverage”
+  - “Review Priority”
+- Priority labels:
+  - Low: “Low”
+  - Medium: “Medium”
+  - High: “High”
+- Helper under priority (small text): “Based on resume consistency signals”
+- Tabs: keep same tab names except:
+  - Report tab header area should show disclaimer text (below)
+- Section titles:
+  - “Suggested Follow-ups”
+  - “Why this needs follow-up:”
+  - “Suggested questions:”
+  - “Timeline Consistency”
+  - “Progression Pattern”
+  - “Tenure Pattern”
+  - “Strengths”
+  - “Needs Follow-up”
+  - “AI-like Writing Signals”
+  - “Suggested follow-up”
+- Disclaimers (use verbatim):
+  A) Header disclaimer (modal + report tab + PDF):
+     “Candidate-provided resume review only. Not a background check. Not a verification of claims.”
+  B) PDF expanded disclaimer:
+     “Candidate-provided document review only. Not a background check. Not a verification of claims. Do not use as the sole basis for an employment decision.”
+- Button labels:
+  - “Save Notes”
+  - “Download Interview Prep Notes”
+  - Replace “Review” button with “Open Follow-ups”
+
+TEXT REWRITES (apply globally in these components):
+- Replace “likely fake” / “fabricated” => “inconsistency indicators”
+- Replace “fraudulent” => “needs clarification”
+- Replace “lack of commitment” => “short tenures may warrant clarification”
+- Replace “detrimental” => remove entirely; keep neutral interview prompt
+
+ACCEPTANCE CRITERIA:
+- No UI or PDF text contains the words: Risk, Fraud, Fake, Fabricated, likely_fraudulent, Final Recommendation
+- The top “risk %” badge is replaced by categorical Review Priority (Low/Medium/High)
+- PDF export matches new title + disclaimer + wording and filename
+- All existing functionality remains (same data, same tabs, same export works)
+
+Deliverables:
+- PR with only the minimal files changed
+- A new constants file for the copy map, imported by the Resume Analysis UI + PDF generator
