@@ -3294,8 +3294,33 @@ Respond in this exact JSON format:
         return;
       }
 
-      const subject = encodeURIComponent(`Reference Request for ${candidateName || "Candidate"}`);
-      const body = encodeURIComponent(`Dear ${ref.name},
+      const subject = encodeURIComponent(`Reference Check for ${candidateName || "Candidate"}`);
+      
+      // Generate 5 reference check questions if reference came from candidate link
+      let bodyText = "";
+      if (ref.source === "candidate_link") {
+        bodyText = `Dear ${ref.name},
+
+Thank you for providing your contact information as a reference for ${candidateName}. We would appreciate your insights on their professional background and performance.
+
+Please help us by providing brief answers to the following reference check questions:
+
+1. How long have you worked with ${candidateName} and in what capacity? What were your primary interactions?
+
+2. What would you describe as ${candidateName}'s greatest strengths and key skills? Please provide specific examples.
+
+3. How would you rate ${candidateName}'s reliability, work quality, and ability to meet deadlines? Please provide details.
+
+4. Can you speak to ${candidateName}'s teamwork, communication skills, and interpersonal relationships with colleagues?
+
+5. Would you recommend ${candidateName} for the ${candidateRole || "open position"} they are applying for? Why or why not?
+
+Thank you for taking the time to provide this valuable feedback. If you prefer to discuss this by phone instead, please let me know.
+
+Best regards`;
+      } else {
+        // Use original template for manual entry references
+        bodyText = `Dear ${ref.name},
 
 We are considering ${candidateName || "a candidate"} for the ${candidateRole || "open"} position at our company. They provided your contact information as a professional reference.
 
@@ -3309,8 +3334,10 @@ Please feel free to reply to this email or let me know if you prefer a phone cal
 
 Thank you for your time.
 
-Best regards`);
+Best regards`;
+      }
 
+      const body = encodeURIComponent(bodyText);
       const mailto = `mailto:${ref.email}?subject=${subject}&body=${body}`;
       
       res.json({ mailto });
