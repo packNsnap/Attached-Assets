@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -175,6 +175,30 @@ const comparisonData = [
 
 export default function LandingPage() {
   const [activeFeature, setActiveFeature] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && videoRef.current) {
+          videoRef.current.play();
+        } else if (!entry.isIntersecting && videoRef.current) {
+          videoRef.current.pause();
+        }
+      },
+      { threshold: 0.5 }
+    );
+
+    if (videoRef.current) {
+      observer.observe(videoRef.current);
+    }
+
+    return () => {
+      if (videoRef.current) {
+        observer.unobserve(videoRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -729,8 +753,11 @@ export default function LandingPage() {
             >
               <div className="rounded-2xl overflow-hidden border shadow-xl">
                 <video
+                  ref={videoRef}
                   src={demoVideo}
                   controls
+                  autoPlay
+                  muted
                   className="w-full h-auto bg-black"
                   poster={logoImage}
                   data-testid="video-flagged-reviews"
