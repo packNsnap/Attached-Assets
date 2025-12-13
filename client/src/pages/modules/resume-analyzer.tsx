@@ -647,7 +647,7 @@ export default function ResumeAnalyzerModule() {
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>${RESUME_ANALYSIS_COPY.pdfTitle} - ${candidateName}</title>
+  <title>Resume Review Worksheet - ${candidateName}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; color: #1f2937; padding: 40px; max-width: 900px; margin: 0 auto; }
@@ -712,8 +712,8 @@ export default function ResumeAnalyzerModule() {
 </head>
 <body>
   <div class="header">
-    <h1>${RESUME_ANALYSIS_COPY.modalTitle}</h1>
-    <p class="subtitle">${RESUME_ANALYSIS_COPY.headerDisclaimer}</p>
+    <h1>Resume Review Worksheet</h1>
+    <p class="subtitle">Candidate-provided resume review only. Not a background check. Not a verification of claims.</p>
   </div>
 
   ${analysis.mismatchDetection?.hasMismatch && analysis.mismatchDetection.issues.some(i => i.type === "name") ? `
@@ -740,19 +740,19 @@ export default function ResumeAnalyzerModule() {
 
   <div class="scores">
     <div class="score-card fit">
-      <div class="score-label">${RESUME_ANALYSIS_COPY.fitScoreLabel}</div>
+      <div class="score-label">Job Match Coverage</div>
       <div class="score-value" style="color: ${fitScoreColor}">${analysis.fitScore}%</div>
       <span class="score-badge" style="background: ${fitScoreColor}20; color: ${fitScoreColor}">
         ${analysis.fitScore >= 70 ? 'Good Fit' : analysis.fitScore >= 50 ? 'Partial Fit' : 'Low Fit'}
       </span>
     </div>
     <div class="score-card risk">
-      <div class="score-label">${RESUME_ANALYSIS_COPY.reviewPriorityLabel}</div>
-      <div class="score-value" style="color: ${riskScoreColor}">${RESUME_ANALYSIS_COPY.getPriorityLevel(analysis.logicScore)}</div>
+      <div class="score-label">Review Priority</div>
+      <div class="score-value" style="color: ${riskScoreColor}">${analysis.logicScore <= 33 ? 'Low' : analysis.logicScore <= 66 ? 'Medium' : 'High'}</div>
       <span class="score-badge" style="background: ${riskScoreColor}20; color: ${riskScoreColor}">
-        ${RESUME_ANALYSIS_COPY.getPriorityLevel(analysis.logicScore)}
+        ${analysis.logicScore <= 33 ? 'Low' : analysis.logicScore <= 66 ? 'Medium' : 'High'}
       </span>
-      <p style="font-size: 11px; color: #6b7280; margin-top: 4px;">${RESUME_ANALYSIS_COPY.priorityHelper}</p>
+      <p style="font-size: 11px; color: #6b7280; margin-top: 4px;">Based on resume consistency signals</p>
     </div>
   </div>
 
