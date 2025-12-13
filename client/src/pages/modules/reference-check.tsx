@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, UserCheck, Copy, Mail, Link, ExternalLink, Plus, Trash2, Users, Send, Clock, ChevronDown } from "lucide-react";
+import { Loader2, UserCheck, Copy, Mail, Link, ExternalLink, Plus, Trash2, Users, Send, Clock } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { getModuleByPath } from "@/lib/constants";
 import type { Candidate, Reference, ReferenceLink } from "@shared/schema";
 import { format } from "date-fns";
-import { REFERENCE_EMAIL_TEMPLATES, generateMailtoLink } from "@/lib/reference-email-templates";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,14 +41,6 @@ export default function ReferenceCheckModule() {
     subject: string;
     body: string;
     mailto: string;
-  } | null>(null);
-  const [selectedTemplate, setSelectedTemplate] = useState(REFERENCE_EMAIL_TEMPLATES[0].id);
-  const [generatedLinkEmail, setGeneratedLinkEmail] = useState<{
-    to: string;
-    subject: string;
-    body: string;
-    mailto: string;
-    templateName: string;
   } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -477,117 +468,6 @@ export default function ReferenceCheckModule() {
                       </div>
                     ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Mail className="h-5 w-5" />
-                  Send Reference Request Email
-                </CardTitle>
-                <CardDescription>
-                  Send a pre-formatted email to {selectedCandidate?.name} requesting they submit their references.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <Label htmlFor="email-template">Email Template</Label>
-                  <Select value={selectedTemplate} onValueChange={setSelectedTemplate}>
-                    <SelectTrigger id="email-template" data-testid="select-email-template">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REFERENCE_EMAIL_TEMPLATES.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button
-                  data-testid="button-generate-template-email"
-                  onClick={() => {
-                    const template = REFERENCE_EMAIL_TEMPLATES.find(t => t.id === selectedTemplate);
-                    if (!template || !selectedCandidate) return;
-
-                    const mailto = generateMailtoLink(
-                      template,
-                      selectedCandidate.email || "",
-                      selectedCandidate.name,
-                      selectedCandidate.role || ""
-                    );
-
-                    setGeneratedLinkEmail({
-                      to: selectedCandidate.email || "",
-                      subject: template.subject(selectedCandidate.name),
-                      body: template.body(selectedCandidate.name, selectedCandidate.role || ""),
-                      mailto,
-                      templateName: template.name,
-                    });
-
-                    toast({ title: "Email Ready", description: "Use the buttons below to send or copy the email." });
-                  }}
-                  className="w-full"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Generate Email
-                </Button>
-
-                {generatedLinkEmail && (
-                  <Card className="border-primary/50 mt-4">
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        {generatedLinkEmail.templateName}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="text-sm">
-                        <span className="font-medium">To:</span> {generatedLinkEmail.to}
-                      </div>
-                      <div className="text-sm">
-                        <span className="font-medium">Subject:</span> {generatedLinkEmail.subject}
-                      </div>
-                      <div className="text-sm whitespace-pre-wrap bg-muted p-3 rounded-md max-h-40 overflow-y-auto">
-                        {generatedLinkEmail.body}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            const fullEmail = `To: ${generatedLinkEmail.to}\nSubject: ${generatedLinkEmail.subject}\n\n${generatedLinkEmail.body}`;
-                            navigator.clipboard.writeText(fullEmail);
-                            toast({ title: "Copied!", description: "Email content copied to clipboard." });
-                          }}
-                          data-testid="button-copy-template-email"
-                        >
-                          <Copy className="h-4 w-4 mr-1" />
-                          Copy Email
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          asChild
-                        >
-                          <a href={generatedLinkEmail.mailto} target="_blank" rel="noopener noreferrer" data-testid="button-open-email-client">
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            Open in Email Client
-                          </a>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setGeneratedLinkEmail(null)}
-                        >
-                          Dismiss
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
                 )}
               </CardContent>
             </Card>
