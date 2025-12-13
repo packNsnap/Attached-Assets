@@ -605,14 +605,19 @@ export async function registerRoutes(
     }
   });
 
-  // Delete all candidates for user
-  app.delete("/api/candidates/delete-all", isAuthenticated, async (req: any, res) => {
+  // Delete individual candidate
+  app.delete("/api/candidates/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
-      const deletedCount = await storage.deleteAllCandidates(userId);
-      res.json({ success: true, deletedCount });
+      const candidateId = req.params.id;
+      const success = await storage.deleteCandidate(candidateId, userId);
+      if (!success) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+      res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: "Failed to delete candidates" });
+      res.status(500).json({ error: "Failed to delete candidate" });
     }
   });
 

@@ -239,26 +239,24 @@ export default function CandidatesModule() {
     body: string;
     mailto: string;
   } | null>(null);
-  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
 
-  const deleteAllCandidatesMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch("/api/candidates/delete-all", {
+  const deleteCandidateMutation = useMutation({
+    mutationFn: async (candidateId: string) => {
+      const res = await fetch(`/api/candidates/${candidateId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" }
       });
-      if (!res.ok) throw new Error("Failed to delete candidates");
+      if (!res.ok) throw new Error("Failed to delete candidate");
       return res.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "candidates" });
       queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
       setSelectedCandidate(null);
-      setDeleteAllDialogOpen(false);
-      toast({ title: "Success", description: `Deleted ${data.deletedCount} candidates` });
+      toast({ title: "Deleted", description: "Candidate has been removed." });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to delete all candidates", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to delete candidate", variant: "destructive" });
     }
   });
 
@@ -684,42 +682,14 @@ export default function CandidatesModule() {
           icon={module.icon}
           gradient={module.color}
         >
-          <div className="flex gap-2">
-            <Dialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="destructive" size="sm" data-testid="button-delete-all-candidates">
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete All
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Delete All Candidates?</DialogTitle>
-                </DialogHeader>
-                <p className="text-sm text-muted-foreground mb-6">This will permanently delete all {candidates.length} candidates. This action cannot be undone.</p>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setDeleteAllDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => deleteAllCandidatesMutation.mutate()}
-                    disabled={deleteAllCandidatesMutation.isPending}
-                    data-testid="button-confirm-delete-all"
-                  >
-                    {deleteAllCandidatesMutation.isPending ? "Deleting..." : "Delete All"}
-                  </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
               <DialogTrigger asChild>
                 <Button data-testid="button-add-candidate">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Candidate
                 </Button>
               </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Candidate</DialogTitle>
             </DialogHeader>
@@ -953,6 +923,19 @@ export default function CandidatesModule() {
                                 {job.title}
                               </div>
                             )}
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 ml-auto"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteCandidateMutation.mutate(candidate.id);
+                              }}
+                              disabled={deleteCandidateMutation.isPending}
+                              data-testid={`button-delete-candidate-${candidate.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
@@ -978,14 +961,27 @@ export default function CandidatesModule() {
                     <p className="text-sm text-muted-foreground">{selectedCandidate.role}</p>
                   </div>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => setSelectedCandidate(null)}
-                  data-testid="button-close-profile"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                <div className="flex gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => {
+                      deleteCandidateMutation.mutate(selectedCandidate.id);
+                    }}
+                    disabled={deleteCandidateMutation.isPending}
+                    data-testid="button-delete-selected-candidate"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setSelectedCandidate(null)}
+                    data-testid="button-close-profile"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             
