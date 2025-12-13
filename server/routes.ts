@@ -612,7 +612,7 @@ export async function registerRoutes(
       
       // Check user's plan - must be Pro or Enterprise
       const subscription = await storage.getSubscription(userId);
-      const plan = subscription?.planType || "free";
+      const plan = subscription?.plan || "free";
       if (plan !== "pro" && plan !== "enterprise") {
         res.status(403).json({ 
           error: "Bulk upload requires Pro or Enterprise plan",
