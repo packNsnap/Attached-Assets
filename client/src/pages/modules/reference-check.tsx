@@ -105,29 +105,29 @@ export default function ReferenceCheckModule() {
       queryClient.invalidateQueries({ queryKey: [`/api/candidates/${selectedCandidateId}/reference-links`] });
       const referenceLink = `${window.location.origin}/reference-link/${data.token}`;
       
-      // Create editable email template
+      // Create editable email template with candidate's email
       const subject = `Reference Request for ${selectedCandidate?.name}`;
-      const body = `Dear Hiring Manager,
+      const body = `Hi ${selectedCandidate?.name},
 
-We would like to request references for ${selectedCandidate?.name} who is a candidate for the ${selectedCandidate?.role} position at our organization.
+We would like to request references for your application to the ${selectedCandidate?.role} position at our organization.
 
-Please provide a minimum of 2 references through the following link:
+Please provide a minimum of 2 references through the following secure link:
 ${referenceLink}
 
-This link is secure and will allow references to submit their information directly.
+The link will allow references to submit their information directly.
 
-Thank you for your assistance.
+Thank you!
 
 Best regards`;
 
       setActiveLinkEmail({
-        to: "",
+        to: selectedCandidate?.email || "",
         subject,
         body,
         link: referenceLink,
       });
 
-      toast({ title: "Link created!", description: "Customize the email template below to send to references." });
+      toast({ title: "Link created!", description: "Email template is ready to customize and send." });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create reference link.", variant: "destructive" });
