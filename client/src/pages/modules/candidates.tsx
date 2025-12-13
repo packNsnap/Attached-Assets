@@ -814,7 +814,6 @@ export default function CandidatesModule() {
             </div>
           </DialogContent>
         </Dialog>
-          </div>
         </PageHeader>
       </div>
 
