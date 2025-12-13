@@ -4,13 +4,14 @@ import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LogOut, User, ExternalLink, GripVertical, RotateCcw, X, Shield } from "lucide-react";
+import { LogOut, User, ExternalLink, GripVertical, RotateCcw, X, Shield, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Badge } from "@/components/ui/badge";
 import { UsageDisplay } from "@/components/UsageDisplay";
 import { useAuth } from "@/hooks/useAuth";
 import { useModuleOrder } from "@/hooks/useModuleOrder";
+import { useQuery } from "@tanstack/react-query";
 import {
   Tooltip,
   TooltipContent,
@@ -28,6 +29,16 @@ export function Sidebar({ onClose }: SidebarProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const { orderedModules, reorderModules, resetOrder } = useModuleOrder();
+
+  const { data: subscriptionData } = useQuery({
+    queryKey: ["/api/stripe/subscription-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/stripe/subscription-status", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+  });
   
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -229,6 +240,18 @@ export function Sidebar({ onClose }: SidebarProps) {
           </div>
         </div>
         <div className="grid gap-2">
+          {subscriptionData?.plan === "free" && (
+            <Button 
+              size="sm"
+              className="w-full justify-start gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              asChild
+            >
+              <Link href="/pricing" onClick={handleLinkClick} data-testid="sidebar-upgrade-button">
+                <Rocket className="h-4 w-4" />
+                Upgrade Plan
+              </Link>
+            </Button>
+          )}
           {user?.isAdmin === "true" && (
             <Button 
               variant="outline" 

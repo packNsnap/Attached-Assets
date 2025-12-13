@@ -106,34 +106,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Upgrade Banner - Show for Free Users */}
-      {subscriptionData?.plan === "free" && (
-        <Card className="relative overflow-hidden border-blue-500/20 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10">
-          <div className="absolute -top-20 -right-20 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
-          <CardContent className="flex items-center justify-between p-6 relative">
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center shadow-lg">
-                <Rocket className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg">Unlock More Power</h3>
-                <p className="text-sm text-muted-foreground">Upgrade to Growth, Pro, or Enterprise to get more jobs, candidates, and AI actions per candidate.</p>
-              </div>
-            </div>
-            <Button 
-              asChild
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shrink-0"
-              data-testid="button-upgrade-plan"
-            >
-              <Link href="/pricing">
-                Upgrade Now
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
