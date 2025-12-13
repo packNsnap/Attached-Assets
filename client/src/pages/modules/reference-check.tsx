@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -41,6 +42,12 @@ export default function ReferenceCheckModule() {
     subject: string;
     body: string;
     mailto: string;
+  } | null>(null);
+  const [activeLinkEmail, setActiveLinkEmail] = useState<{
+    to: string;
+    subject: string;
+    body: string;
+    link: string;
   } | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -96,8 +103,31 @@ export default function ReferenceCheckModule() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/candidates/${selectedCandidateId}/reference-links`] });
-      navigator.clipboard.writeText(data.url);
-      toast({ title: "Link created and copied!", description: "Share this link with the candidate to collect references." });
+      const referenceLink = `${window.location.origin}/reference-link/${data.token}`;
+      
+      // Create editable email template
+      const subject = `Reference Request for ${selectedCandidate?.name}`;
+      const body = `Dear Hiring Manager,
+
+We would like to request references for ${selectedCandidate?.name} who is a candidate for the ${selectedCandidate?.role} position at our organization.
+
+Please provide a minimum of 2 references through the following link:
+${referenceLink}
+
+This link is secure and will allow references to submit their information directly.
+
+Thank you for your assistance.
+
+Best regards`;
+
+      setActiveLinkEmail({
+        to: "",
+        subject,
+        body,
+        link: referenceLink,
+      });
+
+      toast({ title: "Link created!", description: "Customize the email template below to send to references." });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create reference link.", variant: "destructive" });
@@ -168,6 +198,19 @@ export default function ReferenceCheckModule() {
     const fullEmail = `To: ${activeEmail.to}\nSubject: ${activeEmail.subject}\n\n${activeEmail.body}`;
     navigator.clipboard.writeText(fullEmail);
     toast({ title: "Copied!", description: "Email content copied to clipboard." });
+  };
+
+  const handleCopyLinkEmail = () => {
+    if (!activeLinkEmail) return;
+    const fullEmail = `To: ${activeLinkEmail.to}\nSubject: ${activeLinkEmail.subject}\n\n${activeLinkEmail.body}`;
+    navigator.clipboard.writeText(fullEmail);
+    toast({ title: "Copied!", description: "Email template copied to clipboard." });
+  };
+
+  const handleOpenLinkEmail = () => {
+    if (!activeLinkEmail) return;
+    const mailto = `mailto:${encodeURIComponent(activeLinkEmail.to)}?subject=${encodeURIComponent(activeLinkEmail.subject)}&body=${encodeURIComponent(activeLinkEmail.body)}`;
+    window.open(mailto);
   };
 
   const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
@@ -416,18 +459,139 @@ export default function ReferenceCheckModule() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button
-                  data-testid="button-generate-link"
-                  onClick={() => createLinkMutation.mutate()}
-                  disabled={createLinkMutation.isPending}
-                >
-                  {createLinkMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Plus className="h-4 w-4 mr-2" />
-                  )}
-                  Generate New Link
-                </Button>
+                {!activeLinkEmail ? (
+                  <Button
+                    data-testid="button-generate-link"
+                    onClick={() => createLinkMutation.mutate()}
+                    disabled={createLinkMutation.isPending}
+                  >
+                    {createLinkMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Plus className="h-4 w-4 mr-2" />
+                    )}
+                    Generate New Link
+                  </Button>
+                ) : (
+                  <div className="space-y-4">
+                    <Card className="border-primary/50 bg-muted/30">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          Email Template - Customize & Send
+                        </CardTitle>
+                        <CardDescription>
+                          Edit the template below and send to your reference contacts. Minimum 2 references required.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label htmlFor="email-to" className="text-sm">
+                            To (Email Addresses)
+                          </Label>
+                          <Input
+                            id="email-to"
+                            data-testid="input-email-to"
+                            placeholder="reference1@example.com, reference2@example.com"
+                            value={activeLinkEmail.to}
+                            onChange={(e) =>
+                              setActiveLinkEmail({ ...activeLinkEmail, to: e.target.value })
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="email-subject" className="text-sm">
+                            Subject
+                          </Label>
+                          <Input
+                            id="email-subject"
+                            data-testid="input-email-subject"
+                            value={activeLinkEmail.subject}
+                            onChange={(e) =>
+                              setActiveLinkEmail({ ...activeLinkEmail, subject: e.target.value })
+                            }
+                            className="mt-1"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="email-body" className="text-sm">
+                            Message Body
+                          </Label>
+                          <Textarea
+                            id="email-body"
+                            data-testid="textarea-email-body"
+                            value={activeLinkEmail.body}
+                            onChange={(e) =>
+                              setActiveLinkEmail({ ...activeLinkEmail, body: e.target.value })
+                            }
+                            className="mt-1 min-h-40 font-mono text-xs"
+                          />
+                        </div>
+
+                        <div className="bg-muted p-3 rounded-md border">
+                          <p className="text-xs font-medium mb-2">Reference Link (included in body):</p>
+                          <code className="text-xs break-all text-muted-foreground">
+                            {activeLinkEmail.link}
+                          </code>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              navigator.clipboard.writeText(activeLinkEmail.link);
+                              toast({ title: "Copied!", description: "Reference link copied to clipboard." });
+                            }}
+                            className="mt-2"
+                            data-testid="button-copy-link"
+                          >
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy Link
+                          </Button>
+                        </div>
+
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            size="sm"
+                            onClick={handleCopyLinkEmail}
+                            data-testid="button-copy-template"
+                          >
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy Email Template
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleOpenLinkEmail}
+                            disabled={!activeLinkEmail.to}
+                            data-testid="button-open-email-client"
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Open Email Client
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setActiveLinkEmail(null)}
+                            data-testid="button-dismiss-template"
+                          >
+                            Dismiss
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => setActiveLinkEmail(null)}
+                      className="w-full"
+                      data-testid="button-generate-another-link"
+                    >
+                      Generate Another Link
+                    </Button>
+                  </div>
+                )}
 
                 {referenceLinks.length > 0 && (
                   <div className="space-y-3 pt-4">
