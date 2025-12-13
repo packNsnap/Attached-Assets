@@ -5,7 +5,7 @@ import { createServer } from "http";
 import { storage } from "./storage";
 import bcrypt from "bcryptjs";
 import { runMigrations } from 'stripe-replit-sync';
-import { getStripeSync } from "./stripeClient";
+import { getStripeSync, getUncachableStripeClient } from "./stripeClient";
 import { WebhookHandlers } from "./webhookHandlers";
 
 const app = express();
@@ -47,13 +47,8 @@ async function initStripe() {
     console.log(`Webhook configured: ${webhook.url} (UUID: ${uuid})`);
 
     console.log('Syncing Stripe data...');
-    stripeSync.syncBackfill()
-      .then(() => {
-        console.log('Stripe data synced');
-      })
-      .catch((err: any) => {
-        console.error('Error syncing Stripe data:', err);
-      });
+    await stripeSync.syncBackfill();
+    console.log('Stripe data synced');
   } catch (error) {
     console.error('Failed to initialize Stripe:', error);
   }
@@ -138,6 +133,80 @@ app.use((req, res, next) => {
   next();
 });
 
+async function seedStripeProducts() {
+  try {
+    const stripe = await getUncachableStripeClient();
+
+    const products = [
+      {
+        name: 'Growth',
+        description: 'Perfect for growing teams. 5 active jobs, 30 candidates/month, 15 AI actions per candidate.',
+        metadata: { 
+          plan: 'growth',
+          jobs: '5',
+          candidates: '30',
+          aiActionsPerCandidate: '15',
+        },
+        price: 2900,
+      },
+      {
+        name: 'Pro',
+        description: 'For established HR teams. 20 active jobs, 150 candidates/month, 15 AI actions per candidate.',
+        metadata: { 
+          plan: 'pro',
+          jobs: '20',
+          candidates: '150',
+          aiActionsPerCandidate: '15',
+        },
+        price: 4999,
+      },
+      {
+        name: 'Enterprise',
+        description: 'Unlimited scale for large organizations. Unlimited jobs, 1000+ candidates/month, 15 AI actions per candidate.',
+        metadata: { 
+          plan: 'enterprise',
+          jobs: 'unlimited',
+          candidates: '1000+',
+          aiActionsPerCandidate: '15',
+        },
+        price: 15000,
+      },
+    ];
+
+    for (const productData of products) {
+      try {
+        const existingProducts = await stripe.products.search({ 
+          query: `name:'${productData.name}'` 
+        });
+
+        if (existingProducts.data.length > 0) {
+          log(`Stripe product "${productData.name}" already exists`, "stripe-seed");
+          continue;
+        }
+
+        const product = await stripe.products.create({
+          name: productData.name,
+          description: productData.description,
+          metadata: productData.metadata,
+        });
+
+        const price = await stripe.prices.create({
+          product: product.id,
+          unit_amount: productData.price,
+          currency: 'usd',
+          recurring: { interval: 'month' },
+        });
+
+        log(`Created Stripe product: ${productData.name} ($${productData.price / 100}/mo)`, "stripe-seed");
+      } catch (error) {
+        log(`Error creating product ${productData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`, "stripe-seed");
+      }
+    }
+  } catch (error) {
+    log(`Failed to seed Stripe products: ${error instanceof Error ? error.message : 'Unknown error'}`, "stripe-seed");
+  }
+}
+
 async function createAdminUser() {
   const adminEmail = "admin@resumelogik.com";
   const adminPassword = process.env.ADMIN_PASSWORD;
@@ -172,6 +241,7 @@ async function createAdminUser() {
 
 (async () => {
   await initStripe();
+  await seedStripeProducts();
   await createAdminUser();
   await registerRoutes(httpServer, app);
 
