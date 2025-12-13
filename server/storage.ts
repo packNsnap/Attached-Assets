@@ -768,9 +768,20 @@ export class DatabaseStorage implements IStorage {
     return sub;
   }
 
-  async checkCanCreateJob(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
+  // Helper method to get effective plan, checking both subscription and freeAccessUntil
+  private async getEffectivePlan(userId: string): Promise<PlanType> {
+    // Check if user has active free access granted by admin
+    const user = await this.getUser(userId);
+    if (user && user.freeAccessUntil && new Date(user.freeAccessUntil) > new Date()) {
+      return "pro";
+    }
+    // Otherwise check subscription
     const sub = await this.getOrCreateSubscription(userId);
-    const plan = (sub.plan as PlanType) || "free";
+    return (sub.plan as PlanType) || "free";
+  }
+
+  async checkCanCreateJob(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
+    const plan = await this.getEffectivePlan(userId);
     const limits = PLAN_LIMITS[plan];
     
     // Get active jobs count for this user
@@ -785,8 +796,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkCanAddCandidate(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
-    const sub = await this.getOrCreateSubscription(userId);
-    const plan = (sub.plan as PlanType) || "free";
+    const plan = await this.getEffectivePlan(userId);
     const limits = PLAN_LIMITS[plan];
     
     const usage = await this.getOrCreateCurrentUsageTracking(userId);
@@ -800,8 +810,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkCanUseAiAction(userId: string, candidateId: string, serviceType: string): Promise<{ allowed: boolean; current: number; limit: number }> {
-    const sub = await this.getOrCreateSubscription(userId);
-    const plan = (sub.plan as PlanType) || "free";
+    const plan = await this.getEffectivePlan(userId);
     const limits = PLAN_LIMITS[plan];
     
     // Get total AI actions across all service types for this candidate
@@ -827,8 +836,7 @@ export class DatabaseStorage implements IStorage {
     candidates: { current: number; limit: number };
     periodEnd: Date;
   }> {
-    const sub = await this.getOrCreateSubscription(userId);
-    const plan = (sub.plan as PlanType) || "free";
+    const plan = await this.getEffectivePlan(userId);
     const limits = PLAN_LIMITS[plan];
     
     const usage = await this.getOrCreateCurrentUsageTracking(userId);
