@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import logoImage from "@/assets/logo.png";
+import demoVideo from "@assets/My_Movie_1765611752383.mp4";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -640,6 +641,102 @@ export default function LandingPage() {
               </div>
 
               <div className="absolute -z-10 -top-4 -right-4 w-full h-full rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 blur-xl" />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why Flagged Resume Reviews Are More Reliable - NEW */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-background via-muted/20 to-background relative overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12 sm:mb-16"
+          >
+            <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20">
+              <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
+              Smarter Analysis
+            </Badge>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
+              Why Flagged Resume Reviews Are{" "}
+              <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                More Reliable
+              </span>
+            </h2>
+          </motion.div>
+
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="prose prose-sm dark:prose-invert max-w-none"
+            >
+              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-4">
+                ResumeLogik uses a multi-stage analysis approach. Most resumes are evaluated using lightweight automated checks designed for efficiency and consistency.
+              </p>
+
+              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed mb-4">
+                When multiple risk indicators are detected, the system escalates the resume to a secondary high-confidence review. This review uses a more advanced reasoning model trained to evaluate career plausibility, timeline realism, and internal consistency, rather than formatting or keyword density.
+              </p>
+
+              <p className="font-semibold text-foreground mb-4">This escalation process ensures:</p>
+              
+              <ul className="space-y-3 mb-6">
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                  <span className="text-base text-muted-foreground">Advanced analysis is applied only when warranted</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                  <span className="text-base text-muted-foreground">Routine resumes are not over-processed</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                  <span className="text-base text-muted-foreground">Flagged results reflect compounded risk signals, not a single anomaly</span>
+                </li>
+              </ul>
+
+              <p className="font-semibold text-foreground mb-4">As a result, flagged assessments are:</p>
+              
+              <ul className="space-y-3">
+                <li className="flex items-start gap-3">
+                  <Star className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <span className="text-base text-muted-foreground"><strong>More explainable</strong></span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Star className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <span className="text-base text-muted-foreground"><strong>More consistent</strong> across candidates</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <Star className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <span className="text-base text-muted-foreground"><strong>Less prone to false positives</strong></span>
+                </li>
+              </ul>
+
+              <p className="text-sm text-muted-foreground mt-6 pt-6 border-t italic">
+                ResumeLogik does not make hiring decisions. It provides a second-opinion risk assessment to support informed human review.
+              </p>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              className="relative"
+            >
+              <div className="rounded-2xl overflow-hidden border shadow-xl">
+                <video
+                  src={demoVideo}
+                  controls
+                  className="w-full h-auto bg-black"
+                  poster={logoImage}
+                  data-testid="video-flagged-reviews"
+                />
+              </div>
+              <div className="absolute -z-10 -top-4 -right-4 w-full h-full rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 blur-xl" />
             </motion.div>
           </div>
         </div>

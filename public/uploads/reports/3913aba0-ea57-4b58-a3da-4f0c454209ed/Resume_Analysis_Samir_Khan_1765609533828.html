@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Resume Analysis Report - Samir Khan</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; color: #1f2937; padding: 40px; max-width: 900px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid #e5e7eb; }
+    .header h1 { font-size: 28px; color: #111827; margin-bottom: 8px; }
+    .header .subtitle { color: #6b7280; font-size: 14px; }
+    .meta { display: flex; justify-content: space-between; margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px; }
+    .meta-item { text-align: center; }
+    .meta-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .meta-value { font-size: 14px; font-weight: 600; color: #111827; margin-top: 4px; }
+    .scores { display: flex; gap: 24px; margin-bottom: 32px; }
+    .score-card { flex: 1; padding: 20px; border-radius: 12px; text-align: center; }
+    .score-card.fit { background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #a7f3d0; }
+    .score-card.risk { background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); border: 1px solid #fca5a5; }
+    .score-label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .score-value { font-size: 36px; font-weight: 700; }
+    .score-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; margin-top: 8px; }
+    .recommendation { padding: 16px 24px; border-radius: 8px; margin-bottom: 32px; display: flex; align-items: center; gap: 12px; }
+    .recommendation-icon { font-size: 20px; }
+    .recommendation-text { font-weight: 600; }
+    .section { margin-bottom: 32px; }
+    .section-title { font-size: 18px; font-weight: 600; color: #111827; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
+    .section-title::before { content: ''; width: 4px; height: 20px; border-radius: 2px; }
+    .section-title.skills::before { background: #3b82f6; }
+    .section-title.timeline::before { background: #8b5cf6; }
+    .section-title.flags::before { background: #f59e0b; }
+    .section-title.authenticity::before { background: #ec4899; }
+    .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .skills-box { padding: 12px; border-radius: 8px; }
+    .skills-box.matched { background: #ecfdf5; border: 1px solid #a7f3d0; }
+    .skills-box.missing { background: #fef2f2; border: 1px solid #fca5a5; }
+    .skills-box.extra { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .skills-box-title { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .skill-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin: 2px; }
+    .skill-tag.matched { background: #d1fae5; color: #047857; }
+    .skill-tag.missing { background: #fecaca; color: #b91c1c; }
+    .skill-tag.extra { background: #dbeafe; color: #1d4ed8; }
+    .finding { display: flex; gap: 12px; padding: 12px; border-radius: 8px; margin-bottom: 8px; }
+    .finding.risk { background: #fef2f2; border-left: 3px solid #dc2626; }
+    .finding.warning { background: #fffbeb; border-left: 3px solid #f59e0b; }
+    .finding.good { background: #ecfdf5; border-left: 3px solid #16a34a; }
+    .finding-icon { font-size: 16px; }
+    .finding-content { flex: 1; }
+    .finding-message { font-weight: 500; font-size: 14px; }
+    .finding-details { font-size: 13px; color: #6b7280; margin-top: 4px; }
+    .authenticity-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .auth-item { padding: 12px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; }
+    .auth-label { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .auth-value { font-size: 20px; font-weight: 600; }
+    .progress-bar { height: 6px; background: #e5e7eb; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 3px; }
+    .summary { padding: 20px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 32px; }
+    .summary p { font-size: 14px; color: #374151; }
+    .footer { text-align: center; padding-top: 24px; border-top: 1px solid #e5e7eb; color: #9ca3af; font-size: 12px; }
+    .print-btn { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); }
+    .print-btn:hover { background: #2563eb; }
+    .name-mismatch-alert { background: #991b1b; border: 6px solid #dc2626; border-radius: 16px; padding: 48px; margin: 0 0 40px 0; box-shadow: 0 10px 30px rgba(220, 38, 38, 0.4), inset 0 0 0 1px rgba(252, 165, 165, 0.2); }
+    .name-mismatch-title { font-size: 36px; font-weight: 900; color: #fff; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 3px; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5); }
+    .name-mismatch-text { font-size: 20px; color: #fecaca; margin: 0; font-weight: 700; line-height: 1.4; }
+    @media print { .print-btn { display: none; } body { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Resume Analysis Report</h1>
+    <p class="subtitle">Generated by Resume Logik AI</p>
+  </div>
+
+  
+  <div class="name-mismatch-alert">
+    <div class="name-mismatch-title">⚠️ NAME MISMATCH DETECTED</div>
+    <div class="name-mismatch-text">Resume name does not match candidate name. Manual verification required.</div>
+  </div>
+  
+
+  <div class="meta">
+    <div class="meta-item">
+      <div class="meta-label">Candidate</div>
+      <div class="meta-value">Samir Khan</div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Position</div>
+      <div class="meta-value">verification specialist </div>
+    </div>
+    <div class="meta-item">
+      <div class="meta-label">Date</div>
+      <div class="meta-value">December 12, 2025</div>
+    </div>
+  </div>
+
+  <div class="scores">
+    <div class="score-card fit">
+      <div class="score-label">Fit Score</div>
+      <div class="score-value" style="color: #ca8a04">68%</div>
+      <span class="score-badge" style="background: #ca8a0420; color: #ca8a04">
+        Partial Fit
+      </span>
+    </div>
+    <div class="score-card risk">
+      <div class="score-label">Risk Score</div>
+      <div class="score-value" style="color: #ca8a04">44%</div>
+      <span class="score-badge" style="background: #ca8a0420; color: #ca8a04">
+        Medium Risk
+      </span>
+    </div>
+  </div>
+
+  
+  <div class="recommendation" style="background: #ca8a0410; border: 1px solid #ca8a0440;">
+    <span class="recommendation-icon">📋</span>
+    <span class="recommendation-text" style="color: #ca8a04">Final Recommendation: Review</span>
+  </div>
+  
+  <div style="background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 12px; margin-bottom: 24px;">
+    <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>⚠️ Recommendation Override:</strong> Resume name does not match selected candidate; Low plausibility score (10%) - resume may contain false or exaggerated claims; Resume appears over-optimized (95%) - may be heavily AI-generated or fabricated; Resume authenticity analysis indicates likely fake or heavily fabricated content; Critical authenticity issues: Multiple different names and contact details used throughout the resume., Overlapping full-time jobs with identical responsibilities and achievements.</p>
+  </div>
+  
+  
+
+  <!-- Authenticity Assessment Section -->
+  
+  <div class="section">
+    <h2 class="section-title authenticity">Resume Authenticity Assessment</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 16px;">
+      
+      <div class="auth-item" style="background: #fef2f2; border: 1px solid #fca5a5;">
+        <div class="auth-label">Plausibility Score</div>
+        <div class="auth-value" style="color: #dc2626">10%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 10%; background: #dc2626"></div></div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">Suspicious</div>
+      </div>
+      
+      
+      <div class="auth-item" style="background: #fef2f2; border: 1px solid #fca5a5;">
+        <div class="auth-label">Too Perfect Score</div>
+        <div class="auth-value" style="color: #dc2626">95%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 95%; background: #dc2626"></div></div>
+        <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">Very Polished / Suspicious</div>
+      </div>
+      
+    </div>
+    
+    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+      <p style="font-size: 12px; font-weight: 600; color: #92400e; margin-bottom: 8px;">Over-Optimization Indicators:</p>
+      <ul style="margin: 0; padding-left: 16px; font-size: 12px; color: #78350f;">
+        <li>Every role lists identical, highly impressive achievements with round numbers and no normal/weak bullets.</li><li>Language is extremely buzzword-heavy and formulaic.</li><li>Career progression is perfectly linear with constant promotions and no gaps.</li><li>Responsibilities and achievements are implausibly broad and high-impact for all roles.</li>
+      </ul>
+    </div>
+    
+    
+    <div style="background: #fef2f2; border: 2px solid #dc2626; border-radius: 8px; padding: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <span style="font-size: 20px;">🚨</span>
+        <span style="font-weight: 600; color: #b91c1c; font-size: 16px;">Resume Mismatch Detected</span>
+        <span style="background: #dc2626; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500;">CRITICAL</span>
+      </div>
+      <div style="space-y: 8px;">
+        
+          <div style="background: #fecaca; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>[name]</strong> Multiple different names used throughout the resume.</p>
+            <p style="font-size: 12px; color: #991b1b; margin-top: 4px; font-style: italic;">"Samir Khan, Alyssa Martinez, alyssamartin@resumelogik-test.com"</p>
+          </div>
+        
+          <div style="background: #fecaca; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>[contact]</strong> Email addresses do not match the primary name.</p>
+            <p style="font-size: 12px; color: #991b1b; margin-top: 4px; font-style: italic;">"alyssamartin@resumelogik-test.com, samirkhan@gmail.com"</p>
+          </div>
+        
+          <div style="background: #fecaca; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+            <p style="font-size: 13px; color: #b91c1c; margin: 0;"><strong>[objective]</strong> Objective statement references 'ALYSSA MARTINEZ organization' while resume is for Samir Khan.</p>
+            <p style="font-size: 12px; color: #991b1b; margin-top: 4px; font-style: italic;">"Seeking to leverage expertise to support the ALYSSA MARTINEZ organization."</p>
+          </div>
+        
+      </div>
+    </div>
+    
+  </div>
+  
+
+  
+  <div class="summary">
+    <p>Samir Khan is a seasoned Solutions Architect with over 15 years of experience in the healthcare and aerospace industries. Currently serving as the Director of Solutions Architects at OmniPharma Research, he has demonstrated exceptional leadership by managing cross-functional teams globally and achieving significant cost reductions. His technical expertise spans a wide range of hard skills, including advanced programming languages and cloud technologies, which he has effectively utilized to implement innovative solutions and enhance operational efficiency. Samir's career trajectory reflects a commitment to professional growth, evidenced by multiple promotions within a short timeframe, and his educational background in finance complements his technical acumen, providing a well-rounded perspective on business operations.
+
+However, there are notable concerns regarding overlapping job tenures that could indicate potential conflicts of interest or divided attention. Despite these concerns, his extensive experience and strong skill set make him a valuable candidate. Addressing the identified skill gaps in data analysis and compliance will be crucial for his success in future roles. Overall, Samir Khan presents a compelling profile with a mix of leadership, technical skills, and industry experience, warranting further evaluation through an interview.</p>
+  </div>
+  
+
+  <div class="section">
+    <h2 class="section-title skills">Skills Match</h2>
+    <div class="skills-grid">
+      <div class="skills-box matched">
+        <div class="skills-box-title">Matched Skills (1)</div>
+        <span class="skill-tag matched">communication</span>
+      </div>
+      <div class="skills-box missing">
+        <div class="skills-box-title">Missing Skills (3)</div>
+        <span class="skill-tag missing">data analysis</span><span class="skill-tag missing">verification processes</span><span class="skill-tag missing">compliance</span>
+      </div>
+      <div class="skills-box extra">
+        <div class="skills-box-title">Extra Skills (2)</div>
+        <span class="skill-tag extra">project management</span><span class="skill-tag extra">leadership</span>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <h2 class="section-title flags">Findings</h2>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">Significant overlap between roles</div>
+          <div class="finding-details">There is a notable overlap of 28 months between the roles of Senior Solutions Architect at AeroDyne Labs and Director of Solutions Architects at OmniPharma Research. This extended overlap raises concerns about potential conflicts of interest or divided attention during this period.</div>
+        </div>
+      </div>
+    
+      <div class="finding warning">
+        <span class="finding-icon">⚠️</span>
+        <div class="finding-content">
+          <div class="finding-message">Moderate overlap between roles</div>
+          <div class="finding-details">An overlap of 17 months exists between the Solutions Architect position at OmniPharma Research and the Senior Solutions Architect role at AeroDyne Labs. While this is less concerning than the previous overlap, it still warrants attention to ensure clarity in career progression and responsibilities.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Normal promotion transitions</div>
+          <div class="finding-details">The transition from Senior Solutions Architect to Director of Solutions Architects occurred over 198 months, which is a reasonable timeframe and does not raise any concerns. Similarly, the promotion from Solutions Architect to Senior Solutions Architect took 28 months, which is also considered normal.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Average tenure is acceptable</div>
+          <div class="finding-details">The average tenure across the analyzed jobs is 81 months, which is well above the threshold of 18 months. This indicates stability and a commitment to roles held.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">No job hopping concerns</div>
+          <div class="finding-details">With a total of 3 jobs over 15.5 years, there are no indications of job hopping. This reflects a stable career trajectory without frequent changes that could raise concerns.</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">Significant job overlap</div>
+          <div class="finding-details">There is a major overlap of 28 months between the roles of Senior Solutions Architect at AeroDyne Labs and Director of Solutions Architects at OmniPharma Research, which raises concerns about divided attention and potential conflicts of interest.</div>
+        </div>
+      </div>
+    
+      <div class="finding good">
+        <span class="finding-icon">✅</span>
+        <div class="finding-content">
+          <div class="finding-message">Strong leadership experience</div>
+          <div class="finding-details">Samir has successfully led large cross-functional teams and achieved significant cost reductions, showcasing his capability to drive results.</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Multiple different names and contact details used throughout the resume.</div>
+          <div class="finding-details">Samir Khan, Alyssa Martinez, alyssamartin@resumelogik-test.com, samirkhan@gmail.com</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Overlapping full-time jobs with identical responsibilities and achievements.</div>
+          <div class="finding-details">Director of Solutions Architects (OmniPharma, Jun 2009–Present), Senior Solutions Architect (AeroDyne Labs, Jan 2010–May 2012), Solutions Architect (OmniPharma, Mar 2010–Aug 2011)</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Responsibilities and achievements are implausibly broad and unrealistic for the roles.</div>
+          <div class="finding-details">Led a cross-functional team of 75 across 6 continents; reduced costs by 63% in 30 days. Implemented zero-trust security while also managing bedside patient care responsibilities. Built end-to-end ML systems and performed surgical procedures (as needed).</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Education timeline is impossible; claims to be graduating with a B.S. in 2026 while having 20+ years of experience and holding director-level roles since 2009.</div>
+          <div class="finding-details">B.S. in Finance, DePaul University (2026)</div>
+        </div>
+      </div>
+    
+      <div class="finding risk">
+        <span class="finding-icon">❌</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Certifications do not fit the timeline or career path; RN License (expired) with no clear nursing experience, PMP and CISSP both 'in progress' or 'pending'.</div>
+          <div class="finding-details">RN License (expired), PMP (in progress), CISSP (pending verification)</div>
+        </div>
+      </div>
+    
+      <div class="finding warning">
+        <span class="finding-icon">⚠️</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Highly suspicious, repeated, and generic achievement claims across all roles.</div>
+          <div class="finding-details">All roles list: Led a cross-functional team of 75 across 6 continents; reduced costs by 63% in 30 days.</div>
+        </div>
+      </div>
+    
+      <div class="finding warning">
+        <span class="finding-icon">⚠️</span>
+        <div class="finding-content">
+          <div class="finding-message">[Authenticity] Resume is highly formulaic, with excessive hyphenated compound words and repeated structure.</div>
+          <div class="finding-details">14 hyphenated compound words, repeated bullet structure, generic buzzwords.</div>
+        </div>
+      </div>
+    
+  </div>
+  
+
+  
+  <div class="section">
+    <h2 class="section-title authenticity">Authenticity Signals</h2>
+    <div class="authenticity-grid">
+      <div class="auth-item">
+        <div class="auth-label">Generic Writing Score</div>
+        <div class="auth-value" style="color: #ca8a04">75%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 75%; background: #ca8a04"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Specificity Score</div>
+        <div class="auth-value" style="color: #16a34a">40%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 40%; background: #16a34a"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">Fluff Ratio</div>
+        <div class="auth-value" style="color: #ca8a04">60%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 60%; background: #ca8a04"></div></div>
+      </div>
+      <div class="auth-item">
+        <div class="auth-label">AI-Style Likelihood</div>
+        <div class="auth-value" style="color: #ea580c">70%</div>
+        <div class="progress-bar"><div class="progress-fill" style="width: 70%; background: #ea580c"></div></div>
+      </div>
+    </div>
+    
+    <div style="margin-top: 16px; padding: 12px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 8px;">
+      <p style="font-size: 13px; color: #7c3aed;"><strong>Recommendation:</strong> likely_fraudulent</p>
+    </div>
+    
+  </div>
+  
+
+  <div class="footer">
+    <p>This report was generated automatically by Resume Logik AI analysis.</p>
+    <p style="margin-top: 4px;">This is an internal consistency analysis only and is not a background check or verification of claims.</p>
+  </div>
+
+  <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+</body>
+</html>
