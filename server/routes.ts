@@ -303,17 +303,16 @@ export async function registerRoutes(
     }
   });
 
-  // Admin middleware - checks if user is an admin
+  // Admin middleware - checks if user is an admin by email
   const isAdminMiddleware = async (req: any, res: any, next: any) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
-      // Always check from database for most up-to-date admin status
       const user = await storage.getUser(userId);
-      // isAdmin is stored as text "true" or "false" in database
-      const isAdminUser = user && user.isAdmin === "true";
+      // Check admin by email - works consistently across dev and live
+      const isAdminUser = user && user.email === "admin@resumelogik.com";
       if (!user || !isAdminUser) {
         return res.status(403).json({ message: "Admin access required" });
       }

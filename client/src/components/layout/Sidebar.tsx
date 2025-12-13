@@ -252,7 +252,7 @@ export function Sidebar({ onClose }: SidebarProps) {
               </Link>
             </Button>
           )}
-          {user?.isAdmin === "true" && (
+          {user?.email === "admin@resumelogik.com" && (
             <Button 
               variant="outline" 
               size="sm"
