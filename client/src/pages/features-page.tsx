@@ -583,17 +583,6 @@ export default function FeaturesPage() {
               </CardContent>
             </Card>
 
-            <Card>
-              <CardContent className="pt-8">
-                <p className="text-base text-muted-foreground mb-4">
-                  Or for enterprise conversations:
-                </p>
-                <p className="text-base font-medium text-foreground">
-                  "ResumeLogik provides automated, explainable plausibility and risk analysis for candidate resumes — something traditional ATS platforms and basic AI screeners do not offer."
-                </p>
-              </CardContent>
-            </Card>
-
             <Card className="border-amber-200 dark:border-amber-900">
               <CardHeader>
                 <CardTitle className="text-amber-900 dark:text-amber-100">Your Competitive Reality</CardTitle>
