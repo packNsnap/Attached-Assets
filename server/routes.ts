@@ -376,6 +376,8 @@ export async function registerRoutes(
       if (days > 0) {
         freeAccessUntil = new Date();
         freeAccessUntil.setDate(freeAccessUntil.getDate() + days);
+        // Reset usage tracking when granting pro access
+        await storage.resetUsageTracking(userId);
       }
 
       const user = await storage.updateUserFreeAccess(userId, freeAccessUntil);

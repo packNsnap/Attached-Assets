@@ -272,6 +272,11 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
+  async resetUsageTracking(userId: string): Promise<void> {
+    // Delete all usage tracking records for this user to reset them
+    await db.delete(usageTracking).where(eq(usageTracking.userId, userId));
+  }
+
   async createJob(job: InsertJob): Promise<Job> {
     const result = await db.insert(jobs).values(job).returning();
     return result[0];
