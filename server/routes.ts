@@ -698,6 +698,17 @@ export async function registerRoutes(
       // Keep only letters, spaces, and hyphens (for hyphenated names)
       candidateName = candidateName.replace(/[^a-zA-Z\s\-']/g, '').trim();
       
+      // Remove likely city names from the end (e.g., "John Smith Denver" -> "John Smith")
+      const words = candidateName.split(/\s+/);
+      if (words.length === 3) {
+        const lastWord = words[words.length - 1];
+        // If last word looks like a city (title case, all letters, 2-20 chars), remove it
+        if (/^[A-Z][a-z]{1,19}$/.test(lastWord)) {
+          words.pop();
+          candidateName = words.join(' ');
+        }
+      }
+      
       // Limit length
       if (candidateName.length > 100) {
         candidateName = candidateName.substring(0, 100);
