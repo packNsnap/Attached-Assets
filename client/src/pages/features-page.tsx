@@ -390,27 +390,28 @@ export default function FeaturesPage() {
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-lg border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-white" />
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <Link href="/" className="flex items-center gap-1 sm:gap-2">
+              <div className="h-8 w-8 sm:h-9 sm:w-9 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="h-4 sm:h-5 w-4 sm:w-5 text-white" />
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="hidden sm:inline text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Resume Logik
               </span>
             </Link>
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" asChild data-testid="link-pricing">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <Button variant="ghost" asChild className="hidden sm:inline-flex" data-testid="link-pricing">
                 <a href="/pricing">Pricing</a>
               </Button>
-              <Button variant="ghost" asChild data-testid="link-login">
+              <Button variant="ghost" asChild className="hidden sm:inline-flex" data-testid="link-login">
                 <a href="/auth">Log In</a>
               </Button>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" asChild data-testid="link-get-started">
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-sm sm:text-base h-9 sm:h-10" asChild data-testid="link-get-started">
                 <a href="/auth">
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Get Started</span>
+                  <span className="sm:hidden">Start</span>
+                  <ArrowRight className="ml-1 sm:ml-2 h-3.5 sm:h-4 w-3.5 sm:w-4" />
                 </a>
               </Button>
             </div>
@@ -419,10 +420,10 @@ export default function FeaturesPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 relative">
+      <section className="pt-20 sm:pt-32 pb-10 sm:pb-16 px-4 sm:px-6 lg:px-8 relative">
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl" />
+          <div className="absolute -top-40 -right-40 w-60 sm:w-80 h-60 sm:h-80 bg-purple-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-60 sm:w-80 h-60 sm:h-80 bg-blue-500/10 rounded-full blur-3xl" />
         </div>
 
         <div className="max-w-5xl mx-auto text-center relative">
@@ -431,31 +432,31 @@ export default function FeaturesPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <Badge className="mb-6 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400">
-              <Sparkles className="h-3.5 w-3.5 mr-2" />
+            <Badge className="mb-4 sm:mb-6 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400">
+              <Sparkles className="h-3 sm:h-3.5 w-3 sm:w-3.5 mr-2" />
               Complete Feature Breakdown
             </Badge>
 
-            <h1 className="text-5xl sm:text-6xl font-bold tracking-tight mb-6">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4 sm:mb-6">
               <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-200 dark:to-white bg-clip-text text-transparent">
                 How ResumeLogik Compares
               </span>
             </h1>
 
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+            <p className="text-base sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-4 sm:mb-8">
               Most tools rank resumes. <strong>ResumeLogik evaluates whether they make sense.</strong>
             </p>
 
-            <p className="text-sm text-muted-foreground max-w-2xl mx-auto">
-              Below is a straight, feature-by-feature comparison against the three types of competitors in this space: basic resume parsers, AI screening platforms, and full ATS systems.
+            <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl mx-auto">
+              Feature-by-feature comparison against basic parsers, AI screening platforms, and full ATS systems.
             </p>
           </motion.div>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="pb-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto space-y-16">
+      <section className="pb-12 sm:pb-20 px-3 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto space-y-10 sm:space-y-16">
           {features.map((featureGroup, groupIndex) => {
             const IconComponent = featureGroup.icon;
             return (
@@ -466,78 +467,78 @@ export default function FeaturesPage() {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: groupIndex * 0.1 }}
               >
-                <div className="space-y-4 mb-6">
-                  <div className="flex items-center gap-4">
+                <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+                  <div className="flex items-start sm:items-center gap-3 sm:gap-4">
                     <div
-                      className={`h-12 w-12 rounded-xl bg-gradient-to-br ${featureGroup.color} flex items-center justify-center flex-shrink-0`}
+                      className={`h-10 sm:h-12 w-10 sm:w-12 rounded-xl bg-gradient-to-br ${featureGroup.color} flex items-center justify-center flex-shrink-0`}
                     >
-                      <IconComponent className="h-6 w-6 text-white" />
+                      <IconComponent className="h-5 sm:h-6 w-5 sm:w-6 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-2xl sm:text-3xl font-bold">{featureGroup.category}</h2>
-                      <p className="text-sm text-muted-foreground">{featureGroup.description}</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-2xl lg:text-3xl font-bold break-words">{featureGroup.category}</h2>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{featureGroup.description}</p>
                     </div>
                   </div>
                 </div>
 
-                <Card className="overflow-hidden">
-                  <CardHeader className="bg-muted/50">
-                    <div className="grid grid-cols-12 gap-3 text-sm font-semibold">
-                      <div className="col-span-4 sm:col-span-3">Feature</div>
-                      <div className="col-span-2 text-center hidden sm:block">Basic</div>
-                      <div className="col-span-2 text-center hidden sm:block">AI Tools</div>
-                      <div className="col-span-2 text-center hidden sm:block">ATS</div>
-                      <div className="col-span-3 sm:col-span-2 text-center">ResumeLogik</div>
+                <Card className="overflow-x-auto">
+                  <CardHeader className="bg-muted/50 p-3 sm:p-6">
+                    <div className="grid grid-cols-5 gap-2 text-xs sm:text-sm font-semibold min-w-max sm:min-w-full">
+                      <div className="col-span-2">Feature</div>
+                      <div className="text-center hidden md:block">Basic</div>
+                      <div className="text-center hidden md:block">AI Tools</div>
+                      <div className="text-center hidden md:block">ATS</div>
+                      <div className="text-center">ResumeLogik</div>
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
                     {featureGroup.items.map((item, itemIndex) => (
                       <div
                         key={itemIndex}
-                        className={`grid grid-cols-12 gap-3 px-4 sm:px-6 py-4 text-sm border-t items-center ${
+                        className={`grid grid-cols-5 gap-2 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm border-t items-center min-w-max sm:min-w-full ${
                           itemIndex % 2 === 1 ? "bg-muted/30" : ""
                         }`}
                       >
-                        <div className="col-span-4 sm:col-span-3 font-medium">{item.feature}</div>
-                        <div className="col-span-2 text-center hidden sm:block">
+                        <div className="col-span-2 font-medium">{item.feature}</div>
+                        <div className="text-center hidden md:block">
                           {typeof item.basic === "boolean" ? (
                             item.basic ? (
-                              <CheckCircle2 className="h-5 w-5 mx-auto text-green-600" />
+                              <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 mx-auto text-green-600" />
                             ) : (
-                              <div className="h-5 w-5 mx-auto border-2 border-gray-300 rounded-full" />
+                              <div className="h-4 sm:h-5 w-4 sm:w-5 mx-auto border-2 border-gray-300 rounded-full" />
                             )
                           ) : (
                             <span className="text-xs text-muted-foreground">{item.basic}</span>
                           )}
                         </div>
-                        <div className="col-span-2 text-center hidden sm:block">
+                        <div className="text-center hidden md:block">
                           {typeof item.screening === "boolean" ? (
                             item.screening ? (
-                              <CheckCircle2 className="h-5 w-5 mx-auto text-green-600" />
+                              <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 mx-auto text-green-600" />
                             ) : (
-                              <div className="h-5 w-5 mx-auto border-2 border-gray-300 rounded-full" />
+                              <div className="h-4 sm:h-5 w-4 sm:w-5 mx-auto border-2 border-gray-300 rounded-full" />
                             )
                           ) : (
                             <span className="text-xs text-muted-foreground">{item.screening}</span>
                           )}
                         </div>
-                        <div className="col-span-2 text-center hidden sm:block">
+                        <div className="text-center hidden md:block">
                           {typeof item.ats === "boolean" ? (
                             item.ats ? (
-                              <CheckCircle2 className="h-5 w-5 mx-auto text-green-600" />
+                              <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 mx-auto text-green-600" />
                             ) : (
-                              <div className="h-5 w-5 mx-auto border-2 border-gray-300 rounded-full" />
+                              <div className="h-4 sm:h-5 w-4 sm:w-5 mx-auto border-2 border-gray-300 rounded-full" />
                             )
                           ) : (
                             <span className="text-xs text-muted-foreground">{item.ats}</span>
                           )}
                         </div>
-                        <div className="col-span-3 sm:col-span-2 text-center font-semibold">
+                        <div className="text-center font-semibold">
                           {typeof item.us === "boolean" ? (
                             item.us ? (
-                              <CheckCircle2 className="h-5 w-5 mx-auto text-blue-600" />
+                              <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5 mx-auto text-blue-600" />
                             ) : (
-                              <div className="h-5 w-5 mx-auto border-2 border-gray-300 rounded-full" />
+                              <div className="h-4 sm:h-5 w-4 sm:w-5 mx-auto border-2 border-gray-300 rounded-full" />
                             )
                           ) : (
                             <span className="text-xs text-blue-600 font-semibold">{item.us}</span>
@@ -548,8 +549,8 @@ export default function FeaturesPage() {
                   </CardContent>
                 </Card>
 
-                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <p className="text-sm text-blue-900 dark:text-blue-100">
+                <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-xs sm:text-sm text-blue-900 dark:text-blue-100">
                     <span className="font-semibold">Why you win:</span> {featureGroup.why}
                   </p>
                 </div>
@@ -560,37 +561,37 @@ export default function FeaturesPage() {
       </section>
 
       {/* Positioning Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-muted/30">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="space-y-8"
+            className="space-y-6 sm:space-y-8"
           >
             <div className="text-center">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Why Hiring Teams Choose ResumeLogik</h2>
-              <p className="text-lg text-muted-foreground mb-8">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4">Why Hiring Teams Choose ResumeLogik</h2>
+              <p className="text-sm sm:text-lg text-muted-foreground mb-6 sm:mb-8">
                 The core difference between ResumeLogik and other hiring tools:
               </p>
             </div>
 
             <Card className="border-2 border-blue-500/50 bg-blue-50 dark:bg-blue-950/20">
-              <CardContent className="pt-8">
-                <p className="text-lg font-semibold text-center text-blue-900 dark:text-blue-100 italic">
+              <CardContent className="pt-6 sm:pt-8 px-4 sm:px-8">
+                <p className="text-base sm:text-lg font-semibold text-center text-blue-900 dark:text-blue-100 italic">
                   "Most tools rank resumes. ResumeLogik evaluates whether they make sense."
                 </p>
               </CardContent>
             </Card>
 
             <Card className="border-amber-200 dark:border-amber-900">
-              <CardHeader>
-                <CardTitle className="text-amber-900 dark:text-amber-100">Your Competitive Reality</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-lg sm:text-xl text-amber-900 dark:text-amber-100">Your Competitive Reality</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm">
+              <CardContent className="space-y-4 sm:space-y-3 text-xs sm:text-sm px-4 sm:px-6 pb-4 sm:pb-6">
                 <div>
                   <p className="font-semibold text-foreground mb-2">What Makes ResumeLogik Worth the Investment:</p>
-                  <ul className="space-y-1 ml-4 text-muted-foreground">
+                  <ul className="space-y-1 ml-4 text-muted-foreground text-xs sm:text-sm">
                     <li>✓ Catches fabrication and resume inconsistencies most tools miss</li>
                     <li>✓ Explains every concern in writing—documented for legal compliance</li>
                     <li>✓ Saves you from costly bad hires through smarter resume evaluation</li>
@@ -598,7 +599,7 @@ export default function FeaturesPage() {
                 </div>
                 <div>
                   <p className="font-semibold text-foreground mb-2">Who else is solving this problem?</p>
-                  <ul className="space-y-1 ml-4 text-muted-foreground">
+                  <ul className="space-y-1 ml-4 text-muted-foreground text-xs sm:text-sm">
                     <li>✓ Manual screening (expensive and inconsistent)</li>
                     <li>✓ Traditional ATS tools (they rank, they don't evaluate)</li>
                     <li>✓ Basic AI screeners (they miss the red flags that matter)</li>
@@ -611,29 +612,29 @@ export default function FeaturesPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Ready to Experience the Difference?</h2>
-            <p className="text-lg text-muted-foreground mb-8">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4">Ready to Experience the Difference?</h2>
+            <p className="text-sm sm:text-lg text-muted-foreground mb-6 sm:mb-8">
               See how ResumeLogik's intelligent resume evaluation works in practice.
             </p>
-            <div className="flex gap-4 justify-center flex-wrap">
+            <div className="flex gap-3 sm:gap-4 justify-center flex-wrap">
               <Button
-                size="lg"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                size="sm"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-sm sm:text-base h-9 sm:h-auto"
                 asChild
               >
                 <a href="/auth">
                   Start Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-3.5 sm:h-4 w-3.5 sm:w-4" />
                 </a>
               </Button>
-              <Button size="lg" variant="outline" asChild data-testid="button-pricing">
+              <Button size="sm" variant="outline" className="text-sm sm:text-base h-9 sm:h-auto" asChild data-testid="button-pricing">
                 <a href="/pricing">View Pricing</a>
               </Button>
             </div>
