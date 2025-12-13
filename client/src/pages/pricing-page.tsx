@@ -35,8 +35,8 @@ const pricingTiers = [
     bgColor: "bg-slate-50 dark:bg-slate-800/50",
     limits: [
       "1 active job position",
-      "3 candidates per month",
-      "10 AI actions per candidate",
+      "5 candidates per month",
+      "8 AI actions per candidate",
     ],
     cta: "Get Started Free",
     ctaVariant: "outline" as const,
@@ -55,7 +55,7 @@ const pricingTiers = [
     bgColor: "bg-green-50 dark:bg-green-900/20",
     limits: [
       "5 active job positions",
-      "25 candidates per month",
+      "30 candidates per month",
       "15 AI actions per candidate",
     ],
     cta: "Start with Growth",
@@ -76,7 +76,7 @@ const pricingTiers = [
     limits: [
       "20 active job positions",
       "150 candidates per month",
-      "20 AI actions per candidate",
+      "15 AI actions per candidate",
       "Bulk resume upload (20 per batch)",
     ],
     cta: "Start with Pro",
@@ -97,7 +97,7 @@ const pricingTiers = [
     limits: [
       "Unlimited job positions",
       "1000+ candidates per month",
-      "10 AI actions per candidate",
+      "15 AI actions per candidate",
       "Bulk resume upload (20 per batch)",
       "SSO & Custom Integrations",
       "Priority Support & Onboarding",
