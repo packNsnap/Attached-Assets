@@ -239,6 +239,28 @@ export default function CandidatesModule() {
     body: string;
     mailto: string;
   } | null>(null);
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+
+  const deleteAllCandidatesMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/candidates/delete-all", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!res.ok) throw new Error("Failed to delete candidates");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === "candidates" });
+      queryClient.invalidateQueries({ queryKey: ["jobs-with-candidates"] });
+      setSelectedCandidate(null);
+      setDeleteAllDialogOpen(false);
+      toast({ title: "Success", description: `Deleted ${data.deletedCount} candidates` });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete all candidates", variant: "destructive" });
+    }
+  });
 
   const { data: testResponses = [], isLoading: isLoadingTestResponses } = useQuery({
     queryKey: ["test-responses", viewTestResultsInvitation?.id],
@@ -662,13 +684,41 @@ export default function CandidatesModule() {
           icon={module.icon}
           gradient={module.color}
         >
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button data-testid="button-add-candidate">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Candidate
-              </Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <Dialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" size="sm" data-testid="button-delete-all-candidates">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete All
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete All Candidates?</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground mb-6">This will permanently delete all {candidates.length} candidates. This action cannot be undone.</p>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setDeleteAllDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => deleteAllCandidatesMutation.mutate()}
+                    disabled={deleteAllCandidatesMutation.isPending}
+                    data-testid="button-confirm-delete-all"
+                  >
+                    {deleteAllCandidatesMutation.isPending ? "Deleting..." : "Delete All"}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-add-candidate">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Candidate
+                </Button>
+              </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Add New Candidate</DialogTitle>
@@ -794,6 +844,7 @@ export default function CandidatesModule() {
             </div>
           </DialogContent>
         </Dialog>
+          </div>
         </PageHeader>
       </div>
 

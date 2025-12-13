@@ -605,6 +605,17 @@ export async function registerRoutes(
     }
   });
 
+  // Delete all candidates for user
+  app.delete("/api/candidates/delete-all", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const deletedCount = await storage.deleteAllCandidates(userId);
+      res.json({ success: true, deletedCount });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete candidates" });
+    }
+  });
+
   // Bulk resume upload - Pro+ only
   app.post("/api/bulk-resume-upload", isAuthenticated, upload.single("resume"), async (req: any, res) => {
     try {
