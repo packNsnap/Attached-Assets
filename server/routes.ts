@@ -32,6 +32,11 @@ import * as fs from "fs";
 import * as path from "path";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 
+// Check if API key is available
+if (!process.env.OPENAI_API_KEY) {
+  console.warn("WARNING: OPENAI_API_KEY is not set. Resume analysis will fail.");
+}
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const MODEL_MAP: Record<string, string> = {
@@ -1746,8 +1751,16 @@ export async function registerRoutes(
       
       res.json(result);
     } catch (error) {
-      console.error("Resume analysis error:", error);
-      res.status(500).json({ error: "Failed to analyze resume" });
+      console.error("Resume analysis error:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        type: error instanceof Error ? error.constructor.name : typeof error,
+        apiKeyAvailable: !!process.env.OPENAI_API_KEY
+      });
+      res.status(500).json({ 
+        error: "Failed to analyze resume",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 
