@@ -501,7 +501,7 @@ export async function registerRoutes(
       if (!canCreate.allowed) {
         res.status(403).json({ 
           error: "Job limit reached",
-          message: `You've reached your limit of ${canCreate.limit} active jobs. Please upgrade your plan or close existing jobs.`,
+          message: `You have ${canCreate.current} of ${canCreate.limit} active jobs allowed on your plan. Please upgrade your plan or close existing jobs.`,
           current: canCreate.current,
           limit: canCreate.limit
         });
@@ -615,7 +615,7 @@ export async function registerRoutes(
       if (!canAdd.allowed) {
         res.status(403).json({ 
           error: "Candidate limit reached",
-          message: `You've reached your limit of ${canAdd.limit} candidates this month. Please upgrade your plan.`,
+          message: `You've used ${canAdd.current} of ${canAdd.limit} candidates allowed on your plan this month. Please upgrade your plan to add more.`,
           current: canAdd.current,
           limit: canAdd.limit
         });
@@ -685,7 +685,7 @@ export async function registerRoutes(
       if (!canAdd.allowed) {
         res.status(403).json({ 
           error: "Candidate limit reached",
-          message: `You've reached your limit of ${canAdd.limit} candidates this month.`,
+          message: `You've used ${canAdd.current} of ${canAdd.limit} candidates allowed on your plan this month. Please upgrade to add more.`,
           current: canAdd.current,
           limit: canAdd.limit
         });
