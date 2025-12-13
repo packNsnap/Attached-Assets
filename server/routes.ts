@@ -35,8 +35,18 @@ import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClie
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const MODEL_MAP: Record<string, string> = {
-  "resume_analysis": "gpt-4o",
+  // Resume analysis passes - cheap models for default operations
+  "resume_extraction": "gpt-4o-mini",      // Pass 1: Extract structured data
+  "resume_timeline": "gpt-4o-mini",        // Pass 2: Timeline analysis
+  "resume_job_fit": "gpt-4o-mini",         // Pass 3: Job fit scoring
+  "resume_hr_summary": "gpt-4o-mini",      // Pass 4: HR narrative/recommendations
+  "resume_fraud_detection": "gpt-4o",      // Pass 5: Fraud detection (only when flagged)
+  
+  // Legacy keys for backwards compatibility
+  "resume_analysis": "gpt-4o-mini",
   "ai_detection": "gpt-4o",
+  
+  // Other features
   "job_description": "gpt-4o-mini",
   "skills_test": "gpt-4o-mini",
   "interview_questions": "gpt-4o-mini",
@@ -45,6 +55,14 @@ const MODEL_MAP: Record<string, string> = {
   "performance_goals": "gpt-4o-mini",
   "reference_check": "gpt-4o-mini",
   "default": "gpt-4o-mini",
+};
+
+// Fraud detection thresholds - only run expensive fraud check when these are triggered
+export const FRAUD_DETECTION_THRESHOLDS = {
+  tooPerfectScore: 65,           // Run fraud check if too-perfect score > 65%
+  promotionSpeedMonths: 12,      // Run if promotion in < 12 months
+  overlapMonths: 3,              // Run if job overlap > 3 months
+  skillMismatchWithSenior: true, // Run if major skill gaps + senior titles
 };
 
 type ChatCompletionParams = Omit<Parameters<typeof openai.chat.completions.create>[0], "model" | "stream">;
