@@ -287,10 +287,10 @@ export type SkillsTestResponse = typeof skillsTestResponses.$inferSelect;
 
 // Subscription plan types - Updated pricing tiers
 export const PLAN_LIMITS = {
-  free: { jobs: 1, candidates: 3, aiActionsPerCandidate: 10, price: 0 },
-  growth: { jobs: 5, candidates: 25, aiActionsPerCandidate: 15, price: 2900 }, // $29.00 in cents
-  pro: { jobs: 20, candidates: 150, aiActionsPerCandidate: 20, price: 4999 }, // $49.99 in cents
-  enterprise: { jobs: -1, candidates: 1000, aiActionsPerCandidate: 10, price: 15000 }, // $150+ in cents, -1 = unlimited
+  free: { jobs: 1, candidates: 5, aiActionsPerCandidate: 8, price: 0 },
+  growth: { jobs: 5, candidates: 30, aiActionsPerCandidate: 15, price: 2900 }, // $29.00 in cents
+  pro: { jobs: 20, candidates: 150, aiActionsPerCandidate: 15, price: 4999 }, // $49.99 in cents
+  enterprise: { jobs: -1, candidates: 1000, aiActionsPerCandidate: 15, price: 15000 }, // $150+ in cents, -1 = unlimited
 } as const;
 
 export type PlanType = keyof typeof PLAN_LIMITS;
