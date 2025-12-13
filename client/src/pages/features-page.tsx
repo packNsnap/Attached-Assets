@@ -152,7 +152,7 @@ const features = [
         advantage: "us",
       },
     ],
-    why: "🔑 MAJOR DIFFERENTIATOR: Almost nobody does timeline realism. This is one of ResumeLogik's strongest competitive advantages.",
+    why: "Most hiring platforms ignore work history timeline patterns. ResumeLogik analyzes them to catch fabricated or misaligned career progressions—catching what other tools miss.",
   },
   {
     category: "Plausibility & Fraud Detection",
@@ -201,7 +201,7 @@ const features = [
         advantage: "us",
       },
     ],
-    why: "Others avoid judgment to reduce liability. ResumeLogik embraces decision-support with explainability. This is why you win deals.",
+    why: "Every red flag comes with a clear, documented reason. You get the confidence to act on ResumeLogik's insights and defend your hiring decisions to leadership or legal teams.",
   },
   {
     category: "Explainability & Trust",
@@ -291,7 +291,7 @@ const features = [
         advantage: "us",
       },
     ],
-    why: "How real fraud/risk software works. Very few hiring tools do this. You're thinking like security, not like HR.",
+    why: "Smarter automation saves time and protects your hiring budget. ResumeLogik only escalates cases that genuinely need deeper AI analysis, cutting unnecessary costs while improving accuracy.",
   },
   {
     category: "Content Generation",
@@ -340,7 +340,7 @@ const features = [
         advantage: "us",
       },
     ],
-    why: "These support your product, but they are not the core value. They justify price, they don't define it.",
+    why: "Streamline your entire hiring workflow beyond resume evaluation. Job descriptions, interview prep, skills tests, and onboarding docs—all powered by AI—save your team hours every week.",
   },
   {
     category: "Pricing & Accessibility",
@@ -381,7 +381,7 @@ const features = [
         advantage: "us",
       },
     ],
-    why: "You sit in a rare middle: smarter than SMB tools, cheaper than enterprise ATS stacks. That's your market.",
+    why: "Get enterprise-grade hiring intelligence at SMB pricing. No expensive per-seat licenses, no hidden costs—just one flat monthly price for unlimited candidates and all features.",
   },
 ];
 
@@ -569,9 +569,9 @@ export default function FeaturesPage() {
             className="space-y-8"
           >
             <div className="text-center">
-              <h2 className="text-3xl sm:text-4xl font-bold mb-4">The Clean Positioning</h2>
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">Why Hiring Teams Choose ResumeLogik</h2>
               <p className="text-lg text-muted-foreground mb-8">
-                Use this when positioning ResumeLogik:
+                The core difference between ResumeLogik and other hiring tools:
               </p>
             </div>
 
@@ -600,19 +600,19 @@ export default function FeaturesPage() {
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <div>
-                  <p className="font-semibold text-foreground mb-2">You are NOT overpriced because:</p>
+                  <p className="font-semibold text-foreground mb-2">What Makes ResumeLogik Worth the Investment:</p>
                   <ul className="space-y-1 ml-4 text-muted-foreground">
-                    <li>✓ What you do (fraud detection + explainability)</li>
-                    <li>✓ Who you compete against (screening platforms)</li>
-                    <li>✓ The risk you mitigate (bad hires)</li>
+                    <li>✓ Catches fabrication and resume inconsistencies most tools miss</li>
+                    <li>✓ Explains every concern in writing—documented for legal compliance</li>
+                    <li>✓ Saves you from costly bad hires through smarter resume evaluation</li>
                   </ul>
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground mb-2">Your ACTUAL competitors are:</p>
+                  <p className="font-semibold text-foreground mb-2">Who else is solving this problem?</p>
                   <ul className="space-y-1 ml-4 text-muted-foreground">
-                    <li>✓ Screening platforms (HiPeople, etc.)</li>
-                    <li>✓ Recruiting agencies</li>
-                    <li>✓ Bad hires (the cost of wrong decisions)</li>
+                    <li>✓ Manual screening (expensive and inconsistent)</li>
+                    <li>✓ Traditional ATS tools (they rank, they don't evaluate)</li>
+                    <li>✓ Basic AI screeners (they miss the red flags that matter)</li>
                   </ul>
                 </div>
               </CardContent>
