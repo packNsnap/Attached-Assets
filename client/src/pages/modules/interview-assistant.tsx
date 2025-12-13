@@ -727,10 +727,23 @@ export default function InterviewAssistantModule() {
                             {dayInterviews.slice(0, 2).map((interview) => (
                               <div
                                 key={interview.id}
-                                className="text-xs p-1 bg-primary/10 text-primary rounded truncate"
+                                className="text-xs p-1 bg-primary/10 text-primary rounded flex items-center justify-between group"
                                 title={`${interview.candidateName} - ${interview.jobTitle}`}
                               >
-                                {format(new Date(interview.scheduledDate), "h:mm a")} {interview.candidateName.split(" ")[0]}
+                                <span className="truncate flex-1">
+                                  {format(new Date(interview.scheduledDate), "h:mm a")} {interview.candidateName.split(" ")[0]}
+                                </span>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteScheduledInterview.mutate(interview.id);
+                                  }}
+                                  className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-destructive"
+                                  title="Delete interview"
+                                  data-testid={`calendar-delete-interview-${interview.id}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
                               </div>
                             ))}
                             {dayInterviews.length > 2 && (
