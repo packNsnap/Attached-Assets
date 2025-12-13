@@ -1,4 +1,4 @@
-import { callAI } from "./routes";
+import { callAI, FRAUD_DETECTION_THRESHOLDS } from "./routes";
 
 // Types for structured data
 export interface ExtractedJob {
@@ -888,6 +888,139 @@ export interface Pass5Result {
   summary: string;
 }
 
+// ============ FRAUD DETECTION TRIGGER LOGIC ============
+export interface FraudTriggerResult {
+  shouldRunFraudCheck: boolean;
+  triggers: string[];
+}
+
+export function checkFraudDetectionTriggers(
+  pass2: Pass2Result,
+  pass3: Pass3Result,
+  pass4: Pass4Result,
+  jobLevel: string
+): FraudTriggerResult {
+  const triggers: string[] = [];
+  const thresholds = FRAUD_DETECTION_THRESHOLDS;
+  
+  // Trigger 1: Too-perfect score from Pass 4 authenticity signals
+  const tooPerfectScore = 100 - (pass4.authenticitySignals?.specificityScore || 100) + 
+    (pass4.authenticitySignals?.aiStyleLikelihood || 0);
+  if (tooPerfectScore > thresholds.tooPerfectScore) {
+    triggers.push(`Too-perfect score (${Math.round(tooPerfectScore)}%) exceeds threshold (${thresholds.tooPerfectScore}%)`);
+  }
+  
+  // Trigger 2: Unusual promotion speed
+  const fastPromotions = pass2.timelineAnalysis.promotionTransitions.filter(
+    t => t.isUnusual || t.months < thresholds.promotionSpeedMonths
+  );
+  if (fastPromotions.length > 0) {
+    triggers.push(`Unusual promotion speed: ${fastPromotions.length} promotion(s) in < ${thresholds.promotionSpeedMonths} months`);
+  }
+  
+  // Trigger 3: Job overlaps exceeding threshold
+  const significantOverlaps = pass2.timelineAnalysis.overlaps.filter(
+    o => o.overlapMonths > thresholds.overlapMonths
+  );
+  if (significantOverlaps.length > 0) {
+    triggers.push(`Significant job overlaps: ${significantOverlaps.length} overlap(s) > ${thresholds.overlapMonths} months`);
+  }
+  
+  // Trigger 4: Skill mismatch + senior titles
+  if (thresholds.skillMismatchWithSenior) {
+    const isSeniorLevel = ['senior', 'lead', 'principal', 'director', 'vp', 'chief', 'head', 'manager'].some(
+      level => jobLevel.toLowerCase().includes(level)
+    );
+    const hasMajorSkillGaps = pass3.skillsAnalysis.missing_must_have.length >= 2;
+    
+    if (isSeniorLevel && hasMajorSkillGaps) {
+      triggers.push(`Senior role with major skill gaps: missing ${pass3.skillsAnalysis.missing_must_have.length} must-have skills`);
+    }
+  }
+  
+  return {
+    shouldRunFraudCheck: triggers.length > 0,
+    triggers
+  };
+}
+
+// Default Pass5 result when fraud detection is skipped (no red flags)
+export function createDefaultPass5Result(pass3: Pass3Result): Pass5Result {
+  return {
+    authenticityScore: 75,
+    plausibilityScore: 80,
+    tooPerfectScore: 20,
+    tooPerfectIndicators: [],
+    overallVerdict: "LIKELY_REAL",
+    fraudFlags: [],
+    timelineIssues: {
+      impossibleOverlaps: [],
+      experienceInflation: null,
+      suspiciousProgression: []
+    },
+    companyVerification: {
+      suspiciousCompanies: [],
+      genericDescriptions: 0,
+      verifiableCompanies: 3
+    },
+    contentAnalysis: {
+      aiGeneratedScore: 15,
+      templateMatchScore: 10,
+      genericPhraseCount: 2,
+      hyphenatedWordCount: 5,
+      specificDetailsScore: 70,
+      quantifiableAchievements: 4,
+      buzzwordDensity: 15
+    },
+    credentialIssues: {
+      unverifiableEducation: [],
+      suspiciousCertifications: []
+    },
+    mismatchDetection: {
+      hasMismatch: false,
+      mismatchScore: 0,
+      issues: []
+    },
+    jobHoppingRisk: "low",
+    shortTenureRolesCount: 0,
+    shortTenureRolesNotes: [],
+    roleAlignment: pass3.fitScore >= 70 ? "strong" : pass3.fitScore >= 50 ? "moderate" : "weak",
+    keyRequiredSkillsCovered: pass3.skillsAnalysis.matched_must_have,
+    missingCriticalSkills: pass3.skillsAnalysis.missing_must_have,
+    seniorityFit: "appropriate",
+    roleAlignmentNotes: [],
+    educationExperienceConsistency: "consistent",
+    educationExperienceNotes: [],
+    skillsCredibility: "strong",
+    skillsNotSupportedByExperience: [],
+    buzzwordDensity: "low",
+    buzzwordExamples: [],
+    skillsNotes: [],
+    contactCompleteness: "good",
+    missingContactFields: [],
+    emailProfessionalism: "professional",
+    emailProfessionalismReason: "",
+    atsFriendly: "yes",
+    atsIssues: [],
+    formattingCleanliness: "clean",
+    formattingNotes: [],
+    writingClarity: "clear",
+    achievementFocus: "moderate",
+    writingIssues: [],
+    identityRisk: "low",
+    timelineRisk: "low",
+    stabilityRisk: "low",
+    jobFit: pass3.fitScore >= 70 ? "strong" : pass3.fitScore >= 50 ? "moderate" : "weak",
+    atsUsability: "good",
+    overallResumeQuality: "average",
+    timelineNotes: "Standard analysis completed. No fraud detection triggers activated.",
+    roleFitNotes: "",
+    certEducationNotes: "",
+    recommendation: "verified",
+    summary: "Resume passed initial screening. No red flags detected that would trigger in-depth fraud analysis."
+  };
+}
+
 export async function pass5_authenticityAnalysis(
   extractedData: Pass1Result,
   timelineAnalysis: Pass2Result,
@@ -1263,20 +1396,30 @@ export async function analyzeResumeMultiPass(
   // Consistency Check: Name, Email, Phone verification
   const consistencyCheck = await checkResumeConsistency(resumeText, expectedCandidateName);
   
-  // Pass 1: Extract structured data
+  // Pass 1: Extract structured data (gpt-4o-mini)
   const pass1 = await pass1_extractStructuredData(resumeText);
   
-  // Pass 2: Timeline analysis (server rules + GPT labeling)
+  // Pass 2: Timeline analysis (code + gpt-4o-mini)
   const pass2 = await pass2_timelineAnalysis(pass1);
   
-  // Pass 3: Fit scoring against job
+  // Pass 3: Fit scoring against job (gpt-4o-mini)
   const pass3 = await pass3_fitScoring(pass1, jobDescription, jobSkills, jobTitle, jobLevel);
   
-  // Pass 4: Narrative and recommendations
+  // Pass 4: Narrative and recommendations (gpt-4o-mini)
   const pass4 = await pass4_narrativeAndRecommendations(pass1, pass2, pass3, resumeText);
   
-  // Pass 5: Enhanced Authenticity Detection
-  const pass5 = await pass5_authenticityAnalysis(pass1, pass2, resumeText, expectedCandidateName);
+  // CONDITIONAL: Check if fraud detection should be triggered
+  const fraudTriggers = checkFraudDetectionTriggers(pass2, pass3, pass4, jobLevel);
+  
+  // Pass 5: Enhanced Authenticity Detection - ONLY runs when flagged
+  let pass5: Pass5Result;
+  if (fraudTriggers.shouldRunFraudCheck) {
+    console.log(`[Resume Analysis] Fraud detection TRIGGERED: ${fraudTriggers.triggers.join('; ')}`);
+    pass5 = await pass5_authenticityAnalysis(pass1, pass2, resumeText, expectedCandidateName);
+  } else {
+    console.log(`[Resume Analysis] Fraud detection SKIPPED - no triggers activated`);
+    pass5 = createDefaultPass5Result(pass3);
+  }
   
   // Combine into legacy-compatible format while preserving new structure
   const findings: Array<{ type: "good" | "warning" | "risk"; message: string; details: string }> = [];
