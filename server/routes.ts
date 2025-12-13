@@ -692,8 +692,8 @@ export async function registerRoutes(
       // Clean up name - remove common prefixes
       candidateName = candidateName.replace(/^(resume|cv|curriculum vitae)[\s:-]*/i, '').trim();
       
-      // Remove everything after common delimiters (|, -, •, etc.) to get just the name part
-      candidateName = candidateName.split(/[\|•\-]/)[0].trim();
+      // Remove everything after common delimiters (|, -, •, comma, etc.) to get just the name part
+      candidateName = candidateName.split(/[\|•\-,]/)[0].trim();
       
       // Keep only letters, spaces, and hyphens (for hyphenated names)
       candidateName = candidateName.replace(/[^a-zA-Z\s\-']/g, '').trim();
