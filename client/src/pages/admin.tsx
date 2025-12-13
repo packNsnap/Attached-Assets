@@ -21,6 +21,7 @@ type AdminUser = {
   freeAccessUntil: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  plan: string;
 };
 
 export default function AdminPage() {
@@ -168,7 +169,7 @@ export default function AdminPage() {
                 <TableRow>
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Plan</TableHead>
                   <TableHead>Free Access Until</TableHead>
                   <TableHead>Joined</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -187,12 +188,16 @@ export default function AdminPage() {
                     </TableCell>
                     <TableCell>{user.email || "—"}</TableCell>
                     <TableCell>
-                      {hasActiveAccess(user) ? (
-                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                          Free Access
+                      {user.plan === "enterprise" ? (
+                        <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100">
+                          Enterprise
+                        </Badge>
+                      ) : user.plan === "pro" ? (
+                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100">
+                          Pro
                         </Badge>
                       ) : (
-                        <Badge variant="outline">Standard</Badge>
+                        <Badge variant="outline">Free</Badge>
                       )}
                     </TableCell>
                     <TableCell>
