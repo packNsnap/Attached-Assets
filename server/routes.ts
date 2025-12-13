@@ -40,11 +40,12 @@ const MODEL_MAP: Record<string, string> = {
   "resume_timeline": "gpt-4o-mini",        // Pass 2: Timeline analysis
   "resume_job_fit": "gpt-4o-mini",         // Pass 3: Job fit scoring
   "resume_hr_summary": "gpt-4o-mini",      // Pass 4: HR narrative/recommendations
-  "resume_fraud_detection": "gpt-4o",      // Pass 5: Fraud detection (only when flagged)
+  "flagged_plausibility": "gpt-4.1",       // Flagged pass: Premium model for skeptical fraud analysis
   
   // Legacy keys for backwards compatibility
   "resume_analysis": "gpt-4o-mini",
-  "ai_detection": "gpt-4o",
+  "resume_fraud_detection": "gpt-4.1",
+  "ai_detection": "gpt-4.1",
   
   // Other features
   "job_description": "gpt-4o-mini",
@@ -57,12 +58,17 @@ const MODEL_MAP: Record<string, string> = {
   "default": "gpt-4o-mini",
 };
 
-// Fraud detection thresholds - only run expensive fraud check when these are triggered
+// Flagged pass thresholds - requires 2+ triggers to run expensive gpt-4.1 check
 export const FRAUD_DETECTION_THRESHOLDS = {
-  tooPerfectScore: 65,           // Run fraud check if too-perfect score > 65%
-  promotionSpeedMonths: 12,      // Run if promotion in < 12 months
-  overlapMonths: 3,              // Run if job overlap > 3 months
-  skillMismatchWithSenior: true, // Run if major skill gaps + senior titles
+  tooPerfectScore: 75,           // Trigger if too-perfect score >= 75
+  plausibilityScoreLow: 40,      // Trigger if plausibility score <= 40
+  overlapMonthsTotal: 6,         // Trigger if total overlap > 6 months OR any single overlap > 6
+  gapMonthsMax: 12,              // Trigger if max gap >= 12 months
+  promotionVelocityMonths: 18,   // Trigger if promotion to senior/leadership in < 18 months
+  skillsMismatchThreshold: 2,    // Trigger if missing 2+ must-have skills + senior title
+  skillSoupDetected: true,       // Trigger if too many unrelated skill domains
+  contactInconsistencies: true,  // Trigger if name/email/contact inconsistencies
+  minTriggersRequired: 2,        // Minimum triggers required to run flagged pass
 };
 
 type ChatCompletionParams = Omit<Parameters<typeof openai.chat.completions.create>[0], "model" | "stream">;

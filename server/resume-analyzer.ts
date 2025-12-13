@@ -888,60 +888,247 @@ export interface Pass5Result {
   summary: string;
 }
 
-// ============ FRAUD DETECTION TRIGGER LOGIC ============
+// ============ FLAGGED PASS TRIGGER LOGIC (2+ conditions required) ============
 export interface FraudTriggerResult {
-  shouldRunFraudCheck: boolean;
+  shouldRunFlaggedPass: boolean;
   triggers: string[];
+  triggerCount: number;
+}
+
+export interface FlaggedPassPayload {
+  candidate_profile: {
+    total_experience_years: number;
+    jobs: Array<{ company: string; title: string; duration_months: number | null }>;
+    education: Array<{ institution: string; degree: string; field: string }>;
+    skills: { hard: string[]; domain: string[]; soft: string[] };
+  };
+  timeline_analysis: {
+    overlap_months_total: number;
+    max_single_overlap: number;
+    gap_months_max: number;
+    avg_tenure_months: number;
+    job_count: number;
+    fast_promotions: Array<{ from: string; to: string; months: number }>;
+  };
+  job_fit_summary: {
+    fit_score: number;
+    matched_skills: string[];
+    missing_must_have: string[];
+    title_match: boolean;
+    industry_overlap: number;
+  };
+  previous_flags: {
+    name_mismatch: boolean;
+    contact_inconsistencies: string[];
+    too_perfect_score: number;
+    ai_style_likelihood: number;
+    skill_soup_domains: string[];
+  };
+}
+
+export interface FlaggedPassResult {
+  plausibility_verdict: "low_risk" | "medium_risk" | "high_risk";
+  confidence_score: number;
+  primary_red_flags: string[];
+  secondary_red_flags: string[];
+  what_requires_clarification: string[];
+  hire_risk_summary: string;
 }
 
 export function checkFraudDetectionTriggers(
+  pass1: Pass1Result,
   pass2: Pass2Result,
   pass3: Pass3Result,
   pass4: Pass4Result,
-  jobLevel: string
+  jobLevel: string,
+  consistencyCheck?: { nameMatch: string; suspiciousReasons: string[] }
 ): FraudTriggerResult {
   const triggers: string[] = [];
   const thresholds = FRAUD_DETECTION_THRESHOLDS;
   
-  // Trigger 1: Too-perfect score from Pass 4 authenticity signals
+  // Trigger 1: Too-perfect score >= 75
   const tooPerfectScore = 100 - (pass4.authenticitySignals?.specificityScore || 100) + 
     (pass4.authenticitySignals?.aiStyleLikelihood || 0);
-  if (tooPerfectScore > thresholds.tooPerfectScore) {
-    triggers.push(`Too-perfect score (${Math.round(tooPerfectScore)}%) exceeds threshold (${thresholds.tooPerfectScore}%)`);
+  if (tooPerfectScore >= thresholds.tooPerfectScore) {
+    triggers.push(`too_perfect_score: ${Math.round(tooPerfectScore)} >= ${thresholds.tooPerfectScore}`);
   }
   
-  // Trigger 2: Unusual promotion speed
+  // Trigger 2: Plausibility score <= 40 (inverse of specificity)
+  const plausibilityEstimate = pass4.authenticitySignals?.specificityScore || 70;
+  if (plausibilityEstimate <= thresholds.plausibilityScoreLow) {
+    triggers.push(`plausibility_score: ${plausibilityEstimate} <= ${thresholds.plausibilityScoreLow}`);
+  }
+  
+  // Trigger 3: Overlap > 6 months (total or any single)
+  const totalOverlap = pass2.timelineAnalysis.overlaps.reduce((sum, o) => sum + o.overlapMonths, 0);
+  const maxSingleOverlap = Math.max(0, ...pass2.timelineAnalysis.overlaps.map(o => o.overlapMonths));
+  if (totalOverlap > thresholds.overlapMonthsTotal || maxSingleOverlap > thresholds.overlapMonthsTotal) {
+    triggers.push(`overlap_months: total=${totalOverlap}, max_single=${maxSingleOverlap} > ${thresholds.overlapMonthsTotal}`);
+  }
+  
+  // Trigger 4: Gap >= 12 months
+  const maxGap = Math.max(0, ...pass2.timelineAnalysis.gaps.map(g => g.gapMonths));
+  if (maxGap >= thresholds.gapMonthsMax) {
+    triggers.push(`gap_months_max: ${maxGap} >= ${thresholds.gapMonthsMax}`);
+  }
+  
+  // Trigger 5: Promotion velocity < 18 months to senior/leadership
+  const isSeniorLevel = ['senior', 'lead', 'principal', 'director', 'vp', 'chief', 'head', 'manager'].some(
+    level => jobLevel.toLowerCase().includes(level)
+  );
   const fastPromotions = pass2.timelineAnalysis.promotionTransitions.filter(
-    t => t.isUnusual || t.months < thresholds.promotionSpeedMonths
+    t => t.isUnusual || t.months < thresholds.promotionVelocityMonths
   );
   if (fastPromotions.length > 0) {
-    triggers.push(`Unusual promotion speed: ${fastPromotions.length} promotion(s) in < ${thresholds.promotionSpeedMonths} months`);
+    triggers.push(`promotion_velocity: ${fastPromotions.length} promotion(s) in < ${thresholds.promotionVelocityMonths} months`);
   }
   
-  // Trigger 3: Job overlaps exceeding threshold
-  const significantOverlaps = pass2.timelineAnalysis.overlaps.filter(
-    o => o.overlapMonths > thresholds.overlapMonths
-  );
-  if (significantOverlaps.length > 0) {
-    triggers.push(`Significant job overlaps: ${significantOverlaps.length} overlap(s) > ${thresholds.overlapMonths} months`);
+  // Trigger 6: Skills mismatch + senior title
+  const hasMajorSkillGaps = pass3.skillsAnalysis.missing_must_have.length >= thresholds.skillsMismatchThreshold;
+  if (isSeniorLevel && hasMajorSkillGaps) {
+    triggers.push(`skills_mismatch_senior: missing ${pass3.skillsAnalysis.missing_must_have.length} must-have skills for senior role`);
   }
   
-  // Trigger 4: Skill mismatch + senior titles
-  if (thresholds.skillMismatchWithSenior) {
-    const isSeniorLevel = ['senior', 'lead', 'principal', 'director', 'vp', 'chief', 'head', 'manager'].some(
-      level => jobLevel.toLowerCase().includes(level)
-    );
-    const hasMajorSkillGaps = pass3.skillsAnalysis.missing_must_have.length >= 2;
-    
-    if (isSeniorLevel && hasMajorSkillGaps) {
-      triggers.push(`Senior role with major skill gaps: missing ${pass3.skillsAnalysis.missing_must_have.length} must-have skills`);
+  // Trigger 7: Skill soup (too many unrelated domains)
+  const domainSkills = pass1.skills.domain || [];
+  const uniqueDomains = new Set(domainSkills.map(s => s.toLowerCase()));
+  if (uniqueDomains.size >= 5) {
+    triggers.push(`skill_soup: ${uniqueDomains.size} unrelated skill domains detected`);
+  }
+  
+  // Trigger 8: Name/email/contact inconsistencies
+  if (consistencyCheck) {
+    if (consistencyCheck.nameMatch === "mismatch" || consistencyCheck.suspiciousReasons.length > 0) {
+      triggers.push(`contact_inconsistencies: ${consistencyCheck.suspiciousReasons.join(", ") || "name mismatch"}`);
     }
   }
   
   return {
-    shouldRunFraudCheck: triggers.length > 0,
-    triggers
+    shouldRunFlaggedPass: triggers.length >= thresholds.minTriggersRequired,
+    triggers,
+    triggerCount: triggers.length
   };
+}
+
+// Prepare compact payload for flagged pass (minimize tokens)
+export function prepareFlaggedPassPayload(
+  pass1: Pass1Result,
+  pass2: Pass2Result,
+  pass3: Pass3Result,
+  pass4: Pass4Result,
+  consistencyCheck?: { nameMatch: string; suspiciousReasons: string[] }
+): FlaggedPassPayload {
+  const totalOverlap = pass2.timelineAnalysis.overlaps.reduce((sum, o) => sum + o.overlapMonths, 0);
+  const maxSingleOverlap = Math.max(0, ...pass2.timelineAnalysis.overlaps.map(o => o.overlapMonths));
+  const maxGap = Math.max(0, ...pass2.timelineAnalysis.gaps.map(g => g.gapMonths));
+  const tooPerfectScore = 100 - (pass4.authenticitySignals?.specificityScore || 100) + 
+    (pass4.authenticitySignals?.aiStyleLikelihood || 0);
+  
+  return {
+    candidate_profile: {
+      total_experience_years: pass1.totalExperienceYears,
+      jobs: pass1.jobs.map(j => ({ company: j.company, title: j.title, duration_months: j.durationMonths })),
+      education: pass1.education.map(e => ({ institution: e.institution, degree: e.degree, field: e.field })),
+      skills: pass1.skills
+    },
+    timeline_analysis: {
+      overlap_months_total: totalOverlap,
+      max_single_overlap: maxSingleOverlap,
+      gap_months_max: maxGap,
+      avg_tenure_months: pass2.timelineAnalysis.averageTenureMonths,
+      job_count: pass2.timelineAnalysis.jobCount,
+      fast_promotions: pass2.timelineAnalysis.promotionTransitions
+        .filter(t => t.isUnusual)
+        .map(t => ({ from: t.from, to: t.to, months: t.months }))
+    },
+    job_fit_summary: {
+      fit_score: pass3.fitScore,
+      matched_skills: pass3.skillsAnalysis.matched_must_have,
+      missing_must_have: pass3.skillsAnalysis.missing_must_have,
+      title_match: true,
+      industry_overlap: pass3.industryAnalysis.overlapScore
+    },
+    previous_flags: {
+      name_mismatch: consistencyCheck?.nameMatch === "mismatch",
+      contact_inconsistencies: consistencyCheck?.suspiciousReasons || [],
+      too_perfect_score: Math.round(tooPerfectScore),
+      ai_style_likelihood: pass4.authenticitySignals?.aiStyleLikelihood || 0,
+      skill_soup_domains: pass1.skills.domain || []
+    }
+  };
+}
+
+// Run the flagged plausibility pass with gpt-4.1
+export async function runFlaggedPlausibilityPass(
+  payload: FlaggedPassPayload,
+  triggers: string[]
+): Promise<FlaggedPassResult> {
+  const prompt = `You are an extremely skeptical HR fraud analyst. Your job is to find problems with this candidate's resume. Do NOT praise. Do NOT hedge. Be direct and critical.
+
+ANALYSIS TRIGGERS (why this resume was flagged):
+${triggers.map(t => `- ${t}`).join('\n')}
+
+CANDIDATE DATA:
+${JSON.stringify(payload, null, 2)}
+
+YOUR TASK:
+Analyze ONLY these aspects (NOT formatting or writing style):
+1. Career progression plausibility - are the job transitions realistic?
+2. Timeline consistency - do dates, tenures, and gaps make sense?
+3. Education/certification realism - are credentials achievable given timeline?
+4. Role responsibility realism - do responsibilities match tenure and title?
+5. Achievement realism - are metrics realistic given context?
+6. Skill/industry coherence - do skills align with stated experience?
+7. "Too perfect" signals - is this resume over-engineered or AI-generated?
+
+Return ONLY valid JSON matching this exact schema:
+{
+  "plausibility_verdict": "low_risk" | "medium_risk" | "high_risk",
+  "confidence_score": 0-100,
+  "primary_red_flags": ["specific critical issues only"],
+  "secondary_red_flags": ["minor concerns"],
+  "what_requires_clarification": ["questions to ask candidate"],
+  "hire_risk_summary": "2-3 sentence internal hiring team assessment"
+}
+
+Be aggressive. Find the problems. No hedging language.`;
+
+  try {
+    const completion = await callAI("flagged_plausibility", {
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) throw new Error("No response from flagged pass");
+    
+    const result = JSON.parse(content) as FlaggedPassResult;
+    
+    // Validate required fields
+    if (!result.plausibility_verdict || !["low_risk", "medium_risk", "high_risk"].includes(result.plausibility_verdict)) {
+      result.plausibility_verdict = "medium_risk";
+    }
+    if (typeof result.confidence_score !== "number") {
+      result.confidence_score = 50;
+    }
+    result.primary_red_flags = result.primary_red_flags || [];
+    result.secondary_red_flags = result.secondary_red_flags || [];
+    result.what_requires_clarification = result.what_requires_clarification || [];
+    result.hire_risk_summary = result.hire_risk_summary || "Unable to generate summary.";
+    
+    return result;
+  } catch (error) {
+    console.error("Flagged pass error:", error);
+    return {
+      plausibility_verdict: "medium_risk",
+      confidence_score: 0,
+      primary_red_flags: ["Error running flagged analysis"],
+      secondary_red_flags: [],
+      what_requires_clarification: [],
+      hire_risk_summary: "Flagged pass failed to execute. Manual review recommended."
+    };
+  }
 }
 
 // Default Pass5 result when fraud detection is skipped (no red flags)
@@ -1408,16 +1595,33 @@ export async function analyzeResumeMultiPass(
   // Pass 4: Narrative and recommendations (gpt-4o-mini)
   const pass4 = await pass4_narrativeAndRecommendations(pass1, pass2, pass3, resumeText);
   
-  // CONDITIONAL: Check if fraud detection should be triggered
-  const fraudTriggers = checkFraudDetectionTriggers(pass2, pass3, pass4, jobLevel);
+  // CONDITIONAL: Check if flagged plausibility pass should be triggered (requires 2+ triggers)
+  const fraudTriggers = checkFraudDetectionTriggers(pass1, pass2, pass3, pass4, jobLevel, consistencyCheck);
   
-  // Pass 5: Enhanced Authenticity Detection - ONLY runs when flagged
+  // Flagged Pass: Premium gpt-4.1 skeptical analysis - ONLY runs when 2+ triggers fire
+  let flaggedPassResult: FlaggedPassResult | null = null;
+  let flaggedPassStatus: "not_run" | "run" | "error" = "not_run";
+  
+  if (fraudTriggers.shouldRunFlaggedPass) {
+    console.log(`[Resume Analysis] FLAGGED PASS TRIGGERED (${fraudTriggers.triggerCount} triggers): ${fraudTriggers.triggers.join('; ')}`);
+    try {
+      const payload = prepareFlaggedPassPayload(pass1, pass2, pass3, pass4, consistencyCheck);
+      flaggedPassResult = await runFlaggedPlausibilityPass(payload, fraudTriggers.triggers);
+      flaggedPassStatus = "run";
+      console.log(`[Resume Analysis] Flagged pass verdict: ${flaggedPassResult.plausibility_verdict}`);
+    } catch (error) {
+      console.error(`[Resume Analysis] Flagged pass error:`, error);
+      flaggedPassStatus = "error";
+    }
+  } else {
+    console.log(`[Resume Analysis] Flagged pass SKIPPED - only ${fraudTriggers.triggerCount} trigger(s), need 2+`);
+  }
+  
+  // Pass 5: Enhanced Authenticity Detection - runs if flagged OR uses default
   let pass5: Pass5Result;
-  if (fraudTriggers.shouldRunFraudCheck) {
-    console.log(`[Resume Analysis] Fraud detection TRIGGERED: ${fraudTriggers.triggers.join('; ')}`);
+  if (fraudTriggers.shouldRunFlaggedPass) {
     pass5 = await pass5_authenticityAnalysis(pass1, pass2, resumeText, expectedCandidateName);
   } else {
-    console.log(`[Resume Analysis] Fraud detection SKIPPED - no triggers activated`);
     pass5 = createDefaultPass5Result(pass3);
   }
   

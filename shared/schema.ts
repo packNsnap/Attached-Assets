@@ -207,6 +207,9 @@ export const resumeAnalysis = pgTable("resume_analysis", {
   authenticityScore: integer("authenticity_score"),
   fraudFlags: text("fraud_flags"),
   status: text("status").notNull().default("completed"),
+  flaggedPassStatus: text("flagged_pass_status").default("not_run"),
+  flaggedPassTriggers: text("flagged_pass_triggers").array(),
+  flaggedPassResult: text("flagged_pass_result"),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
