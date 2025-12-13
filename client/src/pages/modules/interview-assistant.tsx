@@ -833,26 +833,10 @@ export default function InterviewAssistantModule() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className={cn(
-                                "h-6 w-6",
-                                new Date(interview.scheduledDate) < new Date()
-                                  ? "text-muted-foreground cursor-not-allowed opacity-50"
-                                  : "text-destructive"
-                              )}
-                              onClick={() => {
-                                if (new Date(interview.scheduledDate) < new Date()) {
-                                  toast({
-                                    title: "Cannot Delete",
-                                    description: "Past interviews cannot be deleted. Only future interviews can be removed.",
-                                    variant: "destructive"
-                                  });
-                                } else {
-                                  deleteScheduledInterview.mutate(interview.id);
-                                }
-                              }}
-                              disabled={new Date(interview.scheduledDate) < new Date()}
+                              className="h-6 w-6 text-destructive"
+                              onClick={() => deleteScheduledInterview.mutate(interview.id)}
                               data-testid={`delete-interview-${interview.id}`}
-                              title={new Date(interview.scheduledDate) < new Date() ? "Cannot delete past interviews" : "Delete interview"}
+                              title="Delete interview"
                             >
                               <X className="h-4 w-4" />
                             </Button>
