@@ -727,7 +727,7 @@ export default function InterviewAssistantModule() {
                             {dayInterviews.slice(0, 2).map((interview) => (
                               <div
                                 key={interview.id}
-                                className="text-xs p-1 bg-primary/10 text-primary rounded flex items-center justify-between group"
+                                className="text-xs p-1 bg-primary/10 text-primary rounded flex items-center justify-between"
                                 title={`${interview.candidateName} - ${interview.jobTitle}`}
                               >
                                 <span className="truncate flex-1">
@@ -738,7 +738,7 @@ export default function InterviewAssistantModule() {
                                     e.stopPropagation();
                                     deleteScheduledInterview.mutate(interview.id);
                                   }}
-                                  className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-primary hover:text-destructive"
+                                  className="ml-1 text-primary hover:text-destructive transition-colors"
                                   title="Delete interview"
                                   data-testid={`calendar-delete-interview-${interview.id}`}
                                 >

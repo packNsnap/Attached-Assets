@@ -288,8 +288,8 @@ export async function registerRoutes(
       }
       // Always check from database for most up-to-date admin status
       const user = await storage.getUser(userId);
-      // Handle both string "true" and boolean true values
-      const isAdminUser = user?.isAdmin === "true" || user?.isAdmin === true;
+      // isAdmin is stored as text "true" or "false" in database
+      const isAdminUser = user && user.isAdmin === "true";
       if (!user || !isAdminUser) {
         return res.status(403).json({ message: "Admin access required" });
       }
@@ -4358,7 +4358,7 @@ Generate 3-5 diverse goals covering different aspects of the role.`;
         customerId = subscription.stripeCustomerId;
       } else {
         const customer = await stripe.customers.create({
-          email: user.email,
+          email: user.email || undefined,
           metadata: { userId },
         });
         customerId = customer.id;
