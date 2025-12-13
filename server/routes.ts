@@ -35,7 +35,7 @@ import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClie
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const MODEL_MAP: Record<string, string> = {
-  "resume_analysis": "o1-mini",
+  "resume_analysis": "gpt-4o",
   "ai_detection": "gpt-4o",
   "job_description": "gpt-4o-mini",
   "skills_test": "gpt-4o-mini",
