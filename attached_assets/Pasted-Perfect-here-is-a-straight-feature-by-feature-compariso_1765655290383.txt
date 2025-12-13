@@ -1,0 +1,163 @@
+Perfect — here is a straight, feature-by-feature comparison between ResumeLogik and the actual types of competitors in this space. No marketing fluff. This is how buyers and investors think.
+
+I’ll group competitors into real categories, because that’s how the market actually works.
+
+⸻
+
+FEATURE-BY-FEATURE COMPARISON
+
+Categories Compared
+	1.	Basic Resume Parsers / Rankers
+(cheap AI screeners, keyword match tools)
+	2.	AI Screening Platforms
+(HiPeople-type tools, screening + assessments)
+	3.	Full ATS Platforms
+(Greenhouse, Lever + AI add-ons)
+	4.	ResumeLogik (You)
+
+⸻
+
+1️⃣ Resume Ingestion & Parsing
+
+Feature	Basic Parsers	AI Screening Tools	ATS Platforms	ResumeLogik
+Resume parsing	✅	✅	✅	✅
+Structured extraction	Basic	Medium	Medium	Advanced
+Multiple re-analysis per candidate	❌	❌	❌	✅ (intentional)
+Detects parsing inconsistencies	❌	❌	❌	✅
+
+Why you win:
+Others parse once and move on. You treat resumes as iterative artifacts, which mirrors real recruiter behavior.
+
+⸻
+
+2️⃣ Job Fit & Skill Matching
+
+Feature	Basic Parsers	AI Screening Tools	ATS Platforms	ResumeLogik
+Keyword matching	✅	✅	✅	✅
+Semantic skill matching	❌	⚠️ Limited	⚠️ Add-on	✅
+Missing vs inflated skill detection	❌	❌	❌	✅
+Role-specific fit explanation	❌	⚠️	⚠️	✅
+
+Why you win:
+Others score. You explain mismatches and exaggerations.
+
+⸻
+
+3️⃣ Career Timeline Analysis
+
+Feature	Basic Parsers	AI Screening Tools	ATS Platforms	ResumeLogik
+Employment dates	✅	✅	✅	✅
+Gap detection	❌	⚠️	⚠️	✅
+Overlap detection	❌	❌	❌	✅
+Promotion velocity logic	❌	❌	❌	✅
+Timeline plausibility	❌	❌	❌	✅
+
+This is a MAJOR differentiator.
+Almost nobody does timeline realism. This is one of your strongest moats.
+
+⸻
+
+4️⃣ Plausibility & Fraud Detection (Core Differentiator)
+
+Feature	Basic Parsers	AI Screening Tools	ATS Platforms	ResumeLogik
+Detects “too perfect” resumes	❌	❌	❌	✅
+Flags unrealistic career jumps	❌	❌	❌	✅
+Skill-scope vs tenure mismatch	❌	❌	❌	✅
+Automatic escalation to deeper analysis	❌	❌	❌	✅ (automatic)
+Explainable fraud signals	❌	⚠️ Very limited	❌	✅
+
+Why you’re different:
+Others avoid judgment to reduce liability.
+You embrace decision-support with explainability.
+
+⸻
+
+5️⃣ Explainability & Trust
+
+Feature	Basic Parsers	AI Screening Tools	ATS Platforms	ResumeLogik
+Single score output	✅	✅	✅	❌
+Reasoned breakdown	❌	⚠️	⚠️	✅
+Primary vs secondary red flags	❌	❌	❌	✅
+Confidence scoring	❌	⚠️	❌	✅
+Audit-friendly explanations	❌	❌	❌	✅
+
+This is enterprise-grade behavior at SMB-friendly pricing.
+
+⸻
+
+6️⃣ Automation Behavior
+
+Feature	Basic Parsers	AI Screening Tools	ATS Platforms	ResumeLogik
+Manual deep review	❌	✅	❌	❌
+Automatic deep review	❌	❌	❌	✅
+Controlled escalation	❌	❌	❌	✅ (tier-based)
+Cost-aware AI routing	❌	❌	❌	✅
+
+This is how real fraud / risk software works.
+Very few hiring tools do this.
+
+⸻
+
+7️⃣ Content Generation (Secondary Value)
+
+Feature	Basic Parsers	AI Screening Tools	ATS Platforms	ResumeLogik
+Job descriptions	⚠️	✅	✅	✅
+Interview questions	⚠️	✅	⚠️	✅
+Skills tests	❌	⚠️	⚠️	✅
+HR policies	❌	❌	❌	✅
+Onboarding docs	❌	❌	⚠️	✅
+
+Important:
+These support your product, but they are not the core value. They justify price, they don’t define it.
+
+⸻
+
+8️⃣ Pricing & Accessibility
+
+Feature	Basic Parsers	AI Screening Tools	ATS Platforms	ResumeLogik
+Entry price	$0–$29	$67–$99	$100–$300+	$59
+Flat monthly pricing	⚠️	❌	❌	✅
+SMB-friendly	✅	⚠️	❌	✅
+Enterprise-ready logic	❌	⚠️	✅	✅
+
+You sit in a rare middle:
+	•	smarter than SMB tools
+	•	cheaper than enterprise ATS stacks
+
+⸻
+
+The clean positioning sentence (use this)
+
+“Most tools rank resumes. ResumeLogik evaluates whether they make sense.”
+
+Or, more enterprise-safe:
+
+“ResumeLogik provides automated, explainable plausibility and risk analysis for candidate resumes — something traditional ATS platforms and basic AI screeners do not offer.”
+
+⸻
+
+Final reality check (important)
+
+You are not overpriced relative to:
+	•	what you do
+	•	who you compete against
+	•	the risk you mitigate
+
+You were underpricing because you compared yourself to:
+	•	resume parsers
+	•	AI text tools
+
+Your real competitors are:
+	•	screening platforms
+	•	agencies
+	•	bad hires
+
+⸻
+
+If you want next, I can:
+	•	turn this into a competitive comparison page
+	•	create sales battlecards
+	•	write investor-style differentiation bullets
+	•	or help you decide who NOT to compete with
+
+Just tell me the next move.

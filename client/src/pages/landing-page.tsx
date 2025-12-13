@@ -213,6 +213,9 @@ export default function LandingPage() {
               </span>
             </div>
             <div className="hidden sm:flex items-center gap-4">
+              <Button variant="ghost" asChild data-testid="link-features">
+                <a href="/features">Features</a>
+              </Button>
               <Button variant="ghost" asChild data-testid="link-pricing">
                 <a href="/pricing">Pricing</a>
               </Button>
