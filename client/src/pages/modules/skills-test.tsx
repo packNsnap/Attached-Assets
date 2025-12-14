@@ -725,7 +725,7 @@ export default function SkillsTestModule() {
                               Times over 30 seconds may allow candidates to look up answers
                             </span>
                           ) : (
-                            "Recommended: 15 seconds to prevent answer lookup"
+                            "Recommended: 15-30 seconds to prevent answer lookup"
                           )}
                         </FormDescription>
                         <FormMessage />
