@@ -768,8 +768,19 @@ export class DatabaseStorage implements IStorage {
     return sub;
   }
 
+  // Helper to check if user is admin
+  private async isUserAdmin(userId: string): Promise<boolean> {
+    const user = await this.getUser(userId);
+    return user?.email === "admin@resumelogik.com";
+  }
+
   // Helper method to get effective plan, checking both subscription and freeAccessUntil
   private async getEffectivePlan(userId: string): Promise<PlanType> {
+    // Check if user is admin - they get enterprise (unlimited)
+    if (await this.isUserAdmin(userId)) {
+      return "enterprise";
+    }
+    
     // Check if user has active free access granted by admin
     const user = await this.getUser(userId);
     if (user && user.freeAccessUntil && new Date(user.freeAccessUntil) > new Date()) {
@@ -781,6 +792,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkCanCreateJob(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
+    // Admins have unlimited access
+    if (await this.isUserAdmin(userId)) {
+      return { allowed: true, current: 0, limit: -1 };
+    }
+    
     const plan = await this.getEffectivePlan(userId);
     const limits = PLAN_LIMITS[plan];
     
@@ -796,6 +812,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkCanAddCandidate(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
+    // Admins have unlimited access
+    if (await this.isUserAdmin(userId)) {
+      return { allowed: true, current: 0, limit: -1 };
+    }
+    
     const plan = await this.getEffectivePlan(userId);
     const limits = PLAN_LIMITS[plan];
     
@@ -810,6 +831,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkCanUseAiAction(userId: string, candidateId: string, serviceType: string): Promise<{ allowed: boolean; current: number; limit: number }> {
+    // Admins have unlimited access
+    if (await this.isUserAdmin(userId)) {
+      return { allowed: true, current: 0, limit: -1 };
+    }
+    
     const plan = await this.getEffectivePlan(userId);
     const limits = PLAN_LIMITS[plan];
     
