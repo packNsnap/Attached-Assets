@@ -176,17 +176,26 @@ async function seedStripeProducts() {
           query: `name:'${productData.name}'` 
         });
 
+        let product;
         if (existingProducts.data.length > 0) {
-          log(`Stripe product "${productData.name}" already exists`, "stripe-seed");
-          continue;
+          // Update existing product
+          product = existingProducts.data[0];
+          await stripe.products.update(product.id, {
+            description: productData.description,
+            metadata: productData.metadata,
+          });
+          log(`Updated Stripe product: ${productData.name}`, "stripe-seed");
+        } else {
+          // Create new product
+          product = await stripe.products.create({
+            name: productData.name,
+            description: productData.description,
+            metadata: productData.metadata,
+          });
+          log(`Created Stripe product: ${productData.name}`, "stripe-seed");
         }
 
-        const product = await stripe.products.create({
-          name: productData.name,
-          description: productData.description,
-          metadata: productData.metadata,
-        });
-
+        // Create new price
         const price = await stripe.prices.create({
           product: product.id,
           unit_amount: productData.price,
@@ -194,9 +203,9 @@ async function seedStripeProducts() {
           recurring: { interval: 'month' },
         });
 
-        log(`Created Stripe product: ${productData.name} ($${productData.price / 100}/mo)`, "stripe-seed");
+        log(`Created price for ${productData.name}: $${productData.price / 100}/mo`, "stripe-seed");
       } catch (error) {
-        log(`Error creating product ${productData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`, "stripe-seed");
+        log(`Error with product ${productData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`, "stripe-seed");
       }
     }
   } catch (error) {
