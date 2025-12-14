@@ -4472,8 +4472,8 @@ Generate 3-5 diverse goals covering different aspects of the role.`;
             pr.unit_amount,
             pr.currency,
             pr.recurring,
-            pr.created_at,
-            ROW_NUMBER() OVER (PARTITION BY pr.product ORDER BY pr.created_at DESC) as rn
+            pr.created,
+            ROW_NUMBER() OVER (PARTITION BY pr.product ORDER BY pr.created DESC) as rn
           FROM stripe.prices pr
           WHERE pr.active = true
         )
