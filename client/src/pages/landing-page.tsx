@@ -498,9 +498,18 @@ export default function LandingPage() {
               </Button>
             </div>
 
-            <p className="text-sm text-muted-foreground mb-6">
+            <p className="text-sm text-muted-foreground mb-4">
               No credit card • 10-second scan • Decision support only
             </p>
+
+            <button
+              onClick={() => setSampleReportOpen(true)}
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline mb-6 inline-flex items-center gap-1"
+              data-testid="link-try-sample"
+            >
+              <Eye className="h-4 w-4" />
+              Try Sample Resume
+            </button>
 
             {/* Trust Indicators */}
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-muted-foreground px-4">
@@ -521,7 +530,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Dashboard Preview Section - NEW */}
+      {/* What the Scan Catches Section */}
       <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-muted/30 to-background overflow-hidden">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -530,113 +539,146 @@ export default function LandingPage() {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
-              <Activity className="h-3.5 w-3.5 mr-2" />
-              Real-Time Analytics
+            <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20">
+              <Eye className="h-3.5 w-3.5 mr-2" />
+              AI-Powered Analysis
             </Badge>
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-              Your HR Dashboard,{" "}
-              <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-                At a Glance
+              What the Scan{" "}
+              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Catches
               </span>
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Track KPIs, pipeline stages, hiring trends, and team performance with real-time data — not placeholder metrics.
+              See exactly what our AI flags in seconds — from timeline issues to copy-paste artifacts.
             </p>
           </motion.div>
 
-          {/* Dashboard Mock */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="relative"
-          >
-            <div className="rounded-2xl border bg-background shadow-2xl overflow-hidden">
-              {/* Mock Header */}
-              <div className="border-b px-4 sm:px-6 py-4 flex items-center justify-between bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <img src={logoImage} alt="Resume Logik" className="h-8 w-8 object-contain" />
-                  <span className="font-semibold hidden sm:inline">Resume Logik</span>
-                </div>
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Left: Sample Report Preview Card */}
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="rounded-2xl border bg-background shadow-xl overflow-hidden"
+            >
+              <div className="border-b px-5 py-4 bg-muted/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-green-500" />
-                  <span className="text-sm text-muted-foreground">Live Data</span>
+                  <FileText className="h-5 w-5 text-purple-600" />
+                  <span className="font-semibold">Sample Integrity Report</span>
                 </div>
+                <Badge variant="secondary" className="text-xs">Demo</Badge>
               </div>
               
-              {/* Mock Dashboard Content */}
-              <div className="p-4 sm:p-6">
-                {/* KPI Cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                  {[
-                    { label: "Active Jobs", value: "12", change: "+3 this week", color: "text-blue-600" },
-                    { label: "Total Candidates", value: "248", change: "+45 this month", color: "text-purple-600" },
-                    { label: "Interviews Scheduled", value: "18", change: "6 today", color: "text-green-600" },
-                    { label: "Offers Extended", value: "5", change: "80% acceptance", color: "text-orange-600" },
-                  ].map((kpi, i) => (
-                    <div key={i} className="p-3 sm:p-4 rounded-xl bg-muted/50 border">
-                      <p className="text-xs sm:text-sm text-muted-foreground">{kpi.label}</p>
-                      <p className={cn("text-xl sm:text-2xl font-bold", kpi.color)}>{kpi.value}</p>
-                      <p className="text-xs text-muted-foreground">{kpi.change}</p>
-                    </div>
-                  ))}
+              <div className="p-5 space-y-5">
+                {/* Score Cards */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-600/10 border border-blue-500/20 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Integrity Score</p>
+                    <p className="text-2xl font-bold text-blue-600">72</p>
+                    <p className="text-xs text-muted-foreground">/100</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 border border-purple-500/20 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">AI Likelihood</p>
+                    <p className="text-2xl font-bold text-purple-600">45%</p>
+                    <p className="text-xs text-muted-foreground">Moderate</p>
+                  </div>
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/10 border border-green-500/20 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">Skills Match</p>
+                    <p className="text-2xl font-bold text-green-600">68%</p>
+                    <p className="text-xs text-muted-foreground">Good</p>
+                  </div>
                 </div>
 
-                {/* Pipeline Visualization */}
-                <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
-                  <div className="p-4 rounded-xl bg-muted/30 border">
-                    <h4 className="font-semibold mb-4 flex items-center gap-2">
-                      <PieChart className="h-4 w-4 text-purple-500" />
-                      Pipeline Stages
-                    </h4>
-                    <div className="space-y-3">
-                      {[
-                        { stage: "Applied", count: 86, color: "bg-blue-500", width: "100%" },
-                        { stage: "Screening", count: 45, color: "bg-purple-500", width: "52%" },
-                        { stage: "Interview", count: 28, color: "bg-orange-500", width: "32%" },
-                        { stage: "Offer", count: 12, color: "bg-green-500", width: "14%" },
-                        { stage: "Hired", count: 5, color: "bg-emerald-500", width: "6%" },
-                      ].map((stage, i) => (
-                        <div key={i} className="flex items-center gap-3">
-                          <span className="text-xs sm:text-sm w-20 text-muted-foreground">{stage.stage}</span>
-                          <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
-                            <div className={cn("h-full rounded-full", stage.color)} style={{ width: stage.width }} />
-                          </div>
-                          <span className="text-xs sm:text-sm font-medium w-8">{stage.count}</span>
-                        </div>
-                      ))}
+                {/* Flags Summary */}
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                    Flags Found (5)
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border-l-2 border-l-red-500">
+                      <div className="h-5 w-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                        <AlertTriangle className="h-3 w-3 text-white" />
+                      </div>
+                      <span className="text-xs">Timeline overlap: 2 roles, 18 months</span>
                     </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-muted/30 border">
-                    <h4 className="font-semibold mb-4 flex items-center gap-2">
-                      <Gauge className="h-4 w-4 text-blue-500" />
-                      Hiring Efficiency
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      {[
-                        { label: "Avg. Time to Hire", value: "18 days", trend: "↓ 3 days" },
-                        { label: "Interview Rate", value: "32%", trend: "↑ 5%" },
-                        { label: "Offer Acceptance", value: "80%", trend: "↑ 10%" },
-                        { label: "Quality Score", value: "4.2/5", trend: "Stable" },
-                      ].map((metric, i) => (
-                        <div key={i} className="text-center p-3 rounded-lg bg-background/50">
-                          <p className="text-xs text-muted-foreground mb-1">{metric.label}</p>
-                          <p className="text-base sm:text-lg font-bold">{metric.value}</p>
-                          <p className="text-xs text-green-600">{metric.trend}</p>
-                        </div>
-                      ))}
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-red-50 dark:bg-red-950/20 border-l-2 border-l-red-500">
+                      <div className="h-5 w-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
+                        <AlertTriangle className="h-3 w-3 text-white" />
+                      </div>
+                      <span className="text-xs">Copy-paste error: wrong company name</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border-l-2 border-l-yellow-500">
+                      <div className="h-5 w-5 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0">
+                        <Eye className="h-3 w-3 text-white" />
+                      </div>
+                      <span className="text-xs">Inflated title: VP at 4-person startup</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-50 dark:bg-yellow-950/20 border-l-2 border-l-yellow-500">
+                      <div className="h-5 w-5 rounded-full bg-yellow-500 flex items-center justify-center flex-shrink-0">
+                        <Eye className="h-3 w-3 text-white" />
+                      </div>
+                      <span className="text-xs">AI-generated summary detected</span>
+                    </div>
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-950/20 border-l-2 border-l-green-500">
+                      <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle2 className="h-3 w-3 text-white" />
+                      </div>
+                      <span className="text-xs">Education timeline verified</span>
                     </div>
                   </div>
                 </div>
+
+                <Button 
+                  onClick={() => setSampleReportOpen(true)} 
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                >
+                  View Full Sample Report
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Decorative blur behind dashboard */}
-            <div className="absolute -z-10 inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 blur-3xl scale-110" />
-          </motion.div>
+            {/* Right: 8 Flag Tiles */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="grid grid-cols-2 gap-3"
+            >
+              {[
+                { icon: Users, title: "Name Mismatch", description: "Different names across resume sections or documents.", color: "from-red-500 to-rose-500" },
+                { icon: Calendar, title: "Timeline Overlap", description: "Multiple full-time roles during the same period.", color: "from-red-500 to-orange-500" },
+                { icon: FileText, title: "Copy-Paste Artifact", description: "Wrong company names, leftover template text.", color: "from-yellow-500 to-amber-500" },
+                { icon: Award, title: "Inflated Title Risk", description: "VP/Director titles at very small companies.", color: "from-yellow-500 to-orange-500" },
+                { icon: Target, title: "Skills Mismatch", description: "Claimed expertise without supporting experience.", color: "from-purple-500 to-pink-500" },
+                { icon: Shield, title: "Contact Inconsistency", description: "Email domain doesn't match stated employer.", color: "from-blue-500 to-cyan-500" },
+                { icon: BookOpen, title: "Education Anomaly", description: "Degree dates don't align with career start.", color: "from-indigo-500 to-purple-500" },
+                { icon: Sparkles, title: "Generic AI Phrasing", description: "Buzzword-heavy, substance-light language.", color: "from-pink-500 to-rose-500" },
+              ].map((flag, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.05 }}
+                  className="p-4 rounded-xl bg-background border shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className={cn(
+                    "h-9 w-9 rounded-lg bg-gradient-to-br flex items-center justify-center mb-3",
+                    flag.color
+                  )}>
+                    <flag.icon className="h-4 w-4 text-white" />
+                  </div>
+                  <h4 className="font-semibold text-sm mb-1">{flag.title}</h4>
+                  <p className="text-xs text-muted-foreground">{flag.description}</p>
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
         </div>
       </section>
 
@@ -1134,6 +1176,119 @@ export default function LandingPage() {
                 )}
               </motion.div>
             ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Dashboard Preview Section */}
+      <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-muted/30 to-background overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border-blue-500/20">
+              <Activity className="h-3.5 w-3.5 mr-2" />
+              Real-Time Analytics
+            </Badge>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+              Your HR Dashboard,{" "}
+              <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                At a Glance
+              </span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Track KPIs, pipeline stages, hiring trends, and team performance with real-time data — not placeholder metrics.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="relative"
+          >
+            <div className="rounded-2xl border bg-background shadow-2xl overflow-hidden">
+              <div className="border-b px-4 sm:px-6 py-4 flex items-center justify-between bg-muted/30">
+                <div className="flex items-center gap-3">
+                  <img src={logoImage} alt="Resume Logik" className="h-8 w-8 object-contain" />
+                  <span className="font-semibold hidden sm:inline">Resume Logik</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <span className="text-sm text-muted-foreground">Live Data</span>
+                </div>
+              </div>
+              
+              <div className="p-4 sm:p-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                  {[
+                    { label: "Active Jobs", value: "12", change: "+3 this week", color: "text-blue-600" },
+                    { label: "Total Candidates", value: "248", change: "+45 this month", color: "text-purple-600" },
+                    { label: "Interviews Scheduled", value: "18", change: "6 today", color: "text-green-600" },
+                    { label: "Offers Extended", value: "5", change: "80% acceptance", color: "text-orange-600" },
+                  ].map((kpi, i) => (
+                    <div key={i} className="p-3 sm:p-4 rounded-xl bg-muted/50 border">
+                      <p className="text-xs sm:text-sm text-muted-foreground">{kpi.label}</p>
+                      <p className={cn("text-xl sm:text-2xl font-bold", kpi.color)}>{kpi.value}</p>
+                      <p className="text-xs text-muted-foreground">{kpi.change}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid lg:grid-cols-2 gap-4 sm:gap-6">
+                  <div className="p-4 rounded-xl bg-muted/30 border">
+                    <h4 className="font-semibold mb-4 flex items-center gap-2">
+                      <PieChart className="h-4 w-4 text-purple-500" />
+                      Pipeline Stages
+                    </h4>
+                    <div className="space-y-3">
+                      {[
+                        { stage: "Applied", count: 86, color: "bg-blue-500", width: "100%" },
+                        { stage: "Screening", count: 45, color: "bg-purple-500", width: "52%" },
+                        { stage: "Interview", count: 28, color: "bg-orange-500", width: "32%" },
+                        { stage: "Offer", count: 12, color: "bg-green-500", width: "14%" },
+                        { stage: "Hired", count: 5, color: "bg-emerald-500", width: "6%" },
+                      ].map((stage, i) => (
+                        <div key={i} className="flex items-center gap-3">
+                          <span className="text-xs sm:text-sm w-20 text-muted-foreground">{stage.stage}</span>
+                          <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                            <div className={cn("h-full rounded-full", stage.color)} style={{ width: stage.width }} />
+                          </div>
+                          <span className="text-xs sm:text-sm font-medium w-8">{stage.count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-muted/30 border">
+                    <h4 className="font-semibold mb-4 flex items-center gap-2">
+                      <Gauge className="h-4 w-4 text-blue-500" />
+                      Hiring Efficiency
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { label: "Avg. Time to Hire", value: "18 days", trend: "↓ 3 days" },
+                        { label: "Interview Rate", value: "32%", trend: "↑ 5%" },
+                        { label: "Offer Acceptance", value: "80%", trend: "↑ 10%" },
+                        { label: "Quality Score", value: "4.2/5", trend: "Stable" },
+                      ].map((metric, i) => (
+                        <div key={i} className="text-center p-3 rounded-lg bg-background/50">
+                          <p className="text-xs text-muted-foreground mb-1">{metric.label}</p>
+                          <p className="text-base sm:text-lg font-bold">{metric.value}</p>
+                          <p className="text-xs text-green-600">{metric.trend}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="absolute -z-10 inset-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10 blur-3xl scale-110" />
           </motion.div>
         </div>
       </section>
