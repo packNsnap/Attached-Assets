@@ -512,7 +512,6 @@ export async function registerRoutes(
       // Override userId with authenticated user's ID to prevent privilege escalation
       jobData.userId = userId;
       const job = await storage.createJob(jobData);
-      await storage.incrementJobsCreated(userId);
       res.json(job);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -664,18 +663,17 @@ export async function registerRoutes(
     }
   });
 
-  // Bulk resume upload - Pro+ only
+  // Bulk resume upload - Growth tier and above only
   app.post("/api/bulk-resume-upload", isAuthenticated, upload.single("resume"), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       
-      // Check user's plan - must be Pro or Enterprise
-      const subscription = await storage.getSubscription(userId);
-      const plan = subscription?.plan || "free";
-      if (plan !== "pro" && plan !== "enterprise") {
+      // Check if bulk upload is allowed for user's plan (Growth or Enterprise only)
+      const bulkAllowed = await storage.checkBulkUploadAllowed(userId);
+      if (!bulkAllowed) {
         res.status(403).json({ 
-          error: "Bulk upload requires Pro or Enterprise plan",
-          message: "Please upgrade to Pro or Enterprise to use bulk resume upload."
+          error: "Bulk upload requires Growth or Enterprise plan",
+          message: "Please upgrade to Growth ($99.99/mo) or Enterprise to use bulk resume upload."
         });
         return;
       }

@@ -36,18 +36,17 @@ const pricingTiers = [
     limits: [
       "1 active job position",
       "5 candidates per month",
-      "8 AI actions per candidate",
+      "5 baseline resume analyses",
+      "2 job descriptions",
+      "1 skills test",
+      "3 interview question sets",
+      "1 HR policy",
+      "10 emails per month",
       "Resume Logic Analyzer",
       "AI Job Description Generator",
       "AI Skills Test Builder",
       "Interview Question Generator",
-      "Workflow Automations",
-      "Offer Letter / Onboarding Docs",
-      "HR Policies & Handbooks",
-      "Reference Email Generator",
-      "Calendar Scheduling",
       "All Templates",
-      "Unlimited Users per Company",
     ],
     cta: "Get Started Free",
     ctaVariant: "outline" as const,
@@ -55,10 +54,10 @@ const pricingTiers = [
     stripeProductName: null,
   },
   {
-    name: "Growth",
-    planKey: "growth",
-    subtitle: "Growing Teams",
-    price: "$29",
+    name: "Starter",
+    planKey: "starter",
+    subtitle: "SMB Entry",
+    price: "$49.99",
     period: "/ month",
     description: "Ideal for small businesses hiring occasionally throughout the year.",
     color: "from-green-500 to-emerald-600",
@@ -66,83 +65,87 @@ const pricingTiers = [
     bgColor: "bg-green-50 dark:bg-green-900/20",
     limits: [
       "5 active job positions",
-      "30 candidates per month",
-      "15 AI actions per candidate",
+      "25 candidates per month",
+      "75 baseline resume analyses",
+      "Up to 10 advanced reviews/month",
+      "15 job descriptions",
+      "8 skills tests",
+      "25 interview question sets",
+      "10 HR policies",
+      "150 emails per month",
       "Resume Logic Analyzer",
       "AI Job Description Generator",
       "AI Skills Test Builder",
       "Interview Question Generator",
-      "Workflow Automations",
-      "Offer Letter / Onboarding Docs",
-      "HR Policies & Handbooks",
-      "Reference Email Generator",
-      "Calendar Scheduling",
       "All Templates",
       "Unlimited Users per Company",
     ],
-    cta: "Start with Growth",
+    cta: "Start with Starter",
     ctaVariant: "outline" as const,
     popular: false,
-    stripeProductName: "Growth",
+    stripeProductName: "Starter",
   },
   {
-    name: "Pro",
-    planKey: "pro",
-    subtitle: "Most Popular",
-    price: "$49.99",
+    name: "Growth",
+    planKey: "growth",
+    subtitle: "Best Value",
+    price: "$99.99",
     period: "/ month",
-    description: "For growing companies, agencies, or businesses hiring regularly.",
+    description: "For growing companies and agencies hiring regularly. Includes bulk upload.",
     color: "from-blue-500 to-purple-600",
     borderColor: "border-purple-300 dark:border-purple-700",
     bgColor: "bg-gradient-to-b from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20",
     limits: [
       "20 active job positions",
       "150 candidates per month",
-      "15 AI actions per candidate",
+      "500 baseline resume analyses",
+      "Up to 40 advanced reviews/month",
+      "50 job descriptions",
+      "20 skills tests",
+      "60 interview question sets",
+      "30 HR policies",
+      "400 emails per month",
       "Bulk resume upload (20 per batch)",
+      "10 bulk batches per month",
       "Resume Logic Analyzer",
       "AI Job Description Generator",
       "AI Skills Test Builder",
       "Interview Question Generator",
-      "Workflow Automations",
-      "Offer Letter / Onboarding Docs",
-      "HR Policies & Handbooks",
-      "Reference Email Generator",
-      "Calendar Scheduling",
       "All Templates",
       "Unlimited Users per Company",
     ],
-    cta: "Start with Pro",
+    cta: "Start with Growth",
     ctaVariant: "default" as const,
     popular: true,
-    stripeProductName: "Pro",
+    stripeProductName: "Growth",
   },
   {
     name: "Enterprise",
     planKey: "enterprise",
     subtitle: "Custom Solutions",
-    price: "$150",
+    price: "$249",
     period: "/ month",
-    description: "Unlimited scale with custom integrations and dedicated support.",
+    description: "Unlimited scale with priority support and maximum capacity.",
     color: "from-orange-500 to-red-600",
     borderColor: "border-orange-200 dark:border-orange-800",
     bgColor: "bg-orange-50 dark:bg-orange-900/20",
     limits: [
       "Unlimited job positions",
-      "1000+ candidates per month",
-      "15 AI actions per candidate",
-      "Bulk resume upload (20 per batch)",
-      "SSO & Custom Integrations",
+      "500+ candidates per month",
+      "2000 baseline resume analyses",
+      "Up to 200 advanced reviews/month",
+      "200 job descriptions",
+      "100 skills tests",
+      "200 interview question sets",
+      "100 HR policies",
+      "2000 emails per month",
+      "Bulk resume upload (50 per batch)",
+      "100 bulk batches per month",
       "Priority Support & Onboarding",
       "Resume Logic Analyzer",
       "AI Job Description Generator",
       "AI Skills Test Builder",
       "Interview Question Generator",
-      "Workflow Automations",
-      "Offer Letter / Onboarding Docs",
-      "HR Policies & Handbooks",
-      "Reference Email Generator",
-      "Calendar Scheduling",
       "All Templates",
       "Unlimited Users per Company",
     ],
@@ -371,8 +374,8 @@ export default function PricingPage() {
                   <CardHeader className="pb-4">
                     <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${tier.color} flex items-center justify-center mb-4`}>
                       {tier.name === "Free" && <Sparkles className="h-6 w-6 text-white" />}
-                      {tier.name === "Growth" && <Zap className="h-6 w-6 text-white" />}
-                      {tier.name === "Pro" && <Briefcase className="h-6 w-6 text-white" />}
+                      {tier.name === "Starter" && <Zap className="h-6 w-6 text-white" />}
+                      {tier.name === "Growth" && <Briefcase className="h-6 w-6 text-white" />}
                       {tier.name === "Enterprise" && <Building2 className="h-6 w-6 text-white" />}
                     </div>
                     <div className="space-y-1">
@@ -494,11 +497,21 @@ export default function PricingPage() {
             className="space-y-6"
           >
             <div className="bg-muted/50 rounded-xl p-6">
-              <h3 className="font-semibold text-lg mb-2">What counts as an "AI action"?</h3>
+              <h3 className="font-semibold text-lg mb-2">What are "advanced reviews"?</h3>
               <p className="text-muted-foreground">
-                AI actions include running the Resume Logic analyzer, generating interview questions, 
-                creating skills tests, or generating job descriptions. Each candidate gets 2 AI actions, 
-                so you can analyze their resume and generate interview questions.
+                Advanced reviews run automatically when our AI detects risk signals in a resume 
+                (timeline overlaps, skill inconsistencies, etc.). They use our premium analysis 
+                model for deeper plausibility checks. You don't need to trigger them — they happen 
+                automatically when needed, up to your plan's monthly limit.
+              </p>
+            </div>
+
+            <div className="bg-muted/50 rounded-xl p-6">
+              <h3 className="font-semibold text-lg mb-2">What is bulk resume upload?</h3>
+              <p className="text-muted-foreground">
+                Bulk upload lets you upload multiple resumes at once and automatically create 
+                candidate profiles. This feature is available on Growth ($99.99/mo) and Enterprise 
+                plans to help teams process high volumes efficiently.
               </p>
             </div>
 
@@ -514,7 +527,7 @@ export default function PricingPage() {
               <h3 className="font-semibold text-lg mb-2">What happens if I exceed my limits?</h3>
               <p className="text-muted-foreground">
                 We'll notify you when you're approaching your limits. You can upgrade your plan 
-                or wait until the next month when your limits reset.
+                or wait until the next month when all limits reset automatically.
               </p>
             </div>
 
