@@ -1,0 +1,169 @@
+How ResumeLogik Works
+
+AI-Powered Resume Risk Analysis & Hiring Support
+
+ResumeLogik is an AI-powered resume analysis and risk-prevention platform designed to help employers, recruiters, and agencies make more informed, consistent, and defensible hiring decisions — without replacing human judgment or performing background checks.
+
+We do not make hiring decisions.
+We do not verify employment or education.
+We do not access external databases or third-party records.
+
+ResumeLogik provides decision support, not decisions.
+
+What ResumeLogik Actually Does
+
+ResumeLogik analyzes only the information voluntarily provided by a candidate, typically in the form of a résumé or application content uploaded by the employer.
+
+Using proprietary AI logic, the platform evaluates patterns, inconsistencies, and risk indicators commonly associated with résumé fraud, exaggeration, or misalignment — then presents those findings in a clear, structured format for human review.
+
+Think of ResumeLogik as a pre-screening intelligence layer that helps you ask better questions — not an automated gatekeeper.
+
+The AI Analysis Process (Step-by-Step)
+1. Resume Content Intake
+
+The system analyzes the résumé text exactly as submitted.
+No enrichment. No verification. No external lookups.
+
+2. Structural & Consistency Analysis
+
+AI evaluates internal consistency across the document, including:
+
+Name, contact, and formatting alignment
+
+Timeline sequencing (gaps, overlaps, unrealistic progression)
+
+Role and responsibility consistency
+
+Education and credential plausibility
+
+Skill alignment relative to stated roles
+
+3. Authenticity & Risk Signal Detection
+
+The platform flags potential risk signals such as:
+
+Overly polished or AI-generated language patterns
+
+Skill inflation or role mismatch
+
+Copy-paste errors (wrong names, emails, mismatched companies)
+
+Inconsistent job descriptions across time
+
+Unrealistic career acceleration or compression
+
+These are signals, not accusations.
+
+4. Scoring & Categorization
+
+Results are grouped into:
+
+Low concern indicators
+
+Moderate review indicators
+
+High-attention risk indicators
+
+Each flag includes plain-language explanations so hiring teams understand why something was flagged.
+
+5. Human Review & Decision Support
+
+You decide what matters.
+You decide what to ignore.
+You decide next steps.
+
+ResumeLogik never auto-rejects candidates and never determines eligibility.
+
+What ResumeLogik Does Not Do
+
+To be explicit:
+
+❌ No employment verification
+
+❌ No education verification
+
+❌ No criminal history checks
+
+❌ No credit reports
+
+❌ No identity validation
+
+❌ No third-party data sources
+
+❌ No hiring recommendations
+
+Because ResumeLogik does not collect, verify, or report consumer data from external sources, it does not operate as a Consumer Reporting Agency (CRA).
+
+Why ResumeLogik Is Not a CRA
+
+ResumeLogik does not meet the definition of a consumer report under the Fair Credit Reporting Act (FCRA) because:
+
+All analysis is derived solely from employer-submitted résumé content
+
+No external databases or verification services are used
+
+No factual determinations are made about a candidate’s background
+
+No pass/fail or hire/no-hire recommendations are issued
+
+The platform provides analytical insights, not factual findings.
+
+ResumeLogik functions as a risk-prevention and decision-support tool, similar to résumé review checklists or internal screening heuristics — enhanced with AI for scale and consistency.
+
+Your Role as the Decision-Maker
+
+All hiring decisions remain entirely with the employer.
+
+ResumeLogik is designed to:
+
+Reduce blind spots
+
+Improve consistency across reviewers
+
+Surface issues earlier in the hiring funnel
+
+Support fairer, more documented decision-making
+
+It is one input among many — not a substitute for interviews, reference checks, background screenings, or professional judgment.
+
+Key Benefits to Employers & Recruiters
+✔ Faster Pre-Screening
+
+Identify potential issues early without manual résumé deep dives.
+
+✔ Reduced Hiring Risk
+
+Catch inconsistencies and red flags before they become costly mistakes.
+
+✔ Better Interview Quality
+
+Use flagged areas to guide targeted interview questions.
+
+✔ Consistency Across Reviewers
+
+Apply the same analytical lens across all candidates.
+
+✔ Compliance-Friendly Design
+
+No external data. No automated decisions. No hidden checks.
+
+Designed for Responsible AI Use
+
+ResumeLogik was built with intentional boundaries:
+
+Transparency over automation
+
+Assistance over authority
+
+Insight over judgment
+
+The platform supports ethical, explainable AI that works alongside human decision-makers — not around them.
+
+Bottom Line
+
+ResumeLogik helps you see what’s easy to miss,
+question what looks too perfect,
+and hire with more confidence — without crossing compliance lines.
+
+You stay in control.
+The AI stays in its lane.
