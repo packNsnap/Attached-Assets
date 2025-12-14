@@ -1,0 +1,67 @@
+You are working inside my existing ResumeLogik SaaS (Next.js + Tailwind + shadcn/ui). We already have auth + a database + a Stripe checkout flow for paid tiers.
+
+Goal:
+Create a NEW hidden plan called TRIAL_14 that only admins can assign from an Admin Panel. This trial tier must NOT appear anywhere on the public Pricing page or Payment/Checkout page. Users cannot self-select it. Only admins can grant it.
+
+Requirements (must all be met):
+1) Add a plan/entitlements system (server-side source of truth).
+   - Plans: FREE, GROWTH, PRO, ENTERPRISE, TRIAL_14
+   - TRIAL_14 is hidden (not returned from any public pricing endpoint, not listed in UI, not eligible in checkout).
+   - Each user has entitlements: plan, planStartAt, planEndAt (nullable), aiCreditsTotal, aiCreditsUsed, candidateLimit, jobLimit, bulkUploadEnabled, exportsLimit, flaggedDeepRunsLimit.
+   - Defaults:
+     - FREE: small limits
+     - TRIAL_14: 1 jobLimit, 25 candidateLimit, aiCreditsTotal=150, flaggedDeepRunsLimit=10, exportsLimit=5, bulkUploadEnabled=false, planEndAt = now + 14 days
+   - Paid plans keep existing Stripe behavior. TRIAL_14 bypasses Stripe.
+
+2) Database changes:
+   - If we already have a subscription table, DO NOT break it. Add a new table for entitlements or extend user safely.
+   - Create a table like `UserEntitlement` (or extend existing `Subscription`) with:
+     userId (unique), plan (enum/string), planStartAt, planEndAt,
+     aiCreditsTotal, aiCreditsUsed,
+     candidateLimit, jobLimit,
+     bulkUploadEnabled (bool),
+     exportsLimit, flaggedDeepRunsLimit,
+     updatedAt
+   - Create `AdminAuditLog` table:
+     id, adminUserId, targetUserId, actionType, payloadJson, createdAt
+
+3) Admin-only panel to grant access:
+   - Add /admin page guarded by admin role (server-side check, not client-only).
+   - Admin can search users by email/name.
+   - Admin can click a user and:
+     - Set plan to any of: FREE/GROWTH/PRO/ENTERPRISE/TRIAL_14
+     - If TRIAL_14 selected: auto-fill planEndAt = now + 14 days (editable)
+     - Optionally override limits/credits (aiCreditsTotal, candidateLimit, etc.)
+     - Save changes
+     - Log every change to AdminAuditLog (include previous values + new values)
+   - Include a “Revoke to FREE” button.
+
+4) Ensure TRIAL_14 is truly hidden:
+   - Pricing page must only render FREE/GROWTH/PRO/ENTERPRISE. Hardcode the displayed list so it can’t accidentally include trial.
+   - Any endpoint used by pricing page (ex: /api/pricing) must only return public plans (exclude TRIAL_14).
+   - Stripe checkout endpoint must reject plan=TRIAL_14 if someone tries to call it manually (return 400).
+   - Any UI that lists “available plans” must be fed by a “public plans” function that excludes trial.
+
+5) Feature gating everywhere:
+   - Create a single server-side helper `getUserEntitlements(userId)` that is used by:
+     - resume analysis / AI calls (decrement aiCreditsUsed per “AI move”)
+     - bulk upload (must be blocked unless bulkUploadEnabled)
+     - exports (block after exportsLimit)
+     - flagged deep runs (block after flaggedDeepRunsLimit)
+     - candidate creation (block after candidateLimit)
+   - If planEndAt exists AND now > planEndAt, automatically downgrade user to FREE immediately (on their next request) and log an AdminAuditLog action type like “AUTO_EXPIRE_DOWNGRADE”.
+
+6) UI feedback:
+   - When a user hits a limit, show a clear message + “Upgrade” button that routes to the paid pricing page (not trial).
+   - In the admin panel, show current usage numbers (aiCreditsUsed, candidates used if tracked).
+
+Implementation constraints:
+- Keep changes minimal and localized.
+- Do not refactor the whole app.
+- Prefer adding a small entitlements layer + middleware/helper rather than touching many components.
+- Provide the exact file list you changed and why.
+- After implementation, give me quick manual test steps:
+  - Admin grants TRIAL_14 to a user and user can access trial limits
+  - Trial doesn’t show on pricing page
+  - Checkout rejects TRIAL_14
+  - Trial expires and user downgrades to FREE automatically
