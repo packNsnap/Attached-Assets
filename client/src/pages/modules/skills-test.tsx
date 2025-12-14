@@ -54,6 +54,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
+  candidateId: z.string().optional(),
   roleName: z.string().min(2, "Role name is required"),
   difficulty: z.string().min(1, "Difficulty is required"),
   skills: z.string().min(2, "Skills are required"),
@@ -111,6 +112,7 @@ export default function SkillsTestModule() {
   const [previewTestId, setPreviewTestId] = useState<string | null>(null);
   const [pendingJobDescription, setPendingJobDescription] = useState<string>("");
   const [viewResultsInvitation, setViewResultsInvitation] = useState<SkillsTestInvitation | null>(null);
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
 
   // Data queries - with auto-refresh every 10 seconds for real-time updates
   const { data: recommendations = [] } = useQuery<SkillsTestRecommendation[]>({
@@ -140,6 +142,10 @@ export default function SkillsTestModule() {
 
   const { data: jobs = [] } = useQuery<{ id: string; title: string; description: string }[]>({
     queryKey: ["/api/jobs"],
+  });
+
+  const { data: candidates = [] } = useQuery<{ id: string; name: string; email?: string; jobId?: string }[]>({
+    queryKey: ["/api/candidates"],
   });
 
   const { data: testResponses = [], isLoading: isLoadingResponses } = useQuery<SkillsTestResponse[]>({
@@ -275,6 +281,7 @@ export default function SkillsTestModule() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      candidateId: "",
       roleName: "",
       difficulty: "Intermediate",
       skills: "",
@@ -282,6 +289,38 @@ export default function SkillsTestModule() {
       timePerQuestion: "25",
     },
   });
+
+  // Handle candidate selection - fetch and pre-fill resume analysis data
+  const handleCandidateSelect = async (candidateId: string) => {
+    setSelectedCandidateId(candidateId);
+    form.setValue("candidateId", candidateId);
+    
+    if (!candidateId) {
+      form.setValue("skills", "");
+      form.setValue("roleName", "");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/candidates/${candidateId}/resume-analysis`);
+      if (!res.ok) return;
+      
+      const analysis = await res.json();
+      
+      // Pre-fill role from jobTitle
+      if (analysis.jobTitle) {
+        form.setValue("roleName", analysis.jobTitle);
+      }
+      
+      // Pre-fill skills from matched and extra skills
+      if (analysis.matchedSkills && analysis.matchedSkills.length > 0) {
+        const topSkills = analysis.matchedSkills.slice(0, 5);
+        form.setValue("skills", topSkills.join(", "));
+      }
+    } catch (error) {
+      console.error("Failed to load candidate resume analysis:", error);
+    }
+  };
 
   // Open workflow for a recommendation
   const startWorkflow = (rec: SkillsTestRecommendation) => {
@@ -640,6 +679,33 @@ export default function SkillsTestModule() {
             {workflowStep === "configure" && (
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(generateTest)} className="space-y-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="candidateId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Candidate (Optional)</FormLabel>
+                        <FormControl>
+                          <Select onValueChange={handleCandidateSelect} value={field.value || ""}>
+                            <SelectTrigger data-testid="select-candidate">
+                              <SelectValue placeholder="Choose a candidate to auto-fill from their resume..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">No candidate selected</SelectItem>
+                              {candidates.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
+                        <FormDescription>Selecting a candidate will auto-fill skills from their resume analysis.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
                   <FormField
                     control={form.control}
                     name="roleName"

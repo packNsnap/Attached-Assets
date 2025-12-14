@@ -1414,6 +1414,32 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/candidates/:id/resume-analysis", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const candidateId = req.params.id;
+      
+      // Verify candidate belongs to user
+      const candidate = await storage.getCandidate(candidateId, userId);
+      if (!candidate) {
+        res.status(404).json({ error: "Candidate not found" });
+        return;
+      }
+      
+      const analyses = await storage.getResumeAnalysisByCandidateId(candidateId);
+      if (!analyses || analyses.length === 0) {
+        res.status(404).json({ error: "No resume analysis found" });
+        return;
+      }
+      
+      // Return the latest analysis (first one)
+      const latestAnalysis = analyses[0];
+      res.json(latestAnalysis);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch resume analysis" });
+    }
+  });
+
   app.post("/api/resume-analysis", isAuthenticated, async (req: any, res) => {
     try {
       const analysisData = insertResumeAnalysisSchema.parse(req.body);
