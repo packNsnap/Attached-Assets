@@ -1682,6 +1682,18 @@ export async function registerRoutes(
         return;
       }
 
+      // Check baseline analyses limit
+      const canUseBaseline = await storage.checkCanUseFeature(userId, "baselineAnalyses");
+      if (!canUseBaseline.allowed) {
+        res.status(403).json({
+          error: "Resume analysis limit reached",
+          message: `You've used ${canUseBaseline.current} of ${canUseBaseline.limit} resume analyses this month. Please upgrade your plan.`,
+          current: canUseBaseline.current,
+          limit: canUseBaseline.limit
+        });
+        return;
+      }
+
       // Check AI usage limit if candidateId is provided
       if (candidateId) {
         const canUse = await storage.checkCanUseAiAction(userId, candidateId, "resume_analysis");
@@ -1748,6 +1760,9 @@ export async function registerRoutes(
           console.error("Failed to save analysis to database:", saveError);
         }
       }
+      
+      // Increment baseline analyses usage
+      await storage.incrementUsage(userId, "baselineAnalyses");
       
       res.json(result);
     } catch (error) {
@@ -1995,12 +2010,25 @@ Be specific and practical - these should reflect what real companies actually in
     }
   });
 
-  app.post("/api/generate-job-description", async (req, res) => {
+  app.post("/api/generate-job-description", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { title, level, location, skills, notes } = req.body;
       
       if (!title || !level || !location || !skills) {
         res.status(400).json({ error: "Missing required fields: title, level, location, skills" });
+        return;
+      }
+
+      // Check job description generation limit
+      const canUse = await storage.checkCanUseFeature(userId, "jobDescriptions");
+      if (!canUse.allowed) {
+        res.status(403).json({
+          error: "Job description limit reached",
+          message: `You've used ${canUse.current} of ${canUse.limit} job descriptions this month. Please upgrade your plan.`,
+          current: canUse.current,
+          limit: canUse.limit
+        });
         return;
       }
 
@@ -2035,6 +2063,9 @@ Make the description professional but engaging. Use bullet points for responsibi
       const result = JSON.parse(content);
       const salaryRange = calculateRealisticSalary(level, location);
       
+      // Increment usage after successful generation
+      await storage.incrementUsage(userId, "jobDescriptions");
+      
       res.json({
         description: result.description,
         salaryRange,
@@ -2063,10 +2094,27 @@ Make the description professional but engaging. Use bullet points for responsibi
   app.post("/api/skills-tests", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
+      
+      // Check skills test creation limit
+      const canUse = await storage.checkCanUseFeature(userId, "skillsTests");
+      if (!canUse.allowed) {
+        res.status(403).json({
+          error: "Skills test limit reached",
+          message: `You've created ${canUse.current} of ${canUse.limit} skills tests this month. Please upgrade your plan.`,
+          current: canUse.current,
+          limit: canUse.limit
+        });
+        return;
+      }
+      
       const testData = insertSkillsTestSchema.parse(req.body);
       // Override userId with authenticated user's ID to prevent privilege escalation
       testData.userId = userId;
       const test = await storage.createSkillsTest(testData);
+      
+      // Increment usage after successful creation
+      await storage.incrementUsage(userId, "skillsTests");
+      
       res.json(test);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -2655,6 +2703,18 @@ Respond with ONLY a number between 0 and 100.`;
         return;
       }
 
+      // Check interview set generation limit
+      const canUseInterviews = await storage.checkCanUseFeature(userId, "interviewSets");
+      if (!canUseInterviews.allowed) {
+        res.status(403).json({
+          error: "Interview set limit reached",
+          message: `You've generated ${canUseInterviews.current} of ${canUseInterviews.limit} interview question sets this month. Please upgrade your plan.`,
+          current: canUseInterviews.current,
+          limit: canUseInterviews.limit
+        });
+        return;
+      }
+
       // Check AI usage limit if candidateId is provided
       if (candidateId) {
         const canUse = await storage.checkCanUseAiAction(userId, candidateId, "interview_questions");
@@ -2903,6 +2963,9 @@ Respond in this exact JSON format:
       if (candidateId) {
         await storage.incrementAiActionUsage(userId, candidateId, "interview_questions");
       }
+      
+      // Increment interview sets usage
+      await storage.incrementUsage(userId, "interviewSets");
       
       res.json({
         questions: finalQuestions,
@@ -3749,6 +3812,18 @@ Make sure all emails reference the employee by name (${employee_name}) and their
         return;
       }
 
+      // Check policy generation limit
+      const canUse = await storage.checkCanUseFeature(userId, "policies");
+      if (!canUse.allowed) {
+        res.status(403).json({
+          error: "Policy generation limit reached",
+          message: `You've generated ${canUse.current} of ${canUse.limit} policies this month. Please upgrade your plan.`,
+          current: canUse.current,
+          limit: canUse.limit
+        });
+        return;
+      }
+
       // Curated reference sources based on policy type (real, authoritative HR sources)
       const policyReferences: Record<string, Array<{ title: string; url: string; snippet: string }>> = {
         "remote-work": [
@@ -3898,6 +3973,9 @@ List the reference sources used in the sources array.`;
         res.status(500).json({ error: "Invalid response structure from AI" });
         return;
       }
+
+      // Increment policies usage after successful generation
+      await storage.incrementUsage(userId, "policies");
 
       res.json(parsed);
     } catch (error) {
