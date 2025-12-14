@@ -130,31 +130,27 @@ export default function WhoItsForPage() {
                 ResumeLogik
               </span>
             </Link>
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden md:flex items-center space-x-6">
               <Link href="/features">
-                <span className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                  Features
-                </span>
+                <span className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">Features</span>
               </Link>
               <Link href="/how-it-works">
-                <span className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                  How It Works
-                </span>
+                <span className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">How It Works</span>
               </Link>
               <Link href="/who-its-for">
-                <span className="text-sm font-medium text-foreground cursor-pointer">
-                  Who It's For
-                </span>
+                <span className="text-sm font-medium text-foreground cursor-pointer">Who It's For</span>
+              </Link>
+              <Link href="/what-we-catch">
+                <span className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">What We Catch</span>
+              </Link>
+              <Link href="/common-mistakes">
+                <span className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">Common Mistakes</span>
               </Link>
               <Link href="/pricing">
-                <span className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                  Pricing
-                </span>
+                <span className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer">Pricing</span>
               </Link>
               <Link href="/auth">
-                <Button variant="outline" size="sm">
-                  Sign In
-                </Button>
+                <Button variant="outline" size="sm">Sign In</Button>
               </Link>
               <Link href="/auth">
                 <Button size="sm">Get Started</Button>

@@ -297,21 +297,24 @@ export default function PricingPage() {
                 Resume Logik
               </span>
             </Link>
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center space-x-6">
+              <a href="/features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
+              <a href="/how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
+              <a href="/who-its-for" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Who It's For</a>
+              <a href="/what-we-catch" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">What We Catch</a>
+              <a href="/common-mistakes" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Common Mistakes</a>
+              <a href="/pricing" className="text-sm font-medium text-foreground">Pricing</a>
               {subscriptionData?.hasActiveSubscription && (
-                <Button variant="outline" onClick={handleManageSubscription} data-testid="button-manage-subscription">
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Manage Subscription
+                <Button variant="outline" size="sm" onClick={handleManageSubscription} data-testid="button-manage-subscription">
+                  <ExternalLink className="h-4 w-4 mr-1" />
+                  Manage
                 </Button>
               )}
-              <Button variant="ghost" asChild data-testid="link-login">
-                <a href="/api/login">Log In</a>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/auth">Sign In</a>
               </Button>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" asChild data-testid="link-get-started">
-                <a href="/api/login">
-                  Get Started
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </a>
+              <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600" asChild>
+                <a href="/auth">Get Started</a>
               </Button>
             </div>
           </div>

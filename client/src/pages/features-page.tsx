@@ -400,19 +400,18 @@ export default function FeaturesPage() {
                 Resume Logik
               </span>
             </Link>
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="ghost" asChild className="hidden sm:inline-flex" data-testid="link-pricing">
-                <a href="/pricing">Pricing</a>
+            <div className="hidden md:flex items-center space-x-6">
+              <a href="/features" className="text-sm font-medium text-foreground">Features</a>
+              <a href="/how-it-works" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
+              <a href="/who-its-for" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Who It's For</a>
+              <a href="/what-we-catch" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">What We Catch</a>
+              <a href="/common-mistakes" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Common Mistakes</a>
+              <a href="/pricing" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+              <Button variant="outline" size="sm" asChild>
+                <a href="/auth">Sign In</a>
               </Button>
-              <Button variant="ghost" asChild className="hidden sm:inline-flex" data-testid="link-login">
-                <a href="/auth">Log In</a>
-              </Button>
-              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-sm sm:text-base h-9 sm:h-10" asChild data-testid="link-get-started">
-                <a href="/auth">
-                  <span className="hidden sm:inline">Get Started</span>
-                  <span className="sm:hidden">Start</span>
-                  <ArrowRight className="ml-1 sm:ml-2 h-3.5 sm:h-4 w-3.5 sm:w-4" />
-                </a>
+              <Button size="sm" className="bg-gradient-to-r from-blue-600 to-purple-600" asChild>
+                <a href="/auth">Get Started</a>
               </Button>
             </div>
           </div>
