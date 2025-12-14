@@ -285,15 +285,118 @@ export const insertSkillsTestResponseSchema = createInsertSchema(skillsTestRespo
 export type InsertSkillsTestResponse = z.infer<typeof insertSkillsTestResponseSchema>;
 export type SkillsTestResponse = typeof skillsTestResponses.$inferSelect;
 
-// Subscription plan types - Updated pricing tiers
+// Subscription plan types - Value-based pricing tiers
 export const PLAN_LIMITS = {
-  free: { jobs: 1, candidates: 5, aiActionsPerCandidate: 8, price: 0 },
-  growth: { jobs: 5, candidates: 30, aiActionsPerCandidate: 15, price: 2900 }, // $29.00 in cents
-  pro: { jobs: 20, candidates: 150, aiActionsPerCandidate: 15, price: 4999 }, // $49.99 in cents
-  enterprise: { jobs: -1, candidates: 1000, aiActionsPerCandidate: 15, price: 15000 }, // $150+ in cents, -1 = unlimited
+  free: {
+    price: 0,
+    candidates: 5,
+    activeJobs: 1,
+    baselineAnalyses: 5,
+    advancedReviews: 0,
+    autoFlagRateCap: 0,
+    policies: 1,
+    jobDescriptions: 2,
+    skillsTests: 1,
+    interviewSets: 3,
+    emails: 10,
+    bulkUpload: false,
+    bulkBatches: 0,
+    maxResumesPerBatch: 0,
+    bulkAnalysisRuns: 0,
+    perCandidateCaps: {
+      basicResumeRuns: 2,
+      flaggedRuns: 0,
+      jobFitScoring: 1,
+      interviewPacks: 1,
+      referenceEmails: 1,
+      onboardingDocs: 0,
+      performanceDocs: 0,
+    },
+  },
+  starter: {
+    price: 4999, // $49.99
+    candidates: 25,
+    activeJobs: 5,
+    baselineAnalyses: 75,
+    advancedReviews: 10,
+    autoFlagRateCap: 0.15,
+    policies: 10,
+    jobDescriptions: 15,
+    skillsTests: 8,
+    interviewSets: 25,
+    emails: 150,
+    bulkUpload: false,
+    bulkBatches: 0,
+    maxResumesPerBatch: 0,
+    bulkAnalysisRuns: 0,
+    perCandidateCaps: {
+      basicResumeRuns: 4,
+      flaggedRuns: 1,
+      jobFitScoring: 2,
+      interviewPacks: 2,
+      referenceEmails: 2,
+      onboardingDocs: 1,
+      performanceDocs: 1,
+    },
+  },
+  growth: {
+    price: 9999, // $99.99
+    candidates: 150,
+    activeJobs: 20,
+    baselineAnalyses: 500,
+    advancedReviews: 40,
+    autoFlagRateCap: 0.25,
+    policies: 30,
+    jobDescriptions: 50,
+    skillsTests: 20,
+    interviewSets: 60,
+    emails: 400,
+    bulkUpload: true,
+    bulkBatches: 10,
+    maxResumesPerBatch: 20,
+    bulkAnalysisRuns: 10,
+    perCandidateCaps: {
+      basicResumeRuns: 4,
+      flaggedRuns: 1,
+      jobFitScoring: 2,
+      interviewPacks: 2,
+      referenceEmails: 2,
+      onboardingDocs: 1,
+      performanceDocs: 1,
+    },
+  },
+  enterprise: {
+    price: 24900, // $249.00
+    candidates: 500,
+    activeJobs: -1, // unlimited
+    baselineAnalyses: 2000,
+    advancedReviews: 200,
+    autoFlagRateCap: 0.35,
+    policies: 100,
+    jobDescriptions: 200,
+    skillsTests: 100,
+    interviewSets: 200,
+    emails: 2000,
+    bulkUpload: true,
+    bulkBatches: 100,
+    maxResumesPerBatch: 50,
+    bulkAnalysisRuns: 100,
+    perCandidateCaps: {
+      basicResumeRuns: 4,
+      flaggedRuns: 1,
+      jobFitScoring: 2,
+      interviewPacks: 2,
+      referenceEmails: 2,
+      onboardingDocs: 1,
+      performanceDocs: 1,
+    },
+  },
 } as const;
 
 export type PlanType = keyof typeof PLAN_LIMITS;
+
+// Risk score threshold for triggering flagged review
+export const FLAG_THRESHOLD = 60;
 
 export const subscriptions = pgTable("subscriptions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -317,14 +420,22 @@ export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type Subscription = typeof subscriptions.$inferSelect;
 
-// Usage tracking per user per month
+// Usage tracking per user per month - comprehensive feature tracking
 export const usageTracking = pgTable("usage_tracking", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
   periodStart: timestamp("period_start").notNull(),
   periodEnd: timestamp("period_end").notNull(),
-  jobsCreated: integer("jobs_created").notNull().default(0),
   candidatesAdded: integer("candidates_added").notNull().default(0),
+  baselineAnalyses: integer("baseline_analyses").notNull().default(0),
+  advancedReviews: integer("advanced_reviews").notNull().default(0),
+  jobDescriptions: integer("job_descriptions").notNull().default(0),
+  policies: integer("policies").notNull().default(0),
+  skillsTests: integer("skills_tests").notNull().default(0),
+  interviewSets: integer("interview_sets").notNull().default(0),
+  emails: integer("emails").notNull().default(0),
+  bulkBatches: integer("bulk_batches").notNull().default(0),
+  bulkAnalysisRuns: integer("bulk_analysis_runs").notNull().default(0),
   createdAt: timestamp("created_at").notNull().default(sql`now()`),
 });
 
@@ -335,6 +446,31 @@ export const insertUsageTrackingSchema = createInsertSchema(usageTracking).omit(
 
 export type InsertUsageTracking = z.infer<typeof insertUsageTrackingSchema>;
 export type UsageTracking = typeof usageTracking.$inferSelect;
+
+// Per-candidate action usage tracking (monthly reset)
+export const candidateActionUsage = pgTable("candidate_action_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  candidateId: varchar("candidate_id").notNull(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  basicResumeRuns: integer("basic_resume_runs").notNull().default(0),
+  flaggedRuns: integer("flagged_runs").notNull().default(0),
+  jobFitScoring: integer("job_fit_scoring").notNull().default(0),
+  interviewPacks: integer("interview_packs").notNull().default(0),
+  referenceEmails: integer("reference_emails").notNull().default(0),
+  onboardingDocs: integer("onboarding_docs").notNull().default(0),
+  performanceDocs: integer("performance_docs").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export const insertCandidateActionUsageSchema = createInsertSchema(candidateActionUsage).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCandidateActionUsage = z.infer<typeof insertCandidateActionUsageSchema>;
+export type CandidateActionUsage = typeof candidateActionUsage.$inferSelect;
 
 // AI action usage tracking per candidate per service
 export const aiActionUsage = pgTable("ai_action_usage", {

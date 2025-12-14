@@ -172,8 +172,10 @@ export interface IStorage {
   // Usage tracking methods
   getUsageTracking(userId: string, periodStart: Date, periodEnd: Date): Promise<UsageTracking | undefined>;
   createUsageTracking(usage: InsertUsageTracking): Promise<UsageTracking>;
-  incrementJobsCreated(userId: string): Promise<void>;
+  incrementUsage(userId: string, field: keyof Omit<UsageTracking, 'id' | 'userId' | 'periodStart' | 'periodEnd' | 'createdAt'>): Promise<void>;
   incrementCandidatesAdded(userId: string): Promise<void>;
+  checkBulkUploadAllowed(userId: string): Promise<boolean>;
+  checkCanUseFeature(userId: string, feature: string): Promise<{ allowed: boolean; current: number; limit: number }>;
   
   // AI action usage methods
   getAiActionUsage(userId: string, candidateId: string, serviceType: string): Promise<AiActionUsage | undefined>;
@@ -701,25 +703,31 @@ export class DatabaseStorage implements IStorage {
         userId,
         periodStart: start,
         periodEnd: end,
-        jobsCreated: 0,
         candidatesAdded: 0,
+        baselineAnalyses: 0,
+        advancedReviews: 0,
+        jobDescriptions: 0,
+        policies: 0,
+        skillsTests: 0,
+        interviewSets: 0,
+        emails: 0,
+        bulkBatches: 0,
+        bulkAnalysisRuns: 0,
       });
     }
     return usage;
   }
 
-  async incrementJobsCreated(userId: string): Promise<void> {
+  async incrementUsage(userId: string, field: keyof Omit<UsageTracking, 'id' | 'userId' | 'periodStart' | 'periodEnd' | 'createdAt'>): Promise<void> {
     const usage = await this.getOrCreateCurrentUsageTracking(userId);
+    const currentValue = (usage[field] as number) || 0;
     await db.update(usageTracking)
-      .set({ jobsCreated: (usage.jobsCreated || 0) + 1 })
+      .set({ [field]: currentValue + 1 })
       .where(eq(usageTracking.id, usage.id));
   }
 
   async incrementCandidatesAdded(userId: string): Promise<void> {
-    const usage = await this.getOrCreateCurrentUsageTracking(userId);
-    await db.update(usageTracking)
-      .set({ candidatesAdded: (usage.candidatesAdded || 0) + 1 })
-      .where(eq(usageTracking.id, usage.id));
+    await this.incrementUsage(userId, 'candidatesAdded');
   }
 
   // AI action usage methods
@@ -784,7 +792,7 @@ export class DatabaseStorage implements IStorage {
     // Check if user has active free access granted by admin
     const user = await this.getUser(userId);
     if (user && user.freeAccessUntil && new Date(user.freeAccessUntil) > new Date()) {
-      return "pro";
+      return "growth"; // Admin-granted access gives growth tier
     }
     // Otherwise check subscription
     const sub = await this.getOrCreateSubscription(userId);
@@ -804,11 +812,11 @@ export class DatabaseStorage implements IStorage {
     const allJobs = await this.getJobs(userId);
     const activeJobs = allJobs.filter(j => j.status === "active").length;
     
-    if (limits.jobs === -1) {
+    if (limits.activeJobs === -1) {
       return { allowed: true, current: activeJobs, limit: -1 };
     }
     
-    return { allowed: activeJobs < limits.jobs, current: activeJobs, limit: limits.jobs };
+    return { allowed: activeJobs < limits.activeJobs, current: activeJobs, limit: limits.activeJobs };
   }
 
   async checkCanAddCandidate(userId: string): Promise<{ allowed: boolean; current: number; limit: number }> {
@@ -823,11 +831,47 @@ export class DatabaseStorage implements IStorage {
     const usage = await this.getOrCreateCurrentUsageTracking(userId);
     const current = usage.candidatesAdded || 0;
     
-    if (limits.candidates === -1) {
+    return { allowed: current < limits.candidates, current, limit: limits.candidates };
+  }
+
+  async checkCanUseFeature(userId: string, feature: keyof Omit<typeof PLAN_LIMITS.free, 'price' | 'perCandidateCaps' | 'bulkUpload'>): Promise<{ allowed: boolean; current: number; limit: number }> {
+    // Admins have unlimited access
+    if (await this.isUserAdmin(userId)) {
+      return { allowed: true, current: 0, limit: -1 };
+    }
+    
+    const plan = await this.getEffectivePlan(userId);
+    const limits = PLAN_LIMITS[plan];
+    const usage = await this.getOrCreateCurrentUsageTracking(userId);
+    
+    const limitValue = limits[feature] as number;
+    const usageFieldMap: Record<string, keyof UsageTracking> = {
+      candidates: 'candidatesAdded',
+      baselineAnalyses: 'baselineAnalyses',
+      advancedReviews: 'advancedReviews',
+      policies: 'policies',
+      jobDescriptions: 'jobDescriptions',
+      skillsTests: 'skillsTests',
+      interviewSets: 'interviewSets',
+      emails: 'emails',
+      bulkBatches: 'bulkBatches',
+      bulkAnalysisRuns: 'bulkAnalysisRuns',
+    };
+    
+    const usageField = usageFieldMap[feature];
+    const current = usageField ? ((usage[usageField] as number) || 0) : 0;
+    
+    if (limitValue === -1) {
       return { allowed: true, current, limit: -1 };
     }
     
-    return { allowed: current < limits.candidates, current, limit: limits.candidates };
+    return { allowed: current < limitValue, current, limit: limitValue };
+  }
+
+  async checkBulkUploadAllowed(userId: string): Promise<boolean> {
+    if (await this.isUserAdmin(userId)) return true;
+    const plan = await this.getEffectivePlan(userId);
+    return PLAN_LIMITS[plan].bulkUpload;
   }
 
   async checkCanUseAiAction(userId: string, candidateId: string, serviceType: string): Promise<{ allowed: boolean; current: number; limit: number }> {
@@ -849,11 +893,14 @@ export class DatabaseStorage implements IStorage {
     
     const totalActions = allUsages.reduce((sum, u) => sum + (u.actionCount || 0), 0);
     
-    if (limits.aiActionsPerCandidate === -1) {
+    // Use baseline analyses limit as general AI action limit
+    const aiLimit = limits.baselineAnalyses;
+    
+    if (aiLimit === -1) {
       return { allowed: true, current: totalActions, limit: -1 };
     }
     
-    return { allowed: totalActions < limits.aiActionsPerCandidate, current: totalActions, limit: limits.aiActionsPerCandidate };
+    return { allowed: totalActions < aiLimit, current: totalActions, limit: aiLimit };
   }
 
   async getUserUsageSummary(userId: string): Promise<{
@@ -872,7 +919,7 @@ export class DatabaseStorage implements IStorage {
     
     return {
       plan,
-      jobs: { current: activeJobs, limit: limits.jobs },
+      jobs: { current: activeJobs, limit: limits.activeJobs },
       candidates: { current: usage.candidatesAdded || 0, limit: limits.candidates },
       periodEnd: usage.periodEnd,
     };

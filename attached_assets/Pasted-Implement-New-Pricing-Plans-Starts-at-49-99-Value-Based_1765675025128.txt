@@ -1,0 +1,299 @@
+Implement New Pricing Plans (Starts at $49.99) + Value-Based Limits + Auto Flagged Reviews + Bulk Mid-Tier+
+Goal
+
+Replace the current pricing/limits with a model that:
+
+Starts at $49.99
+
+Clearly shows VALUE (what user gets, not “AI actions”)
+
+Uses automatic advanced reviews (flagged run) triggered by risk signals
+
+Enforces tier-based auto-flag limits so costs cannot spike
+
+Makes Bulk Upload available only on Mid-tier and above
+
+Enforces limits server-side with monthly resets + usage dashboard
+
+1) Plans and Pricing
+
+Create 4 plans:
+
+FREE – $0 (trial only, very limited)
+
+STARTER – $49.99/mo (SMB entry)
+
+GROWTH (Mid-tier) – $99.99/mo (best value) ✅ Bulk Upload enabled
+
+ENTERPRISE – $249+/mo (scale + compliance)
+
+Note: user asked “bulk upload available to mid tier only” — interpret as: Bulk is enabled starting at Growth (mid-tier) and above, not Starter or Free.
+
+2) Automatic Flagged Reviews (Core Rule)
+
+Flagged Review = advanced plausibility/fraud analysis using gpt-4.1.
+This runs automatically when risk indicators are detected.
+
+Key enforcement (must implement):
+
+Flagged reviews are controlled by tier-based caps, NOT user choice.
+
+Implement both:
+
+Per-candidate cap: max 1 flagged review per candidate per month (hard stop)
+
+Org monthly cap: based on tier
+
+Auto-flag rate cap: % of candidates allowed to trigger flagged review per month (tier-based)
+
+If cap is hit, skip flagged review and show:
+
+“Advanced review limit reached for this month. Baseline analysis still completed.”
+
+3) Limits by Tier (Show as VALUE, not “actions”)
+FREE ($0)
+
+Candidates/month: 5
+
+Active job positions: 1
+
+Baseline Resume Analysis runs: 5
+
+Advanced (flagged) reviews: 0 (disabled)
+
+Policies/month: 1
+
+Job Descriptions/month: 2
+
+Skills Tests/month: 1
+
+Interview Question Sets/month: 3
+
+Emails/month: 10
+
+Bulk Upload: Not available
+
+STARTER ($49.99)
+
+SMB plan that feels valuable but stays safe.
+
+Candidates/month: 25
+
+Active job positions: 5
+
+Baseline Resume Analyses/month: 75 (allows reruns)
+
+Advanced Reviews/month (auto-flag): 10 max
+
+Auto-flag rate cap: up to 15% of candidates in a month
+
+Policies/month: 10
+
+Job Descriptions/month: 15
+
+Skills Tests/month: 8
+
+Interview Question Sets/month: 25
+
+Emails/month: 150
+
+Bulk Upload: Not available
+
+GROWTH (Mid-tier) ($99.99) ✅ Best Value + Bulk
+
+Candidates/month: 150
+
+Active job positions: 20
+
+Baseline Resume Analyses/month: 500
+
+Advanced Reviews/month (auto-flag): 40 max
+
+Auto-flag rate cap: up to 25%
+
+Policies/month: 30
+
+Job Descriptions/month: 50
+
+Skills Tests/month: 20
+
+Interview Question Sets/month: 60
+
+Emails/month: 400
+
+Bulk Upload: Enabled
+
+Bulk batches/month: 10
+
+Max resumes per batch: 20
+
+Bulk analysis runs/month: 10
+
+ENTERPRISE ($249+)
+
+Candidates/month: 500+ (configurable)
+
+Active job positions: Unlimited
+
+Baseline analyses: High/unlimited cap
+
+Advanced Reviews: 200 max/month (or configurable)
+
+Auto-flag rate cap: up to 35%
+
+Policies/JDs/Tests/Emails: High/unlimited caps
+
+Bulk Upload:
+
+Bulk batches/month: 100
+
+Max resumes/batch: 50
+
+Bulk analysis runs/month: 100
+
+Add internal throttles and audit logging
+
+4) Per-candidate caps (hard rules for all paid tiers)
+
+Enforce per candidate per month:
+
+Basic resume analysis runs: max 4
+
+Flagged reviews: max 1 (because flagged is automatic; prevents reruns abuse)
+
+Job fit scoring: max 2
+
+Interview pack (candidate-specific): max 2
+
+Reference email generation: max 2
+
+Onboarding doc generation: max 1
+
+Performance doc generation: max 1
+
+Free plan should be tighter:
+
+Basic resume analysis: max 2
+
+Flagged: 0
+
+5) Feature Buckets / Counters (server-side)
+
+Track monthly org usage per feature:
+
+candidates_created
+
+baseline_resume_analyses
+
+advanced_reviews_flagged
+
+job_descriptions
+
+policies
+
+skills_tests
+
+interview_sets
+
+emails
+
+bulk_batches
+
+bulk_analysis_runs
+
+Track monthly candidate usage:
+
+basic_resume_runs
+
+flagged_runs
+
+job_fit_runs
+
+candidate_interview_packs
+
+reference_emails
+
+onboarding_docs
+
+performance_docs
+
+Reset all counters monthly.
+
+6) Flagged Review Trigger Logic (must be deterministic)
+Flow on resume upload / analysis:
+
+Run baseline analysis (cheap model(s))
+
+Compute risk_score (0–100) from:
+
+timeline overlaps/gaps
+
+name/email mismatch
+
+skill soup / unrealistic breadth
+
+too-perfect indicators
+
+role/tenure mismatch
+
+If risk_score >= FLAG_THRESHOLD THEN attempt advanced review:
+
+Check per-candidate flagged cap
+
+Check org monthly flagged cap
+
+Check auto-flag rate cap (flagged_count <= floor(candidate_count * cap_pct))
+
+If allowed, run flagged review using gpt-4.1
+
+If not allowed, mark:
+
+advanced_review_status = "skipped_quota"
+
+Show UI note
+
+7) Model Routing
+
+Advanced flagged review: gpt-4.1 ONLY
+
+Everything else: gpt-4o-mini (or your cheapest quality model)
+
+Baseline resume logic can be 4o-mini unless you require stronger extraction; keep it cheap.
+
+8) UI Requirements (Show VALUE)
+
+Pricing page cards must show:
+
+Candidates/month
+
+Active positions
+
+Baseline resume analyses/month
+
+“Advanced plausibility reviews run automatically when risk is detected”
+
+“Up to X advanced reviews/month” (do NOT mention percent)
+
+Bulk upload listed ONLY on Growth and Enterprise, with batch limits
+
+In-app “Usage” page must show remaining counts for each category.
+
+9) Stripe Rules
+
+Paid plans require active Stripe subscription
+
+If subscription is past_due/canceled, downgrade plan features (or lock paid features)
+
+Webhooks update org plan + status
+
+10) Acceptance Criteria
+
+Starter begins at $49.99 and feels valuable (many content limits)
+
+Advanced reviews are automatic and capped safely per tier
+
+Bulk upload is enabled ONLY on Growth (mid-tier) and Enterprise
+
+All limits enforced server-side; UI mirrors backend counts
+
+Free plan cannot run flagged reviews at all
