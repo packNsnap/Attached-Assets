@@ -189,6 +189,12 @@ export interface IStorage {
     plan: PlanType;
     jobs: { current: number; limit: number };
     candidates: { current: number; limit: number };
+    baselineAnalyses: { current: number; limit: number };
+    jobDescriptions: { current: number; limit: number };
+    skillsTests: { current: number; limit: number };
+    interviewSets: { current: number; limit: number };
+    policies: { current: number; limit: number };
+    bulkUpload: boolean;
     periodEnd: Date;
   }>;
   
@@ -907,6 +913,12 @@ export class DatabaseStorage implements IStorage {
     plan: PlanType;
     jobs: { current: number; limit: number };
     candidates: { current: number; limit: number };
+    baselineAnalyses: { current: number; limit: number };
+    jobDescriptions: { current: number; limit: number };
+    skillsTests: { current: number; limit: number };
+    interviewSets: { current: number; limit: number };
+    policies: { current: number; limit: number };
+    bulkUpload: boolean;
     periodEnd: Date;
   }> {
     const plan = await this.getEffectivePlan(userId);
@@ -921,6 +933,12 @@ export class DatabaseStorage implements IStorage {
       plan,
       jobs: { current: activeJobs, limit: limits.activeJobs },
       candidates: { current: usage.candidatesAdded || 0, limit: limits.candidates },
+      baselineAnalyses: { current: usage.baselineAnalyses || 0, limit: limits.baselineAnalyses },
+      jobDescriptions: { current: usage.jobDescriptions || 0, limit: limits.jobDescriptions },
+      skillsTests: { current: usage.skillsTests || 0, limit: limits.skillsTests },
+      interviewSets: { current: usage.interviewSets || 0, limit: limits.interviewSets },
+      policies: { current: usage.policies || 0, limit: limits.policies },
+      bulkUpload: limits.bulkUpload,
       periodEnd: usage.periodEnd,
     };
   }

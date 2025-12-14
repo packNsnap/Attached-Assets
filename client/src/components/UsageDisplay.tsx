@@ -6,17 +6,23 @@ import { Briefcase, Users, Zap, Crown, ArrowUpRight } from "lucide-react";
 import { Link } from "wouter";
 
 interface UsageSummary {
-  plan: "free" | "growth" | "pro" | "enterprise";
+  plan: "free" | "starter" | "growth" | "enterprise";
   jobs: { current: number; limit: number };
   candidates: { current: number; limit: number };
+  baselineAnalyses: { current: number; limit: number };
+  jobDescriptions: { current: number; limit: number };
+  skillsTests: { current: number; limit: number };
+  interviewSets: { current: number; limit: number };
+  policies: { current: number; limit: number };
+  bulkUpload: boolean;
   periodEnd: string;
 }
 
 const planLabels: Record<string, { label: string; color: string }> = {
   free: { label: "Free", color: "bg-slate-500" },
-  growth: { label: "Growth", color: "bg-green-500" },
-  pro: { label: "Pro", color: "bg-purple-500" },
-  enterprise: { label: "Enterprise", color: "bg-orange-500" },
+  starter: { label: "Starter", color: "bg-green-500" },
+  growth: { label: "Growth", color: "bg-purple-500" },
+  enterprise: { label: "Enterprise", color: "bg-amber-500" },
 };
 
 export function UsageDisplay() {
@@ -99,9 +105,12 @@ export function UsageDisplay() {
         )}
       </div>
 
-      <p className="text-[10px] text-muted-foreground text-center">
-        {daysLeft > 0 ? `Resets in ${daysLeft} days` : "Resets today"}
-      </p>
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <span>{daysLeft > 0 ? `Resets in ${daysLeft} days` : "Resets today"}</span>
+        <Link href="/usage" className="text-blue-500 hover:underline" data-testid="link-view-all-usage">
+          View all
+        </Link>
+      </div>
     </div>
   );
 }
