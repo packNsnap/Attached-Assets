@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Sparkles,
@@ -31,12 +31,29 @@ import {
   ShieldCheck,
   Database,
   EyeOff,
+  Upload,
+  X,
+  FileText,
+  Clock,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import logoImage from "@/assets/logo.png";
 import demoVideo from "@assets/My_Movie_1765611752383.mp4";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+const sampleReportFlags = [
+  { type: "red", title: "Timeline Overlap Detected", description: "Two full-time roles overlap by 18 months (2019-2021). This requires clarification." },
+  { type: "red", title: "Copy-Paste Error Found", description: "Resume mentions 'excited to join Google' but was submitted to a different company." },
+  { type: "yellow", title: "Inflated Title Possible", description: "VP of Engineering at a 4-person startup with entry-level responsibilities listed." },
+  { type: "yellow", title: "AI-Generated Language", description: "Summary contains generic buzzwords: 'results-driven', 'dynamic professional', 'proven track record'." },
+  { type: "yellow", title: "Skills Without Evidence", description: "Claims 'Expert in Python' but no technical roles or projects demonstrate this skill." },
+  { type: "green", title: "Education Verified Plausible", description: "Degree timeline aligns with career start date. No red flags detected." },
+  { type: "green", title: "Career Progression Logical", description: "Role advancement from Analyst to Manager over 6 years follows typical patterns." },
+  { type: "green", title: "Contact Information Consistent", description: "Email domain matches stated current employer. No mismatches found." },
+];
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -176,6 +193,34 @@ const comparisonData = [
 export default function LandingPage() {
   const [activeFeature, setActiveFeature] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [sampleReportOpen, setSampleReportOpen] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      window.location.href = "/auth";
+    }
+  }, []);
+
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      window.location.href = "/auth";
+    }
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -250,81 +295,104 @@ export default function LandingPage() {
         </div>
       </nav>
 
+      {/* Upload Modal */}
+      <Dialog open={uploadModalOpen} onOpenChange={setUploadModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-blue-600" />
+              Scan a Resume
+            </DialogTitle>
+          </DialogHeader>
+          <div
+            className={cn(
+              "border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer",
+              dragActive ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20" : "border-muted-foreground/25 hover:border-blue-400"
+            )}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById('file-upload')?.click()}
+          >
+            <input
+              id="file-upload"
+              type="file"
+              accept=".pdf,.doc,.docx"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-lg font-medium mb-2">Drop your resume here</p>
+            <p className="text-sm text-muted-foreground mb-4">or click to browse</p>
+            <p className="text-xs text-muted-foreground">PDF, DOC, DOCX up to 10MB</p>
+          </div>
+          <p className="text-xs text-center text-muted-foreground mt-2">
+            Sign up free to see your full integrity report
+          </p>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sample Report Modal */}
+      <Dialog open={sampleReportOpen} onOpenChange={setSampleReportOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5 text-purple-600" />
+              Sample Integrity Report
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground mb-4">
+              This is an example of what our AI-powered analysis reveals. Each flag helps you make informed decisions.
+            </p>
+            {sampleReportFlags.map((flag, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "p-4 rounded-lg border-l-4",
+                  flag.type === "red" && "bg-red-50 dark:bg-red-950/20 border-l-red-500",
+                  flag.type === "yellow" && "bg-yellow-50 dark:bg-yellow-950/20 border-l-yellow-500",
+                  flag.type === "green" && "bg-green-50 dark:bg-green-950/20 border-l-green-500"
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={cn(
+                    "h-6 w-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5",
+                    flag.type === "red" && "bg-red-500",
+                    flag.type === "yellow" && "bg-yellow-500",
+                    flag.type === "green" && "bg-green-500"
+                  )}>
+                    {flag.type === "red" && <AlertTriangle className="h-3.5 w-3.5 text-white" />}
+                    {flag.type === "yellow" && <Eye className="h-3.5 w-3.5 text-white" />}
+                    {flag.type === "green" && <CheckCircle2 className="h-3.5 w-3.5 text-white" />}
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm">{flag.title}</h4>
+                    <p className="text-sm text-muted-foreground mt-1">{flag.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-4 border-t text-center">
+            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" asChild>
+              <a href="/auth">
+                Try It Free
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Hero Section */}
-      <section className="pt-24 sm:pt-32 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 relative">
+      <section className="pt-20 sm:pt-24 pb-10 sm:pb-12 px-4 sm:px-6 lg:px-8 relative">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500/20 rounded-full blur-3xl" />
           <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-500/20 rounded-full blur-3xl" />
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full blur-3xl" />
-        </div>
-
-        {/* Left Side Decorative Elements */}
-        <div className="absolute left-4 lg:left-8 xl:left-16 top-32 hidden lg:block">
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-            className="space-y-4"
-          >
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              className="h-14 w-14 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/25"
-            >
-              <Brain className="h-7 w-7 text-white" />
-            </motion.div>
-            
-            <motion.div
-              animate={{ y: [0, -6, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-              className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-green-500/25 ml-8"
-            >
-              <ClipboardCheck className="h-6 w-6 text-white" />
-            </motion.div>
-
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-              className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25"
-            >
-              <FileSearch className="h-5 w-5 text-white" />
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Right Side Decorative Elements */}
-        <div className="absolute right-4 lg:right-8 xl:right-16 top-32 hidden lg:block">
-          <motion.div
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-            className="space-y-4"
-          >
-            <motion.div
-              animate={{ y: [0, -6, 0] }}
-              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
-              className="h-14 w-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25"
-            >
-              <BarChart3 className="h-7 w-7 text-white" />
-            </motion.div>
-
-            <motion.div
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 0.3 }}
-              className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/25 mr-8"
-            >
-              <MessageSquare className="h-6 w-6 text-white" />
-            </motion.div>
-
-            <motion.div
-              animate={{ y: [0, -5, 0] }}
-              transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
-              className="h-10 w-10 rounded-lg bg-gradient-to-br from-fuchsia-500 to-purple-500 flex items-center justify-center shadow-lg shadow-fuchsia-500/25"
-            >
-              <Target className="h-5 w-5 text-white" />
-            </motion.div>
-          </motion.div>
         </div>
 
         <div className="max-w-7xl mx-auto relative">
@@ -334,54 +402,51 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center"
           >
-            <Badge className="mb-6 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400">
+            <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400">
               <Sparkles className="h-3.5 w-3.5 mr-2" />
-              AI Resume Analysis & Hiring Intelligence
+              Resume Integrity Scoring
             </Badge>
             
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-6">
-              <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-200 dark:to-white bg-clip-text text-transparent">
-                Catch What
-              </span>
-              <br />
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-4">
+              Resume Integrity Scoring for{" "}
               <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Humans Miss
+                Real-World Hiring
               </span>
             </h1>
             
-            <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-8 px-4">
-              ResumeLogik spots <span className="text-foreground font-semibold">copy-paste errors, timeline gaps, inflated titles, and AI-generated fluff</span> that slip past busy reviewers. 
-              Get decision support, not decisions — <span className="text-blue-600 dark:text-blue-400 font-semibold">you stay in control</span>.
+            <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-6 px-4">
+              Catch inconsistencies, questionable timelines, and skill mismatches fast.
+              Decision support only—no auto-rejections.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 px-4">
-              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-6 w-full sm:w-auto" asChild data-testid="button-start-free">
-                <a href="/auth">
-                  Start Free Today
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </a>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-4 px-4">
+              <Button size="lg" onClick={() => setUploadModalOpen(true)} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-6" data-testid="button-scan-resume">
+                <Upload className="mr-2 h-5 w-5" />
+                Scan a Resume
               </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6 w-full sm:w-auto" asChild data-testid="button-see-features">
-                <a href="#features">
-                  See All Features
-                  <ChevronRight className="ml-2 h-5 w-5" />
-                </a>
+              <Button size="lg" variant="outline" onClick={() => setSampleReportOpen(true)} className="text-lg px-8 py-6" data-testid="button-view-sample">
+                <Eye className="mr-2 h-5 w-5" />
+                View Sample Report
               </Button>
             </div>
+
+            <p className="text-sm text-muted-foreground mb-6">
+              No credit card • 10-second scan • Decision support only
+            </p>
 
             {/* Trust Indicators */}
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-muted-foreground px-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <span>No auto-rejections</span>
+                <span>10-second scan</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <span>Compliance-safe design</span>
+                <span>Flags gaps + overlaps</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <span>Start free today</span>
+                <span>Explains every score</span>
               </div>
             </div>
           </motion.div>
