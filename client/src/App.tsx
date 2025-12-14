@@ -12,6 +12,7 @@ import FeaturesPage from "@/pages/features-page";
 import HowItWorksPage from "@/pages/how-it-works";
 import WhoItsForPage from "@/pages/who-its-for";
 import WhatWeCatchPage from "@/pages/what-we-catch";
+import CommonMistakesPage from "@/pages/common-mistakes";
 import { Layout } from "@/components/layout/Layout";
 import JobDescriptionModule from "@/pages/modules/job-description";
 import ResumeAnalyzerModule from "@/pages/modules/resume-analyzer";
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/how-it-works" component={HowItWorksPage} />
       <Route path="/who-its-for" component={WhoItsForPage} />
       <Route path="/what-we-catch" component={WhatWeCatchPage} />
+      <Route path="/common-mistakes" component={CommonMistakesPage} />
       <Route path="/pricing" component={PricingPage} />
       <Route path="/auth" component={AuthPage} />
       <Route path="/test/:token" component={SkillsTestPublic} />

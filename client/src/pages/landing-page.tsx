@@ -225,6 +225,9 @@ export default function LandingPage() {
               <Button variant="ghost" asChild data-testid="link-what-we-catch">
                 <a href="/what-we-catch">What We Catch</a>
               </Button>
+              <Button variant="ghost" asChild data-testid="link-common-mistakes">
+                <a href="/common-mistakes">Common Mistakes</a>
+              </Button>
               <Button variant="ghost" asChild data-testid="link-pricing">
                 <a href="/pricing">Pricing</a>
               </Button>
