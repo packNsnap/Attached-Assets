@@ -137,27 +137,27 @@ const features = [
 const aiFeatures = [
   {
     icon: AlertTriangle,
-    title: "AI Resume Detection",
-    description: "Our advanced algorithms analyze writing patterns and authenticity signals to flag AI-generated content.",
-    stats: "85%+ accuracy"
+    title: "Copy-Paste & Template Errors",
+    description: "Catch wrong company names, mismatched emails, and leftover template text that candidates forgot to change.",
+    stats: "Instant detection"
   },
   {
     icon: Eye,
-    title: "Authenticity Scoring",
-    description: "Detailed breakdowns of generic writing, specificity levels, and cliché phrases.",
-    stats: "10+ signals"
+    title: "Timeline & Career Gaps",
+    description: "Automatically calculate overlapping jobs, impossible timelines, and hidden employment gaps.",
+    stats: "Math-verified"
   },
   {
     icon: Target,
-    title: "Skills Gap Analysis",
-    description: "Identify missing skills compared to job requirements and generate targeted questions.",
-    stats: "Real-time matching"
+    title: "Inflated Titles & Claims",
+    description: "Flag VP titles at 5-person startups, unrealistic progression, and skills without evidence.",
+    stats: "Context-aware"
   },
   {
     icon: Lightbulb,
-    title: "Smart Recommendations",
-    description: "AI suggestions for interview questions, test topics, and evaluation criteria.",
-    stats: "Personalized"
+    title: "AI-Generated Fluff",
+    description: "Detect buzzword-heavy summaries, generic phrases, and polished language that lacks substance.",
+    stats: "85%+ accuracy"
   }
 ];
 
@@ -336,23 +336,22 @@ export default function LandingPage() {
           >
             <Badge className="mb-6 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400">
               <Sparkles className="h-3.5 w-3.5 mr-2" />
-              AI-Powered HR for the Modern Workplace
+              AI Resume Analysis & Hiring Intelligence
             </Badge>
             
             <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold tracking-tight mb-6">
               <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-white dark:via-gray-200 dark:to-white bg-clip-text text-transparent">
-                Hire Smarter,
+                Catch What
               </span>
               <br />
               <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                Not Harder
+                Humans Miss
               </span>
             </h1>
             
             <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto mb-8 px-4">
-              The complete HR platform that small businesses actually need. AI-powered tools to write job descriptions, 
-              <span className="text-foreground font-semibold"> detect fake resumes</span>, build skills tests, and manage your entire hiring pipeline — 
-              <span className="text-blue-600 dark:text-blue-400 font-semibold"> without the enterprise price tag</span>.
+              ResumeLogik spots <span className="text-foreground font-semibold">copy-paste errors, timeline gaps, inflated titles, and AI-generated fluff</span> that slip past busy reviewers. 
+              Get decision support, not decisions — <span className="text-blue-600 dark:text-blue-400 font-semibold">you stay in control</span>.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 px-4">
@@ -374,15 +373,15 @@ export default function LandingPage() {
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-sm text-muted-foreground px-4">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <span>No credit card required</span>
+                <span>No auto-rejections</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <span>Set up in 5 minutes</span>
+                <span>Compliance-safe design</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-                <span>Cancel anytime</span>
+                <span>Start free today</span>
               </div>
             </div>
           </motion.div>
@@ -518,30 +517,30 @@ export default function LandingPage() {
             className="text-center mb-12 sm:mb-16"
           >
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
-              Traditional ATS Systems Are{" "}
-              <span className="text-red-500">Broken</span> for Small Businesses
+              The Cost Isn't Time.{" "}
+              <span className="text-red-500">It's False Confidence.</span>
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
-              Enterprise HR software costs thousands per year and still can't detect AI-generated resumes flooding your inbox.
+              Bad hires rarely come from obviously bad resumes. They come from resumes that look fine.
             </p>
           </motion.div>
 
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
             {[
               {
-                title: "$5,000+ Per Year",
-                description: "Most ATS platforms charge enterprise prices that small businesses can't afford.",
-                icon: "💸"
-              },
-              {
-                title: "Can't Detect AI Resumes",
-                description: "70% of job seekers now use AI to write resumes. Traditional systems can't tell the difference.",
-                icon: "🤖"
-              },
-              {
-                title: "Built for Small Businesses or Large",
-                description: "Designed for teams of any size that need simplicity without sacrificing power.",
+                title: "Polished ≠ Accurate",
+                description: "Beautiful formatting and professional language don't guarantee truthful content. AI makes everyone look good.",
                 icon: "✨"
+              },
+              {
+                title: "Reviewers Skim",
+                description: "Under time pressure, hiring managers assume HR checked. HR assumes candidates vetted themselves.",
+                icon: "⏱️"
+              },
+              {
+                title: "You Stay in Control",
+                description: "ResumeLogik helps you pause, question, and verify — without making decisions for you.",
+                icon: "🎯"
               }
             ].map((problem, index) => (
               <motion.div
@@ -574,16 +573,16 @@ export default function LandingPage() {
           >
             <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/20">
               <Brain className="h-3.5 w-3.5 mr-2" />
-              Our Flagship Feature
+              What We Catch That Humans Miss
             </Badge>
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4">
               <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                AI-Generated Resume Detection
+                6 Categories of Resume Red Flags
               </span>
             </h2>
             <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto">
-              The hiring landscape has changed. ChatGPT and other AI tools make it easy to create polished resumes — 
-              but how do you know who's authentic?
+              The average recruiter spends 2-3 minutes per resume. In that time, subtle issues slip through.
+              ResumeLogik analyzes every detail in seconds.
             </p>
           </motion.div>
 
