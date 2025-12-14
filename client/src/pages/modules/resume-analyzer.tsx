@@ -386,26 +386,28 @@ export default function ResumeAnalyzerModule() {
 
   const handleBulkFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const pdfFiles = files.filter(f => f.type === "application/pdf");
-    if (pdfFiles.length !== files.length) {
+    const supportedTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "text/rtf", "application/rtf"];
+    const supportedExtensions = [".pdf", ".doc", ".docx", ".txt", ".rtf"];
+    const validFiles = files.filter(f => supportedTypes.includes(f.type) || supportedExtensions.some(ext => f.name.toLowerCase().endsWith(ext)));
+    if (validFiles.length !== files.length) {
       toast({
         variant: "destructive",
         title: "Invalid files",
-        description: "Only PDF files are allowed for bulk upload.",
+        description: "Supported formats: PDF, DOC, DOCX, TXT, RTF",
       });
     }
-    if (pdfFiles.length > 20) {
+    if (validFiles.length > 20) {
       toast({
         variant: "destructive",
         title: "Too many files",
         description: "You can upload a maximum of 20 resumes at a time.",
       });
-      setBulkFiles(pdfFiles.slice(0, 20));
-      setBulkResults(pdfFiles.slice(0, 20).map(f => ({ fileName: f.name, status: "pending" })));
+      setBulkFiles(validFiles.slice(0, 20));
+      setBulkResults(validFiles.slice(0, 20).map(f => ({ fileName: f.name, status: "pending" })));
       return;
     }
-    setBulkFiles(pdfFiles);
-    setBulkResults(pdfFiles.map(f => ({ fileName: f.name, status: "pending" })));
+    setBulkFiles(validFiles);
+    setBulkResults(validFiles.map(f => ({ fileName: f.name, status: "pending" })));
   };
 
   const handleBulkUpload = async () => {
@@ -1913,11 +1915,11 @@ export default function ResumeAnalyzerModule() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs sm:text-sm">Upload PDF Resumes</Label>
+                  <Label className="text-xs sm:text-sm">Upload Resumes (PDF, DOC, DOCX, TXT, RTF)</Label>
                   <div className="border-2 border-dashed rounded-lg p-4 sm:p-8 text-center hover:bg-muted/50 transition-colors">
                     <input
                       type="file"
-                      accept=".pdf"
+                      accept=".pdf,.doc,.docx,.txt,.rtf"
                       multiple
                       onChange={handleBulkFileChange}
                       className="hidden"

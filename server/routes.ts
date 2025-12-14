@@ -181,6 +181,57 @@ function resolveFilePath(storedPath: string, userId?: string, candidateId?: stri
 // In-memory resume storage (for text only - files are persisted to disk)
 const resumeStore = new Map<string, string>();
 
+// Supported resume file formats
+const SUPPORTED_RESUME_FORMATS = ["pdf", "docx", "doc", "txt", "rtf"];
+
+async function extractTextFromDocxHelper(buffer: Buffer): Promise<string> {
+  const result = await mammoth.extractRawText({ buffer });
+  return result.value;
+}
+
+async function extractTextFromPdfHelper(buffer: Buffer): Promise<string> {
+  const data = new Uint8Array(buffer);
+  const pdf = await pdfjs.getDocument({ data }).promise;
+  let fullText = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items.map((item: any) => item.str).join(" ");
+    fullText += pageText + "\n";
+  }
+  return fullText.trim();
+}
+
+function extractTextFromTxtHelper(buffer: Buffer): string {
+  return buffer.toString("utf-8").trim();
+}
+
+function extractTextFromRtfHelper(buffer: Buffer): string {
+  const rtfContent = buffer.toString("utf-8");
+  return rtfContent
+    .replace(/\\par[d]?/g, "\n")
+    .replace(/\{\*?\\[^{}]+}|[{}]|\\\n?[A-Za-z]+\n?(?:-?\d+)?[ ]?/g, "")
+    .replace(/\\'[0-9a-fA-F]{2}/g, "")
+    .trim();
+}
+
+async function extractTextFromResume(buffer: Buffer, fileExt: string): Promise<string> {
+  const ext = fileExt.toLowerCase();
+  switch (ext) {
+    case "pdf":
+      return extractTextFromPdfHelper(buffer);
+    case "docx":
+    case "doc":
+      return extractTextFromDocxHelper(buffer);
+    case "txt":
+      return extractTextFromTxtHelper(buffer);
+    case "rtf":
+      return extractTextFromRtfHelper(buffer);
+    default:
+      throw new Error(`Unsupported file format: ${ext}`);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -829,21 +880,21 @@ export async function registerRoutes(
         return;
       }
 
-      // Extract text from PDF
+      const originalFileName = req.file.originalname;
+      const fileExt = originalFileName.split(".").pop()?.toLowerCase() || "";
+      
+      if (!SUPPORTED_RESUME_FORMATS.includes(fileExt)) {
+        res.status(400).json({ 
+          error: `Unsupported file format. Supported formats: ${SUPPORTED_RESUME_FORMATS.join(", ").toUpperCase()}`
+        });
+        return;
+      }
+
       let resumeText = "";
       try {
-        const pdfData = new Uint8Array(req.file.buffer);
-        const pdfDoc = await pdfjs.getDocument({ data: pdfData }).promise;
-        const textParts: string[] = [];
-        for (let i = 1; i <= pdfDoc.numPages; i++) {
-          const page = await pdfDoc.getPage(i);
-          const content = await page.getTextContent();
-          const pageText = content.items.map((item: any) => item.str).join(" ");
-          textParts.push(pageText);
-        }
-        resumeText = textParts.join("\n\n");
+        resumeText = await extractTextFromResume(req.file.buffer, fileExt);
       } catch (err) {
-        res.status(400).json({ error: "Failed to parse PDF file" });
+        res.status(400).json({ error: `Failed to parse ${fileExt.toUpperCase()} file` });
         return;
       }
 
@@ -1639,37 +1690,6 @@ export async function registerRoutes(
     }
   });
 
-  async function extractTextFromDocx(buffer: Buffer): Promise<string> {
-    try {
-      const result = await mammoth.extractRawText({ buffer });
-      return result.value;
-    } catch (error) {
-      throw new Error("Failed to extract text from Word document");
-    }
-  }
-
-  async function extractTextFromPdf(buffer: Buffer): Promise<string> {
-    try {
-      const data = new Uint8Array(buffer);
-      const pdf = await pdfjs.getDocument({ data }).promise;
-      let fullText = "";
-      
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(" ");
-        fullText += pageText + "\n";
-      }
-      
-      return fullText.trim();
-    } catch (error) {
-      console.error("PDF extraction error:", error);
-      throw new Error("Failed to extract text from PDF");
-    }
-  }
-
   app.post("/api/upload-resume", isAuthenticated, upload.single("file"), async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -1683,19 +1703,19 @@ export async function registerRoutes(
 
       let resumeText = "";
       const fileName = file.originalname;
-      const fileExt = fileName.split(".").pop()?.toLowerCase();
+      const fileExt = fileName.split(".").pop()?.toLowerCase() || "";
 
-      if (fileExt !== "pdf") {
-        res.status(400).json({ error: "Only PDF files are supported. Please convert your document to PDF before uploading." });
+      if (!SUPPORTED_RESUME_FORMATS.includes(fileExt)) {
+        res.status(400).json({ 
+          error: `Unsupported file format. Supported formats: ${SUPPORTED_RESUME_FORMATS.join(", ").toUpperCase()}`
+        });
         return;
       }
       
-      // Try to extract text, but continue without it if extraction fails
       try {
-        resumeText = await extractTextFromPdf(file.buffer);
+        resumeText = await extractTextFromResume(file.buffer, fileExt);
       } catch (extractError) {
-        console.warn("Could not extract text from PDF, proceeding without text extraction:", extractError);
-        // Continue with empty resume text - file will still be stored
+        console.warn("Could not extract text from resume, proceeding without text extraction:", extractError);
         resumeText = "";
       }
 
