@@ -881,32 +881,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async checkCanUseAiAction(userId: string, candidateId: string, serviceType: string): Promise<{ allowed: boolean; current: number; limit: number }> {
-    // Admins have unlimited access
     if (await this.isUserAdmin(userId)) {
       return { allowed: true, current: 0, limit: -1 };
     }
     
     const plan = await this.getEffectivePlan(userId);
     const limits = PLAN_LIMITS[plan];
+    const perCandidateCaps = limits.perCandidateCaps;
     
-    // Get total AI actions across all service types for this candidate
-    const allUsages = await db.select()
-      .from(aiActionUsage)
-      .where(and(
-        eq(aiActionUsage.userId, userId),
-        eq(aiActionUsage.candidateId, candidateId)
-      ));
+    const serviceTypeToCapMap: Record<string, keyof typeof perCandidateCaps> = {
+      'resume_analysis': 'basicResumeRuns',
+      'flagged_review': 'flaggedRuns',
+      'job_fit_scoring': 'jobFitScoring',
+      'interview_questions': 'interviewPacks',
+      'reference_email': 'referenceEmails',
+      'onboarding_plan': 'onboardingDocs',
+      'performance_review': 'performanceDocs',
+    };
     
-    const totalActions = allUsages.reduce((sum, u) => sum + (u.actionCount || 0), 0);
-    
-    // Use baseline analyses limit as general AI action limit
-    const aiLimit = limits.baselineAnalyses;
-    
-    if (aiLimit === -1) {
-      return { allowed: true, current: totalActions, limit: -1 };
+    const capField = serviceTypeToCapMap[serviceType];
+    if (!capField) {
+      return { allowed: true, current: 0, limit: -1 };
     }
     
-    return { allowed: totalActions < aiLimit, current: totalActions, limit: aiLimit };
+    const perCandidateLimit = perCandidateCaps[capField];
+    
+    const existingUsage = await this.getAiActionUsage(userId, candidateId, serviceType);
+    const current = existingUsage?.actionCount || 0;
+    
+    if (perCandidateLimit === 0) {
+      return { allowed: false, current, limit: 0 };
+    }
+    
+    return { allowed: current < perCandidateLimit, current, limit: perCandidateLimit };
   }
 
   async getUserUsageSummary(userId: string): Promise<{
