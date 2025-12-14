@@ -341,7 +341,7 @@ export async function registerRoutes(
         }
         // Check if user has free access granted by admin
         if (u.freeAccessUntil && new Date(u.freeAccessUntil) > new Date()) {
-          plan = "pro"; // Free access grants pro-level features
+          plan = "growth"; // Free access grants growth-level features
         }
         return {
           id: u.id,

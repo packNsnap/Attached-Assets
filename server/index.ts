@@ -139,37 +139,34 @@ async function seedStripeProducts() {
 
     const products = [
       {
-        name: 'Growth',
-        description: 'Perfect for growing teams. 5 active jobs, 30 candidates/month, 15 AI actions per candidate.',
+        name: 'Starter',
+        description: 'Ideal for small businesses hiring occasionally. 5 active jobs, 25 candidates/month.',
         metadata: { 
-          plan: 'growth',
+          plan: 'starter',
           jobs: '5',
-          candidates: '30',
-          aiActionsPerCandidate: '15',
-        },
-        price: 2900,
-      },
-      {
-        name: 'Pro',
-        description: 'For established HR teams. 20 active jobs, 150 candidates/month, 15 AI actions per candidate.',
-        metadata: { 
-          plan: 'pro',
-          jobs: '20',
-          candidates: '150',
-          aiActionsPerCandidate: '15',
+          candidates: '25',
         },
         price: 4999,
       },
       {
+        name: 'Growth',
+        description: 'For growing companies and agencies hiring regularly. 20 active jobs, 150 candidates/month, bulk upload.',
+        metadata: { 
+          plan: 'growth',
+          jobs: '20',
+          candidates: '150',
+        },
+        price: 9999,
+      },
+      {
         name: 'Enterprise',
-        description: 'Unlimited scale for large organizations. Unlimited jobs, 1000+ candidates/month, 15 AI actions per candidate.',
+        description: 'Full-scale HR for large organizations. Unlimited jobs, 500 candidates/month, priority support.',
         metadata: { 
           plan: 'enterprise',
           jobs: 'unlimited',
-          candidates: '1000+',
-          aiActionsPerCandidate: '15',
+          candidates: '500',
         },
-        price: 15000,
+        price: 24900,
       },
     ];
 
