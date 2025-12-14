@@ -691,7 +691,6 @@ export default function SkillsTestModule() {
                               <SelectValue placeholder="Choose a candidate to auto-fill from their resume..." />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">No candidate selected</SelectItem>
                               {candidates.map((c) => (
                                 <SelectItem key={c.id} value={c.id}>
                                   {c.name}
