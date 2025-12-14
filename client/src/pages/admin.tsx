@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -309,22 +309,23 @@ export default function AdminPage() {
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">Loading users...</div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8"></TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Free Access Until</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <>
-                    <TableRow key={user.id} data-testid={`user-row-${user.id}`} className="cursor-pointer" onClick={() => toggleExpand(user.id)}>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-8"></TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Free Access Until</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user) => (
+                    <Fragment key={user.id}>
+                      <TableRow data-testid={`user-row-${user.id}`} className="cursor-pointer" onClick={() => toggleExpand(user.id)}>
                       <TableCell>
                         <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                           {expandedUserId === user.id ? (
@@ -401,7 +402,7 @@ export default function AdminPage() {
                       </TableCell>
                     </TableRow>
                     {expandedUserId === user.id && (
-                      <TableRow key={`${user.id}-usage`}>
+                      <TableRow>
                         <TableCell colSpan={7} className="bg-muted/30 p-4">
                           {isLoadingUsage ? (
                             <div className="text-center py-4 text-muted-foreground">Loading usage data...</div>
@@ -507,10 +508,11 @@ export default function AdminPage() {
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
-                ))}
-              </TableBody>
-            </Table>
+                    </Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
