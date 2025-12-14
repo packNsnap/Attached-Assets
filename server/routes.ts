@@ -4465,19 +4465,31 @@ Generate 3-5 diverse goals covering different aspects of the role.`;
   app.get("/api/stripe/products", isAuthenticated, async (_req, res) => {
     try {
       const result = await db.execute(
-        sql`SELECT 
+        sql`WITH ranked_prices AS (
+          SELECT 
+            pr.id,
+            pr.product,
+            pr.unit_amount,
+            pr.currency,
+            pr.recurring,
+            pr.created_at,
+            ROW_NUMBER() OVER (PARTITION BY pr.product ORDER BY pr.created_at DESC) as rn
+          FROM stripe.prices pr
+          WHERE pr.active = true
+        )
+        SELECT 
           p.id as product_id,
           p.name as product_name,
           p.description as product_description,
           p.metadata as product_metadata,
-          pr.id as price_id,
-          pr.unit_amount,
-          pr.currency,
-          pr.recurring
+          rp.id as price_id,
+          rp.unit_amount,
+          rp.currency,
+          rp.recurring
         FROM stripe.products p
-        LEFT JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
+        LEFT JOIN ranked_prices rp ON rp.product = p.id AND rp.rn = 1
         WHERE p.active = true
-        ORDER BY pr.unit_amount ASC`
+        ORDER BY p.name`
       );
       res.json({ products: result.rows });
     } catch (error) {
