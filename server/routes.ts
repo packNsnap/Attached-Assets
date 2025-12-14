@@ -426,6 +426,127 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Set user subscription tier
+  app.post('/api/admin/users/:userId/tier', isAuthenticated, isAdminMiddleware, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      const { plan } = req.body;
+      
+      const validPlans = ['free', 'starter', 'growth', 'enterprise'];
+      if (!plan || !validPlans.includes(plan)) {
+        res.status(400).json({ message: `Invalid plan. Must be one of: ${validPlans.join(', ')}` });
+        return;
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      
+      // Get or create subscription
+      let subscription = await storage.getSubscription(userId);
+      const now = new Date();
+      const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+      
+      if (subscription) {
+        // Update existing subscription
+        subscription = await storage.updateSubscription(userId, {
+          plan,
+          status: 'active',
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+        });
+      } else {
+        // Create new subscription
+        subscription = await storage.createSubscription({
+          userId,
+          plan,
+          status: 'active',
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+        });
+      }
+      
+      // Reset usage tracking when changing plans
+      await storage.resetUsageTracking(userId);
+      
+      console.log(`[admin] Set user ${userId} (${user.email}) to ${plan} tier`);
+      
+      res.json({ 
+        success: true, 
+        userId,
+        plan,
+        message: `User tier updated to ${plan}` 
+      });
+    } catch (error) {
+      console.error("Error setting user tier:", error);
+      res.status(500).json({ message: "Failed to set user tier" });
+    }
+  });
+
+  // Admin: Get detailed user usage stats
+  app.get('/api/admin/users/:userId/usage', isAuthenticated, isAdminMiddleware, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      
+      // Get subscription info
+      const subscription = await storage.getSubscription(userId);
+      let plan = 'free';
+      if (subscription?.status === 'active' || subscription?.status === 'trialing') {
+        plan = subscription.plan || 'free';
+      }
+      if (user.freeAccessUntil && new Date(user.freeAccessUntil) > new Date()) {
+        plan = 'growth';
+      }
+      
+      // Get usage summary
+      const usageSummary = await storage.getUserUsageSummary(userId);
+      
+      // Get entity counts
+      const jobsList = await storage.getJobs(userId);
+      const candidatesList = await storage.getCandidates(userId, true);
+      const activeJobs = jobsList.filter(j => j.status === 'active').length;
+      const totalJobs = jobsList.length;
+      const activeCandidates = candidatesList.filter(c => c.isArchived !== 'true' && c.stage !== 'Rejected').length;
+      const totalCandidates = candidatesList.length;
+      
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          createdAt: user.createdAt,
+        },
+        subscription: {
+          plan,
+          status: subscription?.status || 'none',
+          currentPeriodStart: subscription?.currentPeriodStart,
+          currentPeriodEnd: subscription?.currentPeriodEnd,
+          stripeCustomerId: subscription?.stripeCustomerId,
+          stripeSubscriptionId: subscription?.stripeSubscriptionId,
+        },
+        usage: usageSummary,
+        counts: {
+          activeJobs,
+          totalJobs,
+          activeCandidates,
+          totalCandidates,
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching user usage:", error);
+      res.status(500).json({ message: "Failed to fetch user usage" });
+    }
+  });
+
   // Usage and subscription routes
   app.get('/api/usage', isAuthenticated, async (req: any, res) => {
     try {
