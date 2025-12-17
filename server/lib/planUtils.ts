@@ -20,7 +20,7 @@ export function hasFeature(plan: PlanType, featureKey: FeatureKey): boolean {
   const planConfig = getPlanLimits(plan);
   const value = planConfig.features[featureKey];
   if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'number') return value > 0 || value === -1;
   return false;
 }
 
