@@ -387,13 +387,15 @@ export async function registerRoutes(
       const usersWithPlans = await Promise.all(users.map(async (u) => {
         const subscription = await storage.getSubscription(u.id);
         let plan = "free";
+        
+        // Prioritize paid subscription over free access
         if (subscription?.status === "active" || subscription?.status === "trialing") {
           plan = subscription.plan || "free";
+        } else if (u.freeAccessUntil && new Date(u.freeAccessUntil) > new Date()) {
+          // Only grant free access plan if no paid subscription
+          plan = "growth";
         }
-        // Check if user has free access granted by admin
-        if (u.freeAccessUntil && new Date(u.freeAccessUntil) > new Date()) {
-          plan = "growth"; // Free access grants growth-level features
-        }
+        
         return {
           id: u.id,
           email: u.email,
