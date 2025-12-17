@@ -1,0 +1,82 @@
+You are working on my Resume Logik SaaS codebase. Implement the finalized tier pricing system (Free / Starter / Growth / Pro / Enterprise) with HARD LIMITS enforced on the server (no add-ons/credits).
+
+GOALS
+1) Single source of truth for plans, limits, and features
+2) Monthly usage counters per user (reset by month automatically)
+3) Hard-block API calls when a user exceeds their plan limit
+4) Hide/disable UI controls when a feature is not in the user’s plan
+
+PLANS (FINAL)
+- Free ($0)
+  - Limits: resume_scans_per_month=3, job_desc_per_month=0, bulk_upload_max_batch=0, skills_tests_per_month=0, interview_generations_per_month=0, pdf_exports_per_month=0
+  - Features: resume_logic_basic=true, resume_logic_full=false, ai_detection_basic=false, ai_detection_advanced=false, candidate_profiles=true, pdf_export=false, bulk_upload=false, bulk_actions=false, skills_tests=false, interview_assistant=false, analytics=false, team_seats=1, branded_reports=false, scoring_weights=false
+
+- Starter ($24.99)
+  - Limits: resume_scans_per_month=25, job_desc_per_month=5, bulk_upload_max_batch=0, skills_tests_per_month=0, interview_generations_per_month=0, pdf_exports_per_month=25
+  - Features: resume_logic_basic=true, resume_logic_full=true, ai_detection_basic=true, ai_detection_advanced=false, candidate_profiles=true, pdf_export=true, bulk_upload=false, bulk_actions=false, skills_tests=false, interview_assistant=false, analytics=false, team_seats=1, branded_reports=false, scoring_weights=false
+
+- Growth ($49.99)
+  - Limits: resume_scans_per_month=75, job_desc_per_month=10, bulk_upload_max_batch=20, skills_tests_per_month=25, interview_generations_per_month=50, pdf_exports_per_month=75
+  - Features: resume_logic_basic=true, resume_logic_full=true, ai_detection_basic=true, ai_detection_advanced=true, candidate_profiles=true, pdf_export=true, bulk_upload=true, bulk_actions=true, skills_tests=true, interview_assistant=true, analytics=true, team_seats=1, branded_reports=false, scoring_weights=false
+
+- Pro / Agency ($149.99)
+  - Limits: resume_scans_per_month=250, job_desc_per_month=50, bulk_upload_max_batch=50, skills_tests_per_month=200, interview_generations_per_month=300, pdf_exports_per_month=250
+  - Features: resume_logic_basic=true, resume_logic_full=true, ai_detection_basic=true, ai_detection_advanced=true, candidate_profiles=true, pdf_export=true, bulk_upload=true, bulk_actions=true, skills_tests=true, interview_assistant=true, analytics=true, team_seats=5, branded_reports=true, scoring_weights=true
+
+- Enterprise (Custom)
+  - Limits: treat as unlimited (use very large values or special handling)
+  - Features: everything true + api_access=true + sla=true + white_label=true
+
+REQUIRED IMPLEMENTATION DETAILS
+A) Create a single configuration file:
+- /src/config/plans.ts (or equivalent)
+- export PLAN keys and the full object of limits + features
+- no duplicated plan logic anywhere else
+
+B) Add usage tracking:
+- Add a Usage model/table/collection with:
+  user_id, period (YYYY-MM), resume_scans_used, job_desc_used, skills_tests_used, interview_generations_used, pdf_exports_used
+- Provide helper functions:
+  getOrCreateUsage(userId, period)
+  incrementUsage(userId, period, fieldsToIncrement)
+- period is computed from server date at runtime (e.g., new Date() -> YYYY-MM)
+
+C) Add enforcement utilities:
+- /src/lib/usageGuard.ts with assertWithinLimit({ plan, limitKey, used, increment })
+- /src/lib/featureGate.ts with hasFeature(plan, featureKey)
+
+D) Enforce on server routes (do NOT rely only on UI):
+- Resume analysis endpoint:
+  - requires resume_logic_basic
+  - enforce resume_scans_per_month
+  - increment resume_scans_used after successful analysis
+- Job description endpoint:
+  - enforce job_desc_per_month
+- Skills test generation endpoint:
+  - requires skills_tests
+  - enforce skills_tests_per_month
+- Interview assistant endpoint:
+  - requires interview_assistant
+  - enforce interview_generations_per_month
+- PDF export endpoint:
+  - requires pdf_export
+  - enforce pdf_exports_per_month
+- Bulk upload endpoint:
+  - requires bulk_upload
+  - enforce batch size <= bulk_upload_max_batch
+  - enforce resume_scans_per_month increments by number of resumes processed
+
+E) UI gating:
+- Wherever buttons exist for bulk upload, skills tests, interview assistant, PDF export, advanced AI detection:
+  - hide or disable them if hasFeature(plan, featureKey) is false
+  - show a small “Upgrade to unlock” message
+
+OUTPUT REQUIREMENTS
+1) Make the changes directly in the codebase with correct imports.
+2) Do not break existing auth. Assume req.user exists and includes user.plan.
+3) Add clear error messages when blocked:
+   - “Plan limit reached: Upgrade your plan to continue.”
+   - “Upgrade required to use this feature.”
+4) After implementation, print a short checklist of what files you changed and where to test each endpoint.
+
+START NOW: implement config, DB model, helper functions, enforcement middleware, and UI gating.
