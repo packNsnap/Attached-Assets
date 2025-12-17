@@ -1881,14 +1881,14 @@ export async function registerRoutes(
         return;
       }
 
-      // Check baseline analyses limit
-      const canUseBaseline = await storage.checkCanUseFeature(userId, "baselineAnalyses");
-      if (!canUseBaseline.allowed) {
+      // Check resume scans limit (new system)
+      const canUseScan = await storage.checkCanUseFeature(userId, "resume_scans");
+      if (!canUseScan.allowed) {
         res.status(403).json({
           error: "Resume analysis limit reached",
-          message: `You've used ${canUseBaseline.current} of ${canUseBaseline.limit} resume analyses this month. Please upgrade your plan.`,
-          current: canUseBaseline.current,
-          limit: canUseBaseline.limit
+          message: `You've used ${canUseScan.current} of ${canUseScan.limit} resume scans this month. Please upgrade your plan.`,
+          current: canUseScan.current,
+          limit: canUseScan.limit
         });
         return;
       }
@@ -1960,8 +1960,8 @@ export async function registerRoutes(
         }
       }
       
-      // Increment baseline analyses usage
-      await storage.incrementUsage(userId, "baselineAnalyses");
+      // Increment resume scans usage (new monthly tracking)
+      await storage.incrementMonthlyUsage(userId, "resumeScansUsed");
       
       res.json(result);
     } catch (error) {
@@ -2220,7 +2220,7 @@ Be specific and practical - these should reflect what real companies actually in
       }
 
       // Check job description generation limit
-      const canUse = await storage.checkCanUseFeature(userId, "jobDescriptions");
+      const canUse = await storage.checkCanUseFeature(userId, "job_descriptions");
       if (!canUse.allowed) {
         res.status(403).json({
           error: "Job description limit reached",
@@ -2263,7 +2263,7 @@ Make the description professional but engaging. Use bullet points for responsibi
       const salaryRange = calculateRealisticSalary(level, location);
       
       // Increment usage after successful generation
-      await storage.incrementUsage(userId, "jobDescriptions");
+      await storage.incrementMonthlyUsage(userId, "jobDescUsed");
       
       res.json({
         description: result.description,
@@ -2295,7 +2295,7 @@ Make the description professional but engaging. Use bullet points for responsibi
       const userId = req.user.claims.sub;
       
       // Check skills test creation limit
-      const canUse = await storage.checkCanUseFeature(userId, "skillsTests");
+      const canUse = await storage.checkCanUseFeature(userId, "skills_tests");
       if (!canUse.allowed) {
         res.status(403).json({
           error: "Skills test limit reached",
@@ -2312,7 +2312,7 @@ Make the description professional but engaging. Use bullet points for responsibi
       const test = await storage.createSkillsTest(testData);
       
       // Increment usage after successful creation
-      await storage.incrementUsage(userId, "skillsTests");
+      await storage.incrementMonthlyUsage(userId, "skillsTestsUsed");
       
       res.json(test);
     } catch (error) {
@@ -2903,10 +2903,10 @@ Respond with ONLY a number between 0 and 100.`;
       }
 
       // Check interview set generation limit
-      const canUseInterviews = await storage.checkCanUseFeature(userId, "interviewSets");
+      const canUseInterviews = await storage.checkCanUseFeature(userId, "interview_generations");
       if (!canUseInterviews.allowed) {
         res.status(403).json({
-          error: "Interview set limit reached",
+          error: "Interview generation limit reached",
           message: `You've generated ${canUseInterviews.current} of ${canUseInterviews.limit} interview question sets this month. Please upgrade your plan.`,
           current: canUseInterviews.current,
           limit: canUseInterviews.limit
@@ -3164,7 +3164,7 @@ Respond in this exact JSON format:
       }
       
       // Increment interview sets usage
-      await storage.incrementUsage(userId, "interviewSets");
+      await storage.incrementMonthlyUsage(userId, "interviewGenerationsUsed");
       
       res.json({
         questions: finalQuestions,
@@ -4011,17 +4011,7 @@ Make sure all emails reference the employee by name (${employee_name}) and their
         return;
       }
 
-      // Check policy generation limit
-      const canUse = await storage.checkCanUseFeature(userId, "policies");
-      if (!canUse.allowed) {
-        res.status(403).json({
-          error: "Policy generation limit reached",
-          message: `You've generated ${canUse.current} of ${canUse.limit} policies this month. Please upgrade your plan.`,
-          current: canUse.current,
-          limit: canUse.limit
-        });
-        return;
-      }
+      // Policy library is available to all plans - no feature gate needed
 
       // Curated reference sources based on policy type (real, authoritative HR sources)
       const policyReferences: Record<string, Array<{ title: string; url: string; snippet: string }>> = {
@@ -4174,7 +4164,7 @@ List the reference sources used in the sources array.`;
       }
 
       // Increment policies usage after successful generation
-      await storage.incrementUsage(userId, "policies");
+      // Policies don't count toward limits
 
       res.json(parsed);
     } catch (error) {
