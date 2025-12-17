@@ -104,6 +104,7 @@ export default function AdminPage() {
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [isTierDialogOpen, setIsTierDialogOpen] = useState(false);
   const [selectedTier, setSelectedTier] = useState<string>("");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -187,6 +188,29 @@ export default function AdminPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to update tier",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setIsDeleteDialogOpen(false);
+      setSelectedUser(null);
+      toast({
+        title: "User Deleted",
+        description: "The user and all their data have been removed.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
         variant: "destructive",
       });
     },
@@ -398,6 +422,19 @@ export default function AdminPage() {
                               <X className="w-3 h-3" />
                             </Button>
                           )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => {
+                              setSelectedUser(user);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            disabled={deleteUserMutation.isPending}
+                            data-testid={`delete-user-${user.id}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -606,6 +643,39 @@ export default function AdminPage() {
               data-testid="button-confirm-tier"
             >
               {setTierMutation.isPending ? "Updating..." : "Update Tier"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription className="text-destructive">
+              This will permanently delete {selectedUser?.email || "this user"} and all their data. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this user? All associated jobs, candidates, and data will be removed.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (selectedUser) {
+                  deleteUserMutation.mutate(selectedUser.id);
+                }
+              }}
+              disabled={deleteUserMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteUserMutation.isPending ? "Deleting..." : "Delete User"}
             </Button>
           </DialogFooter>
         </DialogContent>

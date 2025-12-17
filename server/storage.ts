@@ -82,6 +82,7 @@ export interface IStorage {
   upsertUser(userData: UpsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUserFreeAccess(id: string, freeAccessUntil: Date | null): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
   
   createJob(job: InsertJob): Promise<Job>;
   getJobs(userId: string): Promise<Job[]>;
@@ -278,6 +279,14 @@ export class DatabaseStorage implements IStorage {
       .where(eq(users.id, id))
       .returning();
     return result[0];
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    await db.delete(usageTracking).where(eq(usageTracking.userId, id));
+    await db.delete(aiActionUsage).where(eq(aiActionUsage.userId, id));
+    await db.delete(subscriptions).where(eq(subscriptions.userId, id));
+    const result = await db.delete(users).where(eq(users.id, id)).returning();
+    return result.length > 0;
   }
 
   async resetUsageTracking(userId: string): Promise<void> {

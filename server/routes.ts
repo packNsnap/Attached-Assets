@@ -536,6 +536,36 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Delete user
+  app.delete('/api/admin/users/:userId', isAuthenticated, isAdminMiddleware, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      
+      const deleted = await storage.deleteUser(userId);
+      if (!deleted) {
+        res.status(500).json({ message: "Failed to delete user" });
+        return;
+      }
+      
+      console.log(`[admin] Deleted user ${userId} (${user.email})`);
+      
+      res.json({ 
+        success: true, 
+        userId,
+        message: `User ${user.email} has been deleted` 
+      });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // Admin: Get detailed user usage stats
   app.get('/api/admin/users/:userId/usage', isAuthenticated, isAdminMiddleware, async (req: any, res) => {
     try {
