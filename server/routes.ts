@@ -359,6 +359,17 @@ export async function registerRoutes(
     }
   });
 
+  app.get('/api/usage-summary', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const summary = await storage.getUserUsageSummary(userId);
+      res.json(summary);
+    } catch (error) {
+      console.error("Error fetching usage summary:", error);
+      res.status(500).json({ message: "Failed to fetch usage summary" });
+    }
+  });
+
   // Admin middleware - checks if user is an admin by email
   const isAdminMiddleware = async (req: any, res: any, next: any) => {
     try {

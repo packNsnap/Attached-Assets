@@ -32,7 +32,21 @@ Preferred communication style: Simple, everyday language.
 - **Onboarding Module:** AI-generated onboarding plans with task tracking and progress bars.
 - **Admin Panel:** Manages users, grants/revokes free access, accessible only to `isAdmin` users.
 - **Bulk Resume Upload (Pro+):** Allows uploading multiple resumes, auto-creates candidate profiles, extracts data, and associates with jobs.
-- **Usage Limits Enforcement:** API enforces plan-based limits for job creation, candidate creation, and specific AI actions (resume analysis, interview questions, reference emails, onboarding plans).
+- **Usage Limits Enforcement:** API enforces plan-based limits with monthly tracking for resume scans, job descriptions, skills tests, and interview generations.
+
+### Pricing Tiers & Limits (5-Tier System)
+The app uses a 5-tier pricing system defined in `shared/schema.ts` via `PLAN_LIMITS`:
+- **Free ($0):** 3 resume scans/month, basic resume logic only
+- **Starter ($49.99/mo):** 25 resume scans, 5 job descriptions, full resume logic + AI detection
+- **Growth ($99.99/mo):** 100 resume scans, 25 job descriptions, 10 skills tests, 25 interview generations, bulk upload
+- **Pro/Agency ($149.99/mo):** 300 resume scans, 50 job descriptions, 25 skills tests, 50 interview generations, branded reports
+- **Enterprise ($249/mo):** Unlimited everything, API access, white-label, SLA
+
+### Usage Tracking System
+- **Monthly Usage Table:** `monthly_usage` tracks per-user consumption by period (YYYY-MM)
+- **Server-Side Enforcement:** `planUtils.ts` provides `checkUsageLimit`, `assertWithinLimit`, `hasFeature` helpers
+- **Frontend Hook:** `usePlanFeatures.ts` provides plan checking, usage display, and feature gating for UI
+- **Usage API:** `/api/usage-summary` returns current plan + all usage metrics for the period
 
 ## External Dependencies
 
