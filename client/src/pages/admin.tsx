@@ -108,9 +108,10 @@ export default function AdminPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: users = [], isLoading, error } = useQuery<AdminUser[]>({
+  const usersQuery = useQuery<AdminUser[]>({
     queryKey: ["/api/admin/users"],
   });
+  const { data: users = [], isLoading, error } = usersQuery;
 
   const { data: userUsage, isLoading: isLoadingUsage } = useQuery<UserUsage>({
     queryKey: ["/api/admin/users", expandedUserId, "usage"],
@@ -131,13 +132,13 @@ export default function AdminPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setIsGrantDialogOpen(false);
       setSelectedUser(null);
       toast({
         title: "Access Granted",
         description: `Free access has been granted for ${accessDays} days.`,
       });
+      usersQuery.refetch();
     },
     onError: (error: Error) => {
       toast({
@@ -154,11 +155,11 @@ export default function AdminPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "Access Revoked",
         description: "Free access has been removed.",
       });
+      usersQuery.refetch();
     },
     onError: (error: Error) => {
       toast({
@@ -175,14 +176,15 @@ export default function AdminPage() {
       return res.json();
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", variables.userId, "usage"] });
       setIsTierDialogOpen(false);
       setSelectedUser(null);
       toast({
         title: "Tier Updated",
         description: `User tier has been changed to ${selectedTier}.`,
       });
+      // Refetch users immediately
+      usersQuery.refetch();
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users", variables.userId, "usage"] });
     },
     onError: (error: Error) => {
       toast({
@@ -199,13 +201,13 @@ export default function AdminPage() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       setIsDeleteDialogOpen(false);
       setSelectedUser(null);
       toast({
         title: "User Deleted",
         description: "The user and all their data have been removed.",
       });
+      usersQuery.refetch();
     },
     onError: (error: Error) => {
       toast({
