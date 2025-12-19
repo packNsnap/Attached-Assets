@@ -4664,34 +4664,75 @@ Generate 3-5 diverse goals covering different aspects of the role.`;
 
   app.get("/api/stripe/products", async (_req, res) => {
     try {
-      const result = await db.execute(
-        sql`WITH ranked_prices AS (
+      // Try to fetch from database first
+      let products: any[] = [];
+      try {
+        const result = await db.execute(
+          sql`WITH ranked_prices AS (
+            SELECT 
+              pr.id,
+              pr.product,
+              pr.unit_amount,
+              pr.currency,
+              pr.recurring,
+              pr.created,
+              ROW_NUMBER() OVER (PARTITION BY pr.product ORDER BY pr.created DESC) as rn
+            FROM stripe.prices pr
+            WHERE pr.active = true
+          )
           SELECT 
-            pr.id,
-            pr.product,
-            pr.unit_amount,
-            pr.currency,
-            pr.recurring,
-            pr.created,
-            ROW_NUMBER() OVER (PARTITION BY pr.product ORDER BY pr.created DESC) as rn
-          FROM stripe.prices pr
-          WHERE pr.active = true
-        )
-        SELECT 
-          p.id as product_id,
-          p.name as product_name,
-          p.description as product_description,
-          p.metadata as product_metadata,
-          rp.id as price_id,
-          rp.unit_amount,
-          rp.currency,
-          rp.recurring
-        FROM stripe.products p
-        LEFT JOIN ranked_prices rp ON rp.product = p.id AND rp.rn = 1
-        WHERE p.active = true
-        ORDER BY p.name`
-      );
-      res.json({ products: result.rows });
+            p.id as product_id,
+            p.name as product_name,
+            p.description as product_description,
+            p.metadata as product_metadata,
+            rp.id as price_id,
+            rp.unit_amount,
+            rp.currency,
+            rp.recurring
+          FROM stripe.products p
+          LEFT JOIN ranked_prices rp ON rp.product = p.id AND rp.rn = 1
+          WHERE p.active = true
+          ORDER BY p.name`
+        );
+        products = result.rows as any[];
+      } catch (dbError) {
+        console.log("Database query failed, will try Stripe API directly");
+      }
+
+      // If database returned no products, fetch directly from Stripe API
+      if (!products || products.length === 0) {
+        console.log("No products in database, fetching from Stripe API...");
+        try {
+          const stripe = await getUncachableStripeClient();
+          const stripeProducts = await stripe.products.list({ active: true, limit: 100 });
+          const stripePrices = await stripe.prices.list({ active: true, limit: 100 });
+          
+          // Map products with their latest prices
+          products = stripeProducts.data
+            .filter(p => ['Basic', 'Growth', 'Pro', 'Enterprise'].includes(p.name))
+            .map(p => {
+              const productPrices = stripePrices.data
+                .filter(pr => pr.product === p.id && pr.recurring?.interval === 'month')
+                .sort((a, b) => (b.created || 0) - (a.created || 0));
+              const latestPrice = productPrices[0];
+              return {
+                product_id: p.id,
+                product_name: p.name,
+                product_description: p.description,
+                product_metadata: p.metadata,
+                price_id: latestPrice?.id,
+                unit_amount: latestPrice?.unit_amount,
+                currency: latestPrice?.currency,
+                recurring: latestPrice?.recurring,
+              };
+            });
+          console.log(`Fetched ${products.length} products from Stripe API`);
+        } catch (apiError) {
+          console.error("Failed to fetch from Stripe API:", apiError);
+        }
+      }
+
+      res.json({ products });
     } catch (error) {
       console.error("Error fetching Stripe products:", error);
       res.status(500).json({ error: "Failed to fetch products" });
