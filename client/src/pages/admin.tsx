@@ -44,14 +44,11 @@ type UserUsage = {
   };
   usage: {
     plan: string;
-    jobs: { current: number; limit: number };
     candidates: { current: number; limit: number };
-    baselineAnalyses: { current: number; limit: number };
     jobDescriptions: { current: number; limit: number };
     skillsTests: { current: number; limit: number };
     interviewSets: { current: number; limit: number };
-    policies: { current: number; limit: number };
-    bulkUpload: boolean;
+    pdfExports: { current: number; limit: number };
     periodEnd: string;
   };
   counts: {
@@ -484,9 +481,9 @@ export default function AdminPage() {
                                 <Card className="p-3">
                                   <div className="flex items-center gap-2 mb-1">
                                     <Zap className="w-3.5 h-3.5 text-orange-500" />
-                                    <span className="text-xs font-medium">Bulk Upload</span>
+                                    <span className="text-xs font-medium">Plan</span>
                                   </div>
-                                  <p className="text-sm font-medium">{userUsage.usage.bulkUpload ? "Enabled" : "Disabled"}</p>
+                                  <p className="text-sm font-medium capitalize">{userUsage.usage.plan}</p>
                                 </Card>
                               </div>
 
@@ -494,23 +491,10 @@ export default function AdminPage() {
                                 <div className="space-y-3">
                                   <h4 className="text-sm font-medium">Resource Usage</h4>
                                   <UsageBar 
-                                    current={userUsage.usage.jobs.current} 
-                                    limit={userUsage.usage.jobs.limit} 
-                                    label="Active Jobs" 
-                                  />
-                                  <UsageBar 
                                     current={userUsage.usage.candidates.current} 
                                     limit={userUsage.usage.candidates.limit} 
                                     label="Candidates" 
                                   />
-                                  <UsageBar 
-                                    current={userUsage.usage.baselineAnalyses.current} 
-                                    limit={userUsage.usage.baselineAnalyses.limit} 
-                                    label="Resume Analyses" 
-                                  />
-                                </div>
-                                <div className="space-y-3">
-                                  <h4 className="text-sm font-medium">Feature Usage</h4>
                                   <UsageBar 
                                     current={userUsage.usage.jobDescriptions.current} 
                                     limit={userUsage.usage.jobDescriptions.limit} 
@@ -521,15 +505,18 @@ export default function AdminPage() {
                                     limit={userUsage.usage.skillsTests.limit} 
                                     label="Skills Tests" 
                                   />
+                                </div>
+                                <div className="space-y-3">
+                                  <h4 className="text-sm font-medium">Feature Usage</h4>
                                   <UsageBar 
                                     current={userUsage.usage.interviewSets.current} 
                                     limit={userUsage.usage.interviewSets.limit} 
                                     label="Interview Sets" 
                                   />
                                   <UsageBar 
-                                    current={userUsage.usage.policies.current} 
-                                    limit={userUsage.usage.policies.limit} 
-                                    label="HR Policies" 
+                                    current={userUsage.usage.pdfExports.current} 
+                                    limit={userUsage.usage.pdfExports.limit} 
+                                    label="PDF Exports" 
                                   />
                                 </div>
                               </div>
