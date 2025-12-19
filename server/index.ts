@@ -137,41 +137,42 @@ async function seedStripeProducts() {
   try {
     const stripe = await getUncachableStripeClient();
 
+    // Deactivate old "Starter" product (renamed to Basic)
+    try {
+      const starterProducts = await stripe.products.search({ query: `name:'Starter'` });
+      for (const starterProduct of starterProducts.data) {
+        if (starterProduct.active) {
+          await stripe.products.update(starterProduct.id, { active: false });
+          log(`Deactivated old Starter product: ${starterProduct.id}`, "stripe-seed");
+        }
+      }
+    } catch (error) {
+      log(`Note: Could not clean up Starter products`, "stripe-seed");
+    }
+
     const products = [
       {
         name: 'Basic',
         description: 'Ideal for small businesses hiring occasionally. 25 candidates, 2 scans per candidate.',
-        metadata: { 
-          plan: 'basic',
-          candidates: '25',
-        },
+        metadata: { plan: 'basic', candidates: '25' },
         price: 2900,
       },
       {
         name: 'Growth',
         description: 'For growing companies. 75 candidates, advanced AI features.',
-        metadata: { 
-          plan: 'growth',
-          candidates: '75',
-        },
+        metadata: { plan: 'growth', candidates: '75' },
         price: 5900,
       },
       {
         name: 'Pro',
         description: 'For agencies and large teams. 200 candidates, team management.',
-        metadata: { 
-          plan: 'pro',
-          candidates: '200',
-        },
+        metadata: { plan: 'pro', candidates: '200' },
         price: 14900,
       },
       {
         name: 'Enterprise',
         description: 'Full-scale HR for large organizations. 500 candidates, API access.',
-        metadata: { 
-          plan: 'enterprise',
-          candidates: '500',
-        },
+        metadata: { plan: 'enterprise', candidates: '500' },
         price: -1,
       },
     ];
@@ -184,7 +185,6 @@ async function seedStripeProducts() {
 
         let product;
         if (existingProducts.data.length > 0) {
-          // Update existing product
           product = existingProducts.data[0];
           await stripe.products.update(product.id, {
             description: productData.description,
@@ -192,7 +192,6 @@ async function seedStripeProducts() {
           });
           log(`Updated Stripe product: ${productData.name}`, "stripe-seed");
         } else {
-          // Create new product
           product = await stripe.products.create({
             name: productData.name,
             description: productData.description,
@@ -201,15 +200,29 @@ async function seedStripeProducts() {
           log(`Created Stripe product: ${productData.name}`, "stripe-seed");
         }
 
-        // Create new price (skip for custom-priced products like Enterprise)
+        // Only create price if one doesn't exist at the correct amount
         if (productData.price > 0) {
-          const price = await stripe.prices.create({
+          const existingPrices = await stripe.prices.list({
             product: product.id,
-            unit_amount: productData.price,
-            currency: 'usd',
-            recurring: { interval: 'month' },
+            active: true,
+            limit: 100,
           });
-          log(`Created price for ${productData.name}: $${productData.price / 100}/mo`, "stripe-seed");
+          
+          const hasCorrectPrice = existingPrices.data.some(
+            p => p.unit_amount === productData.price && p.recurring?.interval === 'month'
+          );
+          
+          if (!hasCorrectPrice) {
+            await stripe.prices.create({
+              product: product.id,
+              unit_amount: productData.price,
+              currency: 'usd',
+              recurring: { interval: 'month' },
+            });
+            log(`Created price for ${productData.name}: $${productData.price / 100}/mo`, "stripe-seed");
+          } else {
+            log(`Price already exists for ${productData.name}`, "stripe-seed");
+          }
         } else {
           log(`Skipped price creation for ${productData.name} (custom pricing)`, "stripe-seed");
         }
