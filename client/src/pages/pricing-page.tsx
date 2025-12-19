@@ -233,10 +233,14 @@ export default function PricingPage() {
       (p: any) => p.product_name === tier.stripeProductName
     );
 
+    console.log("Products data:", productsData);
+    console.log("Looking for:", tier.stripeProductName);
+    console.log("Found product:", product);
+
     if (!product?.price_id) {
       toast({
         title: "Product not available",
-        description: "Please try again later or contact support.",
+        description: `Could not find ${tier.stripeProductName}. Products loaded: ${productsData?.products?.length || 0}`,
         variant: "destructive",
       });
       return;
