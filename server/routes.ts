@@ -4662,7 +4662,7 @@ Generate 3-5 diverse goals covering different aspects of the role.`;
     }
   });
 
-  app.get("/api/stripe/products", isAuthenticated, async (_req, res) => {
+  app.get("/api/stripe/products", async (_req, res) => {
     try {
       const result = await db.execute(
         sql`WITH ranked_prices AS (
