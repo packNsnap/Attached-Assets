@@ -40,15 +40,17 @@ interface UsageSummary {
 
 const planDisplayNames: Record<string, string> = {
   free: "Free",
-  starter: "Starter",
+  basic: "Basic",
   growth: "Growth",
+  pro: "Pro",
   enterprise: "Enterprise"
 };
 
 const planColors: Record<string, string> = {
   free: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  starter: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+  basic: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
   growth: "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+  pro: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
   enterprise: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300"
 };
 
@@ -268,14 +270,14 @@ export default function UsageDashboard() {
         </Card>
       )}
 
-      {(usage.plan === "starter" || usage.plan === "growth") && (
+      {(usage.plan === "basic" || usage.plan === "growth" || usage.plan === "pro") && (
         <Card className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200 dark:border-amber-800">
           <CardContent className="pt-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <h3 className="font-semibold text-lg">Need more capacity?</h3>
                 <p className="text-sm text-muted-foreground">
-                  Upgrade to {usage.plan === "starter" ? "Growth" : "Enterprise"} for higher limits and additional features.
+                  Upgrade to {usage.plan === "basic" ? "Growth" : usage.plan === "growth" ? "Pro" : "Enterprise"} for higher limits and additional features.
                 </p>
               </div>
               <Button asChild variant="outline" data-testid="upgrade-plan-button">

@@ -496,7 +496,7 @@ export async function registerRoutes(
       const { userId } = req.params;
       const { plan } = req.body;
       
-      const validPlans = ['free', 'starter', 'growth', 'enterprise'];
+      const validPlans = ['free', 'basic', 'growth', 'pro', 'enterprise'];
       if (!plan || !validPlans.includes(plan)) {
         res.status(400).json({ message: `Invalid plan. Must be one of: ${validPlans.join(', ')}` });
         return;
@@ -1971,8 +1971,8 @@ export async function registerRoutes(
         }
       }
       
-      // Increment resume scans usage (new monthly tracking)
-      await storage.incrementMonthlyUsage(userId, "resumeScansUsed");
+      // Resume scans are now tracked per-candidate via aiActionUsage table (above)
+      // No monthly tracking needed for resume scans
       
       res.json(result);
     } catch (error) {
@@ -3175,7 +3175,7 @@ Respond in this exact JSON format:
       }
       
       // Increment interview sets usage
-      await storage.incrementMonthlyUsage(userId, "interviewGenerationsUsed");
+      await storage.incrementMonthlyUsage(userId, "interviewSetsUsed");
       
       res.json({
         questions: finalQuestions,

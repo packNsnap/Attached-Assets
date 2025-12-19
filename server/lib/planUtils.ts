@@ -96,12 +96,13 @@ export function assertHasFeature(plan: PlanType, featureKey: FeatureKey): void {
 
 export function getUsageFieldForLimit(limitKey: LimitKey): keyof MonthlyUsage | null {
   const mapping: Record<LimitKey, keyof MonthlyUsage | null> = {
-    resume_scans_per_month: 'resumeScansUsed',
-    job_desc_per_month: 'jobDescUsed',
-    bulk_upload_max_batch: null, // Special handling - not a counter
+    candidates_max: null, // Special handling - counted from candidates table
+    resume_scans_per_candidate: null, // Special handling - per-candidate via aiActionUsage table
+    job_descriptions_per_month: 'jobDescUsed',
     skills_tests_per_month: 'skillsTestsUsed',
-    interview_generations_per_month: 'interviewGenerationsUsed',
+    interview_sets_per_month: 'interviewSetsUsed',
     pdf_exports_per_month: 'pdfExportsUsed',
+    bulk_upload_max: null, // Special handling - not a counter
   };
   return mapping[limitKey];
 }
@@ -109,9 +110,9 @@ export function getUsageFieldForLimit(limitKey: LimitKey): keyof MonthlyUsage | 
 export function formatPlanName(plan: PlanType): string {
   const names: Record<PlanType, string> = {
     free: 'Free',
-    starter: 'Starter',
+    basic: 'Basic',
     growth: 'Growth',
-    pro: 'Pro / Agency',
+    pro: 'Pro',
     enterprise: 'Enterprise',
   };
   return names[plan] || 'Free';

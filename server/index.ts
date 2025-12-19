@@ -139,34 +139,40 @@ async function seedStripeProducts() {
 
     const products = [
       {
-        name: 'Starter',
-        description: 'Ideal for small businesses hiring occasionally. 5 active jobs, 25 candidates/month.',
+        name: 'Basic',
+        description: 'Ideal for small businesses hiring occasionally. 25 candidates, 2 scans per candidate.',
         metadata: { 
-          plan: 'starter',
-          jobs: '5',
+          plan: 'basic',
           candidates: '25',
         },
-        price: 4999,
+        price: 2900,
       },
       {
         name: 'Growth',
-        description: 'For growing companies and agencies hiring regularly. 20 active jobs, 150 candidates/month, bulk upload.',
+        description: 'For growing companies. 75 candidates, advanced AI features.',
         metadata: { 
           plan: 'growth',
-          jobs: '20',
-          candidates: '150',
+          candidates: '75',
         },
-        price: 9999,
+        price: 5900,
+      },
+      {
+        name: 'Pro',
+        description: 'For agencies and large teams. 200 candidates, team management.',
+        metadata: { 
+          plan: 'pro',
+          candidates: '200',
+        },
+        price: 14900,
       },
       {
         name: 'Enterprise',
-        description: 'Full-scale HR for large organizations. Unlimited jobs, 500 candidates/month, priority support.',
+        description: 'Full-scale HR for large organizations. 500 candidates, API access.',
         metadata: { 
           plan: 'enterprise',
-          jobs: 'unlimited',
           candidates: '500',
         },
-        price: 24900,
+        price: -1,
       },
     ];
 
@@ -195,15 +201,18 @@ async function seedStripeProducts() {
           log(`Created Stripe product: ${productData.name}`, "stripe-seed");
         }
 
-        // Create new price
-        const price = await stripe.prices.create({
-          product: product.id,
-          unit_amount: productData.price,
-          currency: 'usd',
-          recurring: { interval: 'month' },
-        });
-
-        log(`Created price for ${productData.name}: $${productData.price / 100}/mo`, "stripe-seed");
+        // Create new price (skip for custom-priced products like Enterprise)
+        if (productData.price > 0) {
+          const price = await stripe.prices.create({
+            product: product.id,
+            unit_amount: productData.price,
+            currency: 'usd',
+            recurring: { interval: 'month' },
+          });
+          log(`Created price for ${productData.name}: $${productData.price / 100}/mo`, "stripe-seed");
+        } else {
+          log(`Skipped price creation for ${productData.name} (custom pricing)`, "stripe-seed");
+        }
       } catch (error) {
         log(`Error with product ${productData.name}: ${error instanceof Error ? error.message : 'Unknown error'}`, "stripe-seed");
       }

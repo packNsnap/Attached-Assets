@@ -35,15 +35,16 @@ Preferred communication style: Simple, everyday language.
 - **Usage Limits Enforcement:** API enforces plan-based limits with monthly tracking for resume scans, job descriptions, skills tests, and interview generations.
 
 ### Pricing Tiers & Limits (5-Tier System)
-The app uses a 5-tier pricing system defined in `shared/schema.ts` via `PLAN_LIMITS`:
-- **Free ($0):** 3 resume scans/month, basic resume logic only
-- **Starter ($49.99/mo):** 25 resume scans, 5 job descriptions, full resume logic + AI detection
-- **Growth ($99.99/mo):** 100 resume scans, 25 job descriptions, 10 skills tests, 25 interview generations, bulk upload
-- **Pro/Agency ($149.99/mo):** 300 resume scans, 50 job descriptions, 25 skills tests, 50 interview generations, branded reports
-- **Enterprise ($249/mo):** Unlimited everything, API access, white-label, SLA
+The app uses a 5-tier pricing system defined in `shared/schema.ts` via `PLAN_LIMITS`. The system uses **candidate-based limits** with **per-candidate resume scans** instead of monthly scan quotas:
+- **Free ($0):** 3 candidates, 1 scan/candidate, 5 job desc/skills tests/interview sets/PDF exports per month
+- **Basic ($29/mo):** 25 candidates, 2 scans/candidate, 25 job desc, 100 skills tests, 100 interview sets, 50 PDF exports, bulk upload (5)
+- **Growth ($59/mo):** 75 candidates, 2 scans/candidate, 50 job desc, 300 skills tests/interview sets, 200 PDF exports, bulk upload (10), advanced AI, analytics
+- **Pro ($149/mo):** 200 candidates, 2 scans/candidate, 150 job desc, 1200 skills tests/interview sets, 750 PDF exports, bulk upload (25), team management
+- **Enterprise (Custom):** 500 candidates, 3000 everything, bulk upload (100), API access
 
 ### Usage Tracking System
-- **Monthly Usage Table:** `monthly_usage` tracks per-user consumption by period (YYYY-MM)
+- **Monthly Usage Table:** `monthly_usage` tracks per-user consumption by period (YYYY-MM) for job descriptions, skills tests, interview sets, PDF exports, and advanced AI usage
+- **Per-Candidate Tracking:** Resume scans are tracked per-candidate via `ai_action_usage` table (not monthly totals)
 - **Server-Side Enforcement:** `planUtils.ts` provides `checkUsageLimit`, `assertWithinLimit`, `hasFeature` helpers
 - **Frontend Hook:** `usePlanFeatures.ts` provides plan checking, usage display, and feature gating for UI
 - **Usage API:** `/api/usage-summary` returns current plan + all usage metrics for the period

@@ -20,7 +20,7 @@ export function UsageDisplay() {
 
   const planColors: Record<string, string> = {
     free: "bg-slate-500",
-    starter: "bg-green-500",
+    basic: "bg-green-500",
     growth: "bg-purple-500",
     pro: "bg-blue-500",
     enterprise: "bg-amber-500",
@@ -29,10 +29,10 @@ export function UsageDisplay() {
   const planColor = planColors[plan] || "bg-slate-500";
 
   const usageItems = [
-    { key: "resume_scans_per_month" as const, label: "Resume Scans", icon: FileSearch },
-    { key: "job_desc_per_month" as const, label: "Job Descriptions", icon: FileText },
+    { key: "candidates_max" as const, label: "Candidates", icon: FileSearch },
+    { key: "job_descriptions_per_month" as const, label: "Job Descriptions", icon: FileText },
     { key: "skills_tests_per_month" as const, label: "Skills Tests", icon: ClipboardCheck },
-    { key: "interview_generations_per_month" as const, label: "Interviews", icon: MessageSquare },
+    { key: "interview_sets_per_month" as const, label: "Interviews", icon: MessageSquare },
   ];
 
   const formatLimit = (current: number, limit: number) => {

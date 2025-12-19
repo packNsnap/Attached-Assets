@@ -176,7 +176,7 @@ export interface IStorage {
   
   // Monthly usage tracking (new system)
   getOrCreateMonthlyUsage(userId: string, period: string): Promise<MonthlyUsage>;
-  incrementMonthlyUsage(userId: string, field: keyof Pick<MonthlyUsage, 'resumeScansUsed' | 'jobDescUsed' | 'skillsTestsUsed' | 'interviewGenerationsUsed' | 'pdfExportsUsed'>, increment?: number): Promise<MonthlyUsage>;
+  incrementMonthlyUsage(userId: string, field: keyof Pick<MonthlyUsage, 'jobDescUsed' | 'skillsTestsUsed' | 'interviewSetsUsed' | 'pdfExportsUsed' | 'advancedAiUsed'>, increment?: number): Promise<MonthlyUsage>;
   getMonthlyUsage(userId: string, period: string): Promise<MonthlyUsage | undefined>;
   
   // Legacy usage tracking methods (for backward compatibility)
@@ -197,10 +197,10 @@ export interface IStorage {
   checkCanUseAiAction(userId: string, candidateId: string, serviceType: string): Promise<{ allowed: boolean; current: number; limit: number }>;
   getUserUsageSummary(userId: string): Promise<{
     plan: PlanType;
-    resumeScans: { current: number; limit: number };
+    candidates: { current: number; limit: number };
     jobDescriptions: { current: number; limit: number };
     skillsTests: { current: number; limit: number };
-    interviewGenerations: { current: number; limit: number };
+    interviewSets: { current: number; limit: number };
     pdfExports: { current: number; limit: number };
     periodEnd: Date;
   }>;
@@ -724,11 +724,11 @@ export class DatabaseStorage implements IStorage {
       const result = await db.insert(monthlyUsage).values({
         userId,
         period,
-        resumeScansUsed: 0,
         jobDescUsed: 0,
         skillsTestsUsed: 0,
-        interviewGenerationsUsed: 0,
+        interviewSetsUsed: 0,
         pdfExportsUsed: 0,
+        advancedAiUsed: 0,
       }).returning();
       usage = result[0];
     }
@@ -737,7 +737,7 @@ export class DatabaseStorage implements IStorage {
 
   async incrementMonthlyUsage(
     userId: string, 
-    field: keyof Pick<MonthlyUsage, 'resumeScansUsed' | 'jobDescUsed' | 'skillsTestsUsed' | 'interviewGenerationsUsed' | 'pdfExportsUsed'>,
+    field: keyof Pick<MonthlyUsage, 'jobDescUsed' | 'skillsTestsUsed' | 'interviewSetsUsed' | 'pdfExportsUsed' | 'advancedAiUsed'>,
     increment: number = 1
   ): Promise<MonthlyUsage> {
     const period = this.getCurrentPeriodString();
@@ -891,9 +891,8 @@ export class DatabaseStorage implements IStorage {
     }
     const plan = await this.getEffectivePlan(userId);
     const candidates = await this.getCandidates(userId);
-    // No candidate limit in new plan structure - check candidate_profiles feature
-    const hasFeature = PLAN_LIMITS[plan].features.candidate_profiles;
-    return { allowed: hasFeature, current: candidates.length, limit: -1 };
+    const limit = PLAN_LIMITS[plan].limits.candidates_max;
+    return { allowed: candidates.length < limit, current: candidates.length, limit };
   }
 
   async checkCanUseFeature(userId: string, feature: string): Promise<{ allowed: boolean; current: number; limit: number }> {
@@ -906,36 +905,42 @@ export class DatabaseStorage implements IStorage {
     const usage = await this.getOrCreateMonthlyUsage(userId, period);
     const planConfig = PLAN_LIMITS[plan];
     
-    // Map old feature names to new limit keys
+    // Map feature names to new limit keys
     const limitKeyMap: Record<string, LimitKey> = {
-      'resume_scans': 'resume_scans_per_month',
-      'job_descriptions': 'job_desc_per_month',
+      'job_descriptions': 'job_descriptions_per_month',
       'skills_tests': 'skills_tests_per_month',
-      'interview_generations': 'interview_generations_per_month',
+      'interview_sets': 'interview_sets_per_month',
       'pdf_exports': 'pdf_exports_per_month',
+      'candidates': 'candidates_max',
     };
     
     const usageFieldMap: Record<string, keyof MonthlyUsage> = {
-      'resume_scans': 'resumeScansUsed',
       'job_descriptions': 'jobDescUsed',
       'skills_tests': 'skillsTestsUsed',
-      'interview_generations': 'interviewGenerationsUsed',
+      'interview_sets': 'interviewSetsUsed',
       'pdf_exports': 'pdfExportsUsed',
     };
     
     const limitKey = limitKeyMap[feature];
     const usageField = usageFieldMap[feature];
     
-    if (!limitKey || !usageField) {
+    if (!limitKey) {
       return { allowed: true, current: 0, limit: -1 };
     }
     
     const limit = planConfig.limits[limitKey];
-    const current = (usage[usageField] as number) || 0;
     
-    if (limit === -1) {
-      return { allowed: true, current, limit: -1 };
+    // For candidates, count actual candidates instead of monthly usage
+    if (feature === 'candidates') {
+      const candidates = await this.getCandidates(userId);
+      return { allowed: candidates.length < limit, current: candidates.length, limit };
     }
+    
+    if (!usageField) {
+      return { allowed: true, current: 0, limit: -1 };
+    }
+    
+    const current = (usage[usageField] as number) || 0;
     
     return { allowed: current < limit, current, limit };
   }
@@ -956,12 +961,19 @@ export class DatabaseStorage implements IStorage {
     const usage = await this.getOrCreateMonthlyUsage(userId, period);
     const planConfig = PLAN_LIMITS[plan];
     
+    // For resume analysis, check per-candidate limit using aiActionUsage table
+    if (serviceType === 'resume_analysis') {
+      const scansPerCandidate = planConfig.limits.resume_scans_per_candidate;
+      const aiUsage = await this.getAiActionUsage(userId, candidateId, 'resume_analysis');
+      const currentScans = aiUsage?.actionCount || 0;
+      return { allowed: currentScans < scansPerCandidate, current: currentScans, limit: scansPerCandidate };
+    }
+    
     // Map service types to limits and usage fields
     const serviceToLimitMap: Record<string, { limit: LimitKey; usage: keyof MonthlyUsage }> = {
-      'resume_analysis': { limit: 'resume_scans_per_month', usage: 'resumeScansUsed' },
-      'job_description': { limit: 'job_desc_per_month', usage: 'jobDescUsed' },
+      'job_description': { limit: 'job_descriptions_per_month', usage: 'jobDescUsed' },
       'skills_test': { limit: 'skills_tests_per_month', usage: 'skillsTestsUsed' },
-      'interview_questions': { limit: 'interview_generations_per_month', usage: 'interviewGenerationsUsed' },
+      'interview_questions': { limit: 'interview_sets_per_month', usage: 'interviewSetsUsed' },
       'pdf_export': { limit: 'pdf_exports_per_month', usage: 'pdfExportsUsed' },
     };
     
@@ -973,19 +985,15 @@ export class DatabaseStorage implements IStorage {
     const limit = planConfig.limits[mapping.limit];
     const current = (usage[mapping.usage] as number) || 0;
     
-    if (limit === -1) {
-      return { allowed: true, current, limit: -1 };
-    }
-    
     return { allowed: current < limit, current, limit };
   }
 
   async getUserUsageSummary(userId: string): Promise<{
     plan: PlanType;
-    resumeScans: { current: number; limit: number };
+    candidates: { current: number; limit: number };
     jobDescriptions: { current: number; limit: number };
     skillsTests: { current: number; limit: number };
-    interviewGenerations: { current: number; limit: number };
+    interviewSets: { current: number; limit: number };
     pdfExports: { current: number; limit: number };
     periodEnd: Date;
   }> {
@@ -995,13 +1003,14 @@ export class DatabaseStorage implements IStorage {
     const period = this.getCurrentPeriodString();
     const usage = await this.getOrCreateMonthlyUsage(userId, period);
     const { end } = this.getCurrentPeriod();
+    const candidates = await this.getCandidates(userId);
     
     return {
       plan,
-      resumeScans: { current: usage.resumeScansUsed || 0, limit: limits.resume_scans_per_month },
-      jobDescriptions: { current: usage.jobDescUsed || 0, limit: limits.job_desc_per_month },
+      candidates: { current: candidates.length, limit: limits.candidates_max },
+      jobDescriptions: { current: usage.jobDescUsed || 0, limit: limits.job_descriptions_per_month },
       skillsTests: { current: usage.skillsTestsUsed || 0, limit: limits.skills_tests_per_month },
-      interviewGenerations: { current: usage.interviewGenerationsUsed || 0, limit: limits.interview_generations_per_month },
+      interviewSets: { current: usage.interviewSetsUsed || 0, limit: limits.interview_sets_per_month },
       pdfExports: { current: usage.pdfExportsUsed || 0, limit: limits.pdf_exports_per_month },
       periodEnd: end,
     };

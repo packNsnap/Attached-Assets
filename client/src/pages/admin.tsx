@@ -64,9 +64,10 @@ type UserUsage = {
 
 const PLAN_OPTIONS = [
   { value: 'free', label: 'Free', color: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100' },
-  { value: 'starter', label: 'Starter', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' },
-  { value: 'growth', label: 'Growth', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' },
-  { value: 'enterprise', label: 'Enterprise', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100' },
+  { value: 'basic', label: 'Basic', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' },
+  { value: 'growth', label: 'Growth', color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100' },
+  { value: 'pro', label: 'Pro', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100' },
+  { value: 'enterprise', label: 'Enterprise', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100' },
 ];
 
 function getPlanBadge(plan: string) {
@@ -295,10 +296,10 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {planCounts['starter'] + planCounts['growth'] + planCounts['enterprise']}
+              {planCounts['basic'] + planCounts['growth'] + planCounts['pro'] + planCounts['enterprise']}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {planCounts['starter']} Starter, {planCounts['growth']} Growth, {planCounts['enterprise']} Enterprise
+              {planCounts['basic']} Basic, {planCounts['growth']} Growth, {planCounts['pro']} Pro, {planCounts['enterprise']} Enterprise
             </p>
           </CardContent>
         </Card>

@@ -3,10 +3,10 @@ import { PLAN_LIMITS, PlanType, LimitKey, FeatureKey } from "@shared/schema";
 
 export interface UsageData {
   plan: PlanType;
-  resumeScans: { current: number; limit: number };
+  candidates: { current: number; limit: number };
   jobDescriptions: { current: number; limit: number };
   skillsTests: { current: number; limit: number };
-  interviewGenerations: { current: number; limit: number };
+  interviewSets: { current: number; limit: number };
   pdfExports: { current: number; limit: number };
   periodEnd: string;
 }
@@ -33,19 +33,20 @@ export function usePlanFeatures() {
   };
 
   const isUnlimited = (limitKey: LimitKey): boolean => {
-    return planConfig.limits[limitKey] === -1;
+    return (planConfig.limits[limitKey] as number) === -1;
   };
 
   const getUsage = (limitKey: LimitKey) => {
     if (!usageData) return { current: 0, limit: 0, remaining: 0, percentUsed: 0, isUnlimited: false };
     
     const mapping: Record<LimitKey, keyof UsageData | null> = {
-      resume_scans_per_month: "resumeScans",
-      job_desc_per_month: "jobDescriptions",
-      bulk_upload_max_batch: null,
+      candidates_max: "candidates",
+      resume_scans_per_candidate: null,
+      job_descriptions_per_month: "jobDescriptions",
       skills_tests_per_month: "skillsTests",
-      interview_generations_per_month: "interviewGenerations",
+      interview_sets_per_month: "interviewSets",
       pdf_exports_per_month: "pdfExports",
+      bulk_upload_max: null,
     };
 
     const key = mapping[limitKey];
@@ -94,9 +95,9 @@ export function usePlanFeatures() {
 export function formatPlanName(plan: PlanType): string {
   const names: Record<PlanType, string> = {
     free: "Free",
-    starter: "Starter",
+    basic: "Basic",
     growth: "Growth",
-    pro: "Pro / Agency",
+    pro: "Pro",
     enterprise: "Enterprise",
   };
   return names[plan] || "Free";

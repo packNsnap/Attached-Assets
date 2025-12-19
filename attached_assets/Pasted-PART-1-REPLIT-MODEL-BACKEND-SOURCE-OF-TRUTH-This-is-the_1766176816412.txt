@@ -1,0 +1,261 @@
+PART 1 — REPLIT MODEL (BACKEND SOURCE OF TRUTH)
+
+This is the only configuration object your app should reference.
+Everything else (UI, enforcement, usage) reads from this.
+
+🔐 Plan Configuration Object (paste into backend)
+PLANS = {
+    "free": {
+        "price": 0,
+        "candidates_max": 3,
+        "resume_scans_per_candidate": 1,
+        "advanced_ai_enabled": False,
+
+        "monthly_limits": {
+            "job_descriptions": 5,
+            "skills_tests": 5,
+            "interview_sets": 5,
+            "pdf_exports": 5
+        },
+
+        "bulk_upload_max": 0
+    },
+
+    "basic": {
+        "price": 29,
+        "candidates_max": 25,
+        "resume_scans_per_candidate": 2,
+        "advanced_ai_enabled": False,
+
+        "monthly_limits": {
+            "job_descriptions": 25,
+            "skills_tests": 100,
+            "interview_sets": 100,
+            "pdf_exports": 50
+        },
+
+        "bulk_upload_max": 5
+    },
+
+    "growth": {
+        "price": 59,
+        "candidates_max": 75,
+        "resume_scans_per_candidate": 2,
+        "advanced_ai_enabled": True,
+
+        # INTERNAL ONLY – NOT SHOWN TO USERS
+        "advanced_ai_monthly_budget": 20,
+
+        "monthly_limits": {
+            "job_descriptions": 50,
+            "skills_tests": 300,
+            "interview_sets": 300,
+            "pdf_exports": 200
+        },
+
+        "bulk_upload_max": 10
+    },
+
+    "pro": {
+        "price": 149,
+        "candidates_max": 200,
+        "resume_scans_per_candidate": 2,
+        "advanced_ai_enabled": True,
+
+        # INTERNAL ONLY – NOT SHOWN TO USERS
+        "advanced_ai_monthly_budget": 50,
+
+        "monthly_limits": {
+            "job_descriptions": 150,
+            "skills_tests": 1200,
+            "interview_sets": 1200,
+            "pdf_exports": 750
+        },
+
+        "bulk_upload_max": 25
+    },
+
+    "enterprise": {
+        "price": "custom",
+        "candidates_max": 500,
+        "resume_scans_per_candidate": 2,
+        "advanced_ai_enabled": True,
+
+        # INTERNAL DEFAULT – OVERRIDABLE
+        "advanced_ai_monthly_budget": 100,
+
+        "monthly_limits": {
+            "job_descriptions": 3000,
+            "skills_tests": 3000,
+            "interview_sets": 3000,
+            "pdf_exports": 3000
+        },
+
+        "bulk_upload_max": 100
+    }
+}
+
+🧠 Advanced AI Execution Logic (internal)
+
+This is not exposed, but this is the rule that keeps you safe:
+
+def should_run_advanced_ai(user, candidate, risk_score):
+    plan = PLANS[user.plan]
+
+    if not plan["advanced_ai_enabled"]:
+        return False
+
+    if candidate.advanced_ai_ran:
+        return False
+
+    if risk_score < 65:
+        return False
+
+    if user.advanced_ai_used_this_month >= plan["advanced_ai_monthly_budget"]:
+        return False
+
+    return True
+
+
+If it returns False:
+
+You still return a long-form explanation
+
+You just use baseline + cached signals
+
+UX stays identical
+
+PART 2 — PRICING PAGE COPY (CUSTOMER-FACING)
+
+This is what your website should say, verbatim if you want.
+
+No technical leakage. No promises you can’t keep.
+
+🟩 FREE — $0
+
+Get a feel for Resume Logik
+
+Best for exploring the platform and reviewing a small number of candidates.
+
+Includes
+
+Up to 3 candidates
+
+1 resume analysis per candidate
+
+Core resume scoring and risk indicators
+
+Limited interview and skills tools
+
+Best for
+Trying Resume Logik before committing.
+
+🟦 BASIC — $29 / month
+
+Structured hiring for small teams
+
+Designed for founders and small businesses hiring occasionally.
+
+Includes
+
+Up to 25 candidates
+
+2 resume analyses per candidate
+
+Clear risk scoring and explanations
+
+Interview questions and skills tests
+
+Small batch resume uploads
+
+Best for
+Hiring with confidence without overcomplication.
+
+🟪 GROWTH — $59 / month
+
+Smarter screening when quality matters
+
+Built for teams that want deeper insight when resumes raise questions.
+
+Includes
+
+Up to 75 candidates
+
+2 resume analyses per candidate
+
+Adaptive risk analysis with deeper explanations when needed
+
+Larger interview and skills test limits
+
+Bulk resume uploads
+
+Best for
+Growing teams that care about resume credibility and consistency.
+
+🟥 PRO — $149 / month
+
+High-volume hiring with intelligent safeguards
+
+Ideal for recruiters, agencies, and internal HR teams.
+
+Includes
+
+Up to 200 candidates
+
+2 resume analyses per candidate
+
+Intelligent risk detection built in
+
+Advanced explanations for complex resumes
+
+High-volume interview and skills tools
+
+Larger bulk uploads
+
+Best for
+Teams managing active pipelines at scale.
+
+🟫 ENTERPRISE — Custom
+
+Configured for complex hiring environments
+
+For organizations with large candidate volumes and custom workflows.
+
+Includes
+
+Custom candidate limits
+
+Configurable analysis depth
+
+Team management and reporting
+
+API access and integrations
+
+Enterprise-grade controls
+
+Best for
+Companies hiring at scale across multiple roles or teams.
+
+PART 3 — KEY PHRASES USED BY THE SYSTEM (SAFE LANGUAGE)
+
+These phrases are allowed and intentional:
+
+“Multiple indicators suggest…”
+
+“Patterns commonly associated with…”
+
+“May warrant additional review…”
+
+“No material inconsistencies detected…”
+
+“Risk indicators were identified that benefit from clarification…”
+
+These phrases:
+
+Justify deeper explanations
+
+Avoid accusations
+
+Avoid regulatory risk
+
+Avoid exposing AI layers
