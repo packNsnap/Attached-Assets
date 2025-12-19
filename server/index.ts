@@ -223,15 +223,24 @@ async function createAdminUser() {
   }
   
   try {
+    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+    
     // Check if admin already exists
     const existingAdmin = await storage.getUserByEmail(adminEmail);
     if (existingAdmin) {
-      log("Admin user already exists", "admin");
+      // Update password to match current ADMIN_PASSWORD secret
+      await storage.upsertUser({
+        id: existingAdmin.id,
+        email: adminEmail,
+        password: hashedPassword,
+        firstName: existingAdmin.firstName || "Admin",
+        lastName: existingAdmin.lastName || "User",
+      });
+      log("Admin user password synced", "admin");
       return;
     }
     
     // Create admin user with hashed password
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
     await storage.upsertUser({
       email: adminEmail,
       password: hashedPassword,
