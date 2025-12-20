@@ -4721,9 +4721,29 @@ Generate 3-5 diverse goals covering different aspects of the role.`;
       let customerId: string;
       const subscription = await storage.getSubscription(userId);
       
+      // Check if we have a stored customer ID and verify it's valid
       if (subscription?.stripeCustomerId) {
-        customerId = subscription.stripeCustomerId;
+        try {
+          // Verify the customer exists in current Stripe account
+          await stripe.customers.retrieve(subscription.stripeCustomerId);
+          customerId = subscription.stripeCustomerId;
+        } catch (err: any) {
+          // Customer doesn't exist (likely switched Stripe accounts) - create new one
+          console.log("Stored customer ID invalid, creating new customer");
+          const customer = await stripe.customers.create({
+            email: user.email || undefined,
+            metadata: { userId },
+          });
+          customerId = customer.id;
+          
+          // Clear old subscription data and save new customer ID
+          await storage.updateSubscription(userId, {
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: null,
+          });
+        }
       } else {
+        // No stored customer - create new one
         const customer = await stripe.customers.create({
           email: user.email || undefined,
           metadata: { userId },
