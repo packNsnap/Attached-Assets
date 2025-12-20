@@ -1,8 +1,16 @@
 import Stripe from 'stripe';
 
-let connectionSettings: any;
-
 async function getCredentials() {
+  // First check for direct environment secrets (user-provided live keys)
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+  
+  if (secretKey && publishableKey) {
+    console.log('Using Stripe keys from environment secrets');
+    return { publishableKey, secretKey };
+  }
+
+  // Fall back to Replit connector
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? 'repl ' + process.env.REPL_IDENTITY
@@ -10,14 +18,12 @@ async function getCredentials() {
       ? 'depl ' + process.env.WEB_REPL_RENEWAL
       : null;
 
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+  if (!xReplitToken || !hostname) {
+    throw new Error('Stripe keys not found - please configure STRIPE_SECRET_KEY and STRIPE_PUBLISHABLE_KEY');
   }
 
   const connectorName = 'stripe';
   const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
-  
-  // Try production first, then fall back to development
   const environments = isProduction ? ['production', 'development'] : ['development'];
   
   for (const targetEnvironment of environments) {
@@ -34,12 +40,9 @@ async function getCredentials() {
     });
 
     const data = await response.json();
-    connectionSettings = data.items?.[0];
+    const connectionSettings = data.items?.[0];
 
     if (connectionSettings?.settings?.publishable && connectionSettings?.settings?.secret) {
-      if (isProduction && targetEnvironment === 'development') {
-        console.log('Warning: Using development Stripe credentials in production (no live keys configured)');
-      }
       return {
         publishableKey: connectionSettings.settings.publishable,
         secretKey: connectionSettings.settings.secret,
