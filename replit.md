@@ -34,6 +34,12 @@ Preferred communication style: Simple, everyday language.
 - **Bulk Resume Upload (Pro+):** Allows uploading multiple resumes, auto-creates candidate profiles, extracts data, and associates with jobs.
 - **Usage Limits Enforcement:** API enforces plan-based limits with monthly tracking for resume scans, job descriptions, skills tests, and interview generations.
 
+### Security & Multi-Tenant Isolation
+- **Authentication Required:** All candidate-related API endpoints require `isAuthenticated` middleware
+- **User Data Isolation:** Storage layer enforces userId ownership by joining to candidates table before returning data
+- **Protected Endpoints:** Skills test recommendations, interview recommendations, interview notes, and related data filtered by userId
+- **Storage Pattern:** Functions like `getSkillsTestRecommendationsByUserId`, `getInterviewRecommendationsByUserId` use INNER JOIN with candidates to ensure data isolation
+
 ### Pricing Tiers & Limits (5-Tier System)
 The app uses a 5-tier pricing system defined in `shared/schema.ts` via `PLAN_LIMITS`. The system uses **candidate-based limits** with **per-candidate resume scans** instead of monthly scan quotas:
 - **Free ($0):** 3 candidates, 1 scan/candidate, 5 job desc/skills tests/interview sets/PDF exports per month

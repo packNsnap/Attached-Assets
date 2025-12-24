@@ -1211,9 +1211,17 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/interview-notes", async (req, res) => {
+  app.post("/api/interview-notes", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const noteData = insertInterviewNoteSchema.parse(req.body);
+      
+      // Verify the candidate belongs to this user
+      const candidate = await storage.getCandidate(noteData.candidateId, userId);
+      if (!candidate) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
       const note = await storage.createInterviewNote(noteData);
       res.json(note);
     } catch (error) {
@@ -1225,8 +1233,16 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/interview-notes/:candidateId", async (req, res) => {
+  app.get("/api/interview-notes/:candidateId", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
+      
+      // Verify the candidate belongs to this user
+      const candidate = await storage.getCandidate(req.params.candidateId, userId);
+      if (!candidate) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
       const notes = await storage.getInterviewNotesByCandidateId(req.params.candidateId);
       res.json(notes);
     } catch (error) {
@@ -1234,9 +1250,17 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/skills-test-recommendations", async (req, res) => {
+  app.post("/api/skills-test-recommendations", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const recData = insertSkillsTestRecommendationSchema.parse(req.body);
+      
+      // Verify the candidate belongs to this user
+      const candidate = await storage.getCandidate(recData.candidateId, userId);
+      if (!candidate) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
       const recommendation = await storage.createSkillsTestRecommendation(recData);
       res.json(recommendation);
     } catch (error) {
@@ -1248,23 +1272,25 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/skills-test-recommendations", async (req, res) => {
+  app.get("/api/skills-test-recommendations", isAuthenticated, async (req: any, res) => {
     try {
-      const recommendations = await storage.getSkillsTestRecommendations();
+      const userId = req.user.claims.sub;
+      const recommendations = await storage.getSkillsTestRecommendationsByUserId(userId);
       res.json(recommendations);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch skills test recommendations" });
     }
   });
 
-  app.patch("/api/skills-test-recommendations/:id/status", async (req, res) => {
+  app.patch("/api/skills-test-recommendations/:id/status", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { status, testId } = req.body;
       if (!status || typeof status !== "string") {
         res.status(400).json({ error: "Status is required and must be a string" });
         return;
       }
-      const recommendation = await storage.updateSkillsTestRecommendationStatus(req.params.id, status, testId);
+      const recommendation = await storage.updateSkillsTestRecommendationStatus(req.params.id, status, testId, userId);
       if (!recommendation) {
         res.status(404).json({ error: "Recommendation not found" });
         return;
@@ -1275,9 +1301,17 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/interview-recommendations", async (req, res) => {
+  app.post("/api/interview-recommendations", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const recData = insertInterviewRecommendationSchema.parse(req.body);
+      
+      // Verify the candidate belongs to this user
+      const candidate = await storage.getCandidate(recData.candidateId, userId);
+      if (!candidate) {
+        return res.status(403).json({ error: "Access denied" });
+      }
+      
       const recommendation = await storage.createInterviewRecommendation(recData);
       res.json(recommendation);
     } catch (error) {
@@ -1289,23 +1323,25 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/interview-recommendations", async (req, res) => {
+  app.get("/api/interview-recommendations", isAuthenticated, async (req: any, res) => {
     try {
-      const recommendations = await storage.getInterviewRecommendations();
+      const userId = req.user.claims.sub;
+      const recommendations = await storage.getInterviewRecommendationsByUserId(userId);
       res.json(recommendations);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch interview recommendations" });
     }
   });
 
-  app.patch("/api/interview-recommendations/:id/status", async (req, res) => {
+  app.patch("/api/interview-recommendations/:id/status", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user.claims.sub;
       const { status } = req.body;
       if (!status || typeof status !== "string") {
         res.status(400).json({ error: "Status is required and must be a string" });
         return;
       }
-      const recommendation = await storage.updateInterviewRecommendationStatus(req.params.id, status);
+      const recommendation = await storage.updateInterviewRecommendationStatus(req.params.id, status, userId);
       if (!recommendation) {
         res.status(404).json({ error: "Interview recommendation not found" });
         return;
@@ -1316,9 +1352,10 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/interview-recommendations/:id", async (req, res) => {
+  app.delete("/api/interview-recommendations/:id", isAuthenticated, async (req: any, res) => {
     try {
-      const deleted = await storage.deleteInterviewRecommendation(req.params.id);
+      const userId = req.user.claims.sub;
+      const deleted = await storage.deleteInterviewRecommendation(req.params.id, userId);
       if (!deleted) {
         res.status(404).json({ error: "Interview recommendation not found" });
         return;
@@ -1346,13 +1383,13 @@ export async function registerRoutes(
         summaryText = JSON.stringify(interviewSummary);
       }
 
-      // Update recommendation with score, summary, and completed status
+      // Update recommendation with score, summary, and completed status - with user ownership verification
       const recommendation = await storage.updateInterviewRecommendation(recommendationId, {
         status: "completed",
         interviewScore: averageScore || null,
         interviewSummary: summaryText || undefined,
         completedAt: new Date()
-      });
+      }, userId);
 
       if (!recommendation) {
         res.status(404).json({ error: "Interview recommendation not found" });

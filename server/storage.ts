@@ -110,14 +110,16 @@ export interface IStorage {
   
   createSkillsTestRecommendation(rec: InsertSkillsTestRecommendation): Promise<SkillsTestRecommendation>;
   getSkillsTestRecommendations(): Promise<SkillsTestRecommendation[]>;
-  updateSkillsTestRecommendationStatus(id: string, status: string, testId?: string): Promise<SkillsTestRecommendation | undefined>;
+  getSkillsTestRecommendationsByUserId(userId: string): Promise<SkillsTestRecommendation[]>;
+  updateSkillsTestRecommendationStatus(id: string, status: string, testId?: string, userId?: string): Promise<SkillsTestRecommendation | undefined>;
   updateSkillsTestRecommendationStatusByTestId(testId: string, status: string): Promise<SkillsTestRecommendation | undefined>;
   
   createInterviewRecommendation(rec: InsertInterviewRecommendation): Promise<InterviewRecommendation>;
   getInterviewRecommendations(): Promise<InterviewRecommendation[]>;
-  updateInterviewRecommendationStatus(id: string, status: string): Promise<InterviewRecommendation | undefined>;
-  updateInterviewRecommendation(id: string, data: { recommendedQuestions?: string[]; strengths?: string[]; weaknesses?: string[]; status?: string; interviewScore?: number; interviewSummary?: string; completedAt?: Date }): Promise<InterviewRecommendation | undefined>;
-  deleteInterviewRecommendation(id: string): Promise<boolean>;
+  getInterviewRecommendationsByUserId(userId: string): Promise<InterviewRecommendation[]>;
+  updateInterviewRecommendationStatus(id: string, status: string, userId?: string): Promise<InterviewRecommendation | undefined>;
+  updateInterviewRecommendation(id: string, data: { recommendedQuestions?: string[]; strengths?: string[]; weaknesses?: string[]; status?: string; interviewScore?: number; interviewSummary?: string; completedAt?: Date }, userId?: string): Promise<InterviewRecommendation | undefined>;
+  deleteInterviewRecommendation(id: string, userId?: string): Promise<boolean>;
   
   updateCandidate(id: string, userId: string, data: Partial<InsertCandidate>): Promise<Candidate | undefined>;
   
@@ -423,11 +425,40 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(skillsTestRecommendations);
   }
 
-  async updateSkillsTestRecommendationStatus(id: string, status: string, testId?: string): Promise<SkillsTestRecommendation | undefined> {
+  async getSkillsTestRecommendationsByUserId(userId: string): Promise<SkillsTestRecommendation[]> {
+    // Join with candidates to filter by userId
+    const result = await db.select({
+      id: skillsTestRecommendations.id,
+      jobId: skillsTestRecommendations.jobId,
+      candidateId: skillsTestRecommendations.candidateId,
+      candidateName: skillsTestRecommendations.candidateName,
+      jobTitle: skillsTestRecommendations.jobTitle,
+      skillsNeeded: skillsTestRecommendations.skillsNeeded,
+      fitScore: skillsTestRecommendations.fitScore,
+      testId: skillsTestRecommendations.testId,
+      status: skillsTestRecommendations.status,
+      createdAt: skillsTestRecommendations.createdAt,
+    }).from(skillsTestRecommendations)
+      .innerJoin(candidates, eq(skillsTestRecommendations.candidateId, candidates.id))
+      .where(eq(candidates.userId, userId));
+    return result;
+  }
+
+  async updateSkillsTestRecommendationStatus(id: string, status: string, testId?: string, userId?: string): Promise<SkillsTestRecommendation | undefined> {
     const updateData: { status: string; testId?: string } = { status };
     if (testId) {
       updateData.testId = testId;
     }
+    
+    // If userId is provided, verify ownership through candidate
+    if (userId) {
+      const rec = await db.select().from(skillsTestRecommendations).where(eq(skillsTestRecommendations.id, id)).limit(1);
+      if (rec[0] && rec[0].candidateId) {
+        const candidate = await this.getCandidate(rec[0].candidateId, userId);
+        if (!candidate) return undefined;
+      }
+    }
+    
     const result = await db
       .update(skillsTestRecommendations)
       .set(updateData)
@@ -454,7 +485,38 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(interviewRecommendations);
   }
 
-  async updateInterviewRecommendationStatus(id: string, status: string): Promise<InterviewRecommendation | undefined> {
+  async getInterviewRecommendationsByUserId(userId: string): Promise<InterviewRecommendation[]> {
+    // Join with candidates to filter by userId
+    const result = await db.select({
+      id: interviewRecommendations.id,
+      candidateId: interviewRecommendations.candidateId,
+      candidateName: interviewRecommendations.candidateName,
+      jobTitle: interviewRecommendations.jobTitle,
+      testScore: interviewRecommendations.testScore,
+      recommendedQuestions: interviewRecommendations.recommendedQuestions,
+      strengths: interviewRecommendations.strengths,
+      weaknesses: interviewRecommendations.weaknesses,
+      interviewScore: interviewRecommendations.interviewScore,
+      interviewSummary: interviewRecommendations.interviewSummary,
+      completedAt: interviewRecommendations.completedAt,
+      status: interviewRecommendations.status,
+      createdAt: interviewRecommendations.createdAt,
+    }).from(interviewRecommendations)
+      .innerJoin(candidates, eq(interviewRecommendations.candidateId, candidates.id))
+      .where(eq(candidates.userId, userId));
+    return result;
+  }
+
+  async updateInterviewRecommendationStatus(id: string, status: string, userId?: string): Promise<InterviewRecommendation | undefined> {
+    // If userId is provided, verify ownership through candidate
+    if (userId) {
+      const rec = await db.select().from(interviewRecommendations).where(eq(interviewRecommendations.id, id)).limit(1);
+      if (rec[0] && rec[0].candidateId) {
+        const candidate = await this.getCandidate(rec[0].candidateId, userId);
+        if (!candidate) return undefined;
+      }
+    }
+    
     const result = await db
       .update(interviewRecommendations)
       .set({ status })
@@ -463,7 +525,16 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async updateInterviewRecommendation(id: string, data: { recommendedQuestions?: string[]; strengths?: string[]; weaknesses?: string[]; status?: string; interviewScore?: number; interviewSummary?: string; completedAt?: Date }): Promise<InterviewRecommendation | undefined> {
+  async updateInterviewRecommendation(id: string, data: { recommendedQuestions?: string[]; strengths?: string[]; weaknesses?: string[]; status?: string; interviewScore?: number; interviewSummary?: string; completedAt?: Date }, userId?: string): Promise<InterviewRecommendation | undefined> {
+    // If userId is provided, verify ownership through candidate
+    if (userId) {
+      const rec = await db.select().from(interviewRecommendations).where(eq(interviewRecommendations.id, id)).limit(1);
+      if (rec[0] && rec[0].candidateId) {
+        const candidate = await this.getCandidate(rec[0].candidateId, userId);
+        if (!candidate) return undefined;
+      }
+    }
+    
     const result = await db
       .update(interviewRecommendations)
       .set(data)
@@ -472,7 +543,16 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async deleteInterviewRecommendation(id: string): Promise<boolean> {
+  async deleteInterviewRecommendation(id: string, userId?: string): Promise<boolean> {
+    // If userId is provided, verify ownership through candidate
+    if (userId) {
+      const rec = await db.select().from(interviewRecommendations).where(eq(interviewRecommendations.id, id)).limit(1);
+      if (rec[0] && rec[0].candidateId) {
+        const candidate = await this.getCandidate(rec[0].candidateId, userId);
+        if (!candidate) return false;
+      }
+    }
+    
     const result = await db.delete(interviewRecommendations).where(eq(interviewRecommendations.id, id)).returning();
     return result.length > 0;
   }
