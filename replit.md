@@ -34,6 +34,13 @@ Preferred communication style: Simple, everyday language.
 - **Bulk Resume Upload (Pro+):** Allows uploading multiple resumes, auto-creates candidate profiles, extracts data, and associates with jobs.
 - **Usage Limits Enforcement:** API enforces plan-based limits with monthly tracking for resume scans, job descriptions, skills tests, and interview generations.
 
+### Authentication (Current State)
+- **No Auth Mode:** Replit Auth has been removed. The app uses `server/noAuth.ts` which bypasses authentication entirely.
+- **Dev User:** All requests are treated as a single hardcoded user (`dev-user-1`, `dev@resumelogik.com`) with admin access.
+- **Frontend:** `client/src/hooks/useAuth.ts` returns a static logged-in state — no API calls made.
+- **Re-adding Auth:** To restore auth, replace `server/noAuth.ts` with a real auth provider, update the import in `server/routes.ts`, and restore `useAuth.ts` to make an API call to `/api/auth/user`.
+- **Original file:** `server/replitAuth.ts` is still present on disk but no longer imported anywhere.
+
 ### Security & Multi-Tenant Isolation
 - **Authentication Required:** All candidate-related API endpoints require `isAuthenticated` middleware
 - **User Data Isolation:** Storage layer enforces userId ownership by joining to candidates table before returning data
